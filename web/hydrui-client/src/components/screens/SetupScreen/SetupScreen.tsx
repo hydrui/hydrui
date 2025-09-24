@@ -80,6 +80,7 @@ const SetupScreen: React.FC = () => {
             </label>
             <input
               type="text"
+              name="hydrusApiUrl"
               id="baseUrl"
               value={inputBaseUrl}
               onChange={(e) => setInputBaseUrl(e.target.value)}
@@ -95,6 +96,7 @@ const SetupScreen: React.FC = () => {
             </label>
             <input
               type="password"
+              name="hydrusApiKey"
               id="apiKey"
               value={inputApiKey}
               onChange={(e) => setInputApiKey(e.target.value)}
