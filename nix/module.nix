@@ -40,7 +40,7 @@ let
     "$CREDENTIALS_DIRECTORY/htpasswd"
   ]
   ++ optionals (cfg.allowReport != null) [
-    "-allowReport=${boolStr cfg.allowReport}"
+    "-allow-bug-report=${boolStr cfg.allowReport}"
   ]
   # Hydrui Server will create the secret file if it doesn't exist.
   ++ optionals (cfg.serverMode && cfg.secretFile == null) [
