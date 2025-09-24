@@ -49,7 +49,6 @@
 .star-rating-container {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
 }
 
 .star-rating-value {
@@ -58,6 +57,15 @@
   color: var(--color-gray-400);
   text-align: right;
   width: 1.75rem;
+}
+
+.star-rating-hover {
+  opacity: 0.5;
+}
+
+.star-rating-star {
+  width: 1.5rem;
+  padding-right: 0.25rem;
 }
 
 .star-rating-star.active {

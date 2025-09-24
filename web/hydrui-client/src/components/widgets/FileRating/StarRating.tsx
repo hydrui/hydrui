@@ -25,9 +25,12 @@ const StarRating: React.FC<StarRatingProps> = ({
   onChange,
 }) => {
   const [hoverValue, setHoverValue] = useState<number | null>(null);
+  const [loadingValue, setLoadingValue] = useState<number | null>(null);
 
   const handleStarClick = (rating: number) => {
     if (readOnly || !onChange || isLoading) return;
+    setHoverValue(null);
+    setLoadingValue(rating);
     // If clicking the same rating, clear it
     onChange(rating === value ? null : rating);
   };
@@ -37,23 +40,23 @@ const StarRating: React.FC<StarRatingProps> = ({
     setHoverValue(rating);
   };
 
-  const displayValue = hoverValue ?? value ?? 0;
+  const displayValue = isLoading
+    ? (loadingValue ?? 0)
+    : (hoverValue ?? value ?? 0);
 
   const SolidIcon = starShape === "circle" ? PlusCircleIcon : StarIcon;
   const OutlineIcon =
     starShape === "circle" ? PlusCircleOutlineIcon : StarOutlineIcon;
 
   return (
-    <div
-      className="star-rating-container"
-      onMouseLeave={() => handleStarHover(null)}
-    >
+    <div className="star-rating-container">
       {Array.from({ length: maxStars }, (_, i) => i + 1).map((rating) => (
         <button
           key={rating}
           onClick={() => handleStarClick(rating)}
           onMouseEnter={() => handleStarHover(rating)}
-          className={`rating-button star-rating-star ${readOnly ? "readonly" : ""} ${isLoading ? "loading" : ""} ${rating <= displayValue ? "active" : "inactive"}`}
+          onMouseLeave={() => handleStarHover(null)}
+          className={`rating-button star-rating-star ${hoverValue !== null ? "star-rating-hover" : ""} ${readOnly ? "readonly" : ""} ${isLoading ? "loading" : ""} ${rating <= displayValue ? "active" : "inactive"}`}
           disabled={readOnly || isLoading}
           aria-label={`Rate ${rating} out of ${maxStars} stars`}
         >
