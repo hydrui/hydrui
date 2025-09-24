@@ -59,6 +59,12 @@ const AboutModal: React.FC<AboutModalProps> = ({ onClose }) => {
                   View third party licenses
                 </a>
               </p>
+
+              <p>
+                <a href="https://hydrui.dev" rel="noreferrer" target="_blank">
+                  https://hydrui.dev
+                </a>
+              </p>
             </div>
           </div>
           <div className="about-modal-footer">
