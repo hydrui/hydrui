@@ -6,7 +6,7 @@ interface ShortcutMap {
   [key: string]: ShortcutCallback | undefined;
 }
 
-let globalShortcuts: ShortcutMap[] = [];
+let globalShortcuts: React.RefObject<ShortcutMap>[] = [];
 
 const assertModifierOrder = (shortcutKey: string) => {
   const parts = shortcutKey.split("+");
@@ -47,7 +47,7 @@ const globalKeydownHandler = (e: KeyboardEvent) => {
   const shortcutKey = keys.join("+");
 
   for (const shortcuts of globalShortcuts) {
-    const callback = shortcuts[shortcutKey];
+    const callback = shortcuts.current[shortcutKey];
     if (callback) {
       e.preventDefault();
       callback(e);
@@ -61,21 +61,20 @@ export function useShortcut(shortcuts: ShortcutMap) {
 
   const shortcutsRef = useRef(shortcuts);
   shortcutsRef.current = shortcuts;
-  console.log("useShortcut", shortcuts, shortcutsRef);
 
   useEffect(() => {
     if (globalShortcuts.length === 0) {
       window.addEventListener("keydown", globalKeydownHandler);
     }
 
-    globalShortcuts.unshift(shortcuts);
+    globalShortcuts.unshift(shortcutsRef);
 
     return () => {
-      globalShortcuts = globalShortcuts.filter((n) => n !== shortcuts);
+      globalShortcuts = globalShortcuts.filter((n) => n !== shortcutsRef);
 
       if (globalShortcuts.length === 0) {
         window.removeEventListener("keydown", globalKeydownHandler);
       }
     };
-  }, [shortcuts]);
+  }, []);
 }
