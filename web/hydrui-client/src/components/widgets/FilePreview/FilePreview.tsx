@@ -44,7 +44,18 @@ const FilePreview: React.FC = () => {
     try {
       await client.setRating(activeFileId, serviceKey, rating);
       // Refresh file metadata to get updated ratings
-      await refreshFileMetadata([activeFileId]);
+      for (let i = 0; i < 10; i++) {
+        await refreshFileMetadata([activeFileId]);
+        if (
+          usePageStore.getState().files.find((f) => f.file_id === activeFileId)
+            ?.ratings?.[serviceKey] === rating
+        ) {
+          break;
+        }
+        await new Promise((resolve) =>
+          setTimeout(resolve, i < 5 ? 1000 : 5000),
+        );
+      }
     } catch (error) {
       console.error("Failed to update rating:", error);
       addToast("Failed to update rating", "error", 5000);
