@@ -4,6 +4,7 @@ import React, { useCallback, useRef, useState } from "react";
 import EditColorModal from "@/components/modals/EditColorModal/EditColorModal";
 import MimeInput from "@/components/widgets/MimeInput/MimeInput";
 import PushButton from "@/components/widgets/PushButton/PushButton";
+import { useShortcut } from "@/hooks/useShortcut";
 import { useApiStore } from "@/store/apiStore";
 import { usePreferencesStore } from "@/store/preferencesStore";
 import { isServerMode } from "@/utils/serverMode";
@@ -28,6 +29,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
   const logout = useCallback(() => {
     setAuthenticated(false);
   }, [setAuthenticated]);
+
+  useShortcut({
+    Escape: onClose,
+  });
 
   return (
     <div className="settings-modal-container">

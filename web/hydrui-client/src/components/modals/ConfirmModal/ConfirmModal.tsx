@@ -1,6 +1,7 @@
 import React from "react";
 
 import PushButton from "@/components/widgets/PushButton/PushButton";
+import { useShortcut } from "@/hooks/useShortcut";
 
 import "./index.css";
 
@@ -21,6 +22,10 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  useShortcut({
+    Escape: onCancel,
+  });
+
   return (
     <div className="confirm-modal-container">
       <div className="confirm-modal-wrapper">

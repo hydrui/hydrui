@@ -5,13 +5,14 @@ import {
   ChevronRightIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import { FileMetadata } from "@/api/types";
 import BrokenImageModal from "@/components/modals/BrokenImageModal/BrokenImageModal";
 import FileViewer from "@/components/widgets/FileViewer/FileViewer";
 import PushButton from "@/components/widgets/PushButton/PushButton";
 import { ContentUpdateAction } from "@/constants/contentUpdates";
+import { useShortcut } from "@/hooks/useShortcut";
 import { client } from "@/store/apiStore";
 import { formatDuration, formatFileSize } from "@/utils/format";
 
@@ -148,26 +149,11 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({
   const [isBrokenImageModalOpen, setIsBrokenImageModalOpen] = useState(false);
 
   // Handle keyboard navigation
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      } else if (event.key === "ArrowLeft") {
-        onPrevious();
-      } else if (event.key === "ArrowRight") {
-        onNext();
-      }
-    },
-    [onClose, onPrevious, onNext],
-  );
-
-  // Add keyboard event listeners
-  useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [handleKeyDown]);
+  useShortcut({
+    Escape: onClose,
+    ArrowLeft: onPrevious,
+    ArrowRight: onNext,
+  });
 
   const previewRef = useRef<HTMLDivElement>(null);
 

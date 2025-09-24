@@ -4,6 +4,7 @@ import React from "react";
 import { ErrorBoundary } from "react-error-boundary";
 
 import PushButton from "@/components/widgets/PushButton/PushButton";
+import { useShortcut } from "@/hooks/useShortcut";
 
 import { SpinningCube } from "./SpinningCube";
 import "./index.css";
@@ -13,6 +14,10 @@ interface AboutModalProps {
 }
 
 const AboutModal: React.FC<AboutModalProps> = ({ onClose }) => {
+  useShortcut({
+    Escape: onClose,
+  });
+
   return (
     <div className="about-modal-container">
       <div className="about-modal-wrapper">

@@ -5,6 +5,7 @@ import PushButton from "@/components/widgets/PushButton/PushButton";
 import TagInput from "@/components/widgets/TagInput/TagInput";
 import TagLabel from "@/components/widgets/TagLabel/TagLabel";
 import { REAL_TAG_SERVICES } from "@/constants/services";
+import { useShortcut } from "@/hooks/useShortcut";
 import { client } from "@/store/apiStore";
 import { PageType, usePageStore } from "@/store/pageStore";
 import { useServicesStore } from "@/store/servicesStore";
@@ -156,6 +157,10 @@ const ImportUrlsModal: React.FC<ImportUrlModalProps> = ({
       setIsImporting(false);
     }
   };
+
+  useShortcut({
+    Escape: onClose,
+  });
 
   return (
     <div className="import-urls-modal-container">

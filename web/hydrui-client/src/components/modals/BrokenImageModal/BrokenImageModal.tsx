@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
 
 import PushButton from "@/components/widgets/PushButton/PushButton";
+import { useShortcut } from "@/hooks/useShortcut";
 import { useToastStore } from "@/store/toastStore";
 import { isServerMode } from "@/utils/serverMode";
 import type { WorkerResponse } from "@/workers/bugreport.worker";
@@ -49,6 +50,10 @@ const BrokenImageModal: React.FC<BrokenImageModalProps> = ({
       serverMode: isServerMode,
     });
   }, [url, addToast, removeToast, updateToastProgress]);
+
+  useShortcut({
+    Escape: onClose,
+  });
 
   return (
     <div className="broken-image-modal-container">

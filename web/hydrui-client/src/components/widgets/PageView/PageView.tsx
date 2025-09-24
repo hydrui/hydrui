@@ -146,10 +146,7 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
         inModal
           ? {}
           : {
-              "Control+a": (e) => {
-                e.preventDefault();
-                selectAllFiles();
-              },
+              "Control+a": selectAllFiles,
             },
       [inModal, selectAllFiles],
     ),

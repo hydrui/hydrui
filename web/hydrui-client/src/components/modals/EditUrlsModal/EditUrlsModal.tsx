@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FileMetadata } from "@/api/types";
 import ConfirmModal from "@/components/modals/ConfirmModal/ConfirmModal";
 import PushButton from "@/components/widgets/PushButton/PushButton";
+import { useShortcut } from "@/hooks/useShortcut";
 import { client } from "@/store/apiStore";
 import { usePageActions } from "@/store/pageStore";
 
@@ -181,6 +182,10 @@ const EditUrlsModal: React.FC<EditUrlsModalProps> = ({ files, onClose }) => {
       onClose();
     }
   }, [onClose, urlsToAdd.size, urlsToRemove.size]);
+
+  useShortcut({
+    Escape: handleClose,
+  });
 
   return (
     <div className="edit-urls-modal-container">

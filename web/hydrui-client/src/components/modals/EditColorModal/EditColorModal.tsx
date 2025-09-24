@@ -2,6 +2,7 @@ import React, { useCallback, useState } from "react";
 
 import ColorEditor from "@/components/widgets/ColorEditor/ColorEditor";
 import PushButton from "@/components/widgets/PushButton/PushButton";
+import { useShortcut } from "@/hooks/useShortcut";
 import { usePreferencesStore } from "@/store/preferencesStore";
 
 import "./index.css";
@@ -54,6 +55,9 @@ const EditColorModal: React.FC<EditColorProps> = ({ namespace, onClose }) => {
     setDefaultUnnamespacedColor,
     setNamespaceColor,
   ]);
+  useShortcut({
+    Escape: onClose,
+  });
   return (
     <div className="edit-color-modal-container">
       <div className="edit-color-modal-wrapper">

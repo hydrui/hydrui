@@ -9,6 +9,7 @@ import TagInput from "@/components/widgets/TagInput/TagInput";
 import TagLabel from "@/components/widgets/TagLabel/TagLabel";
 import { ContentUpdateAction } from "@/constants/contentUpdates";
 import { REAL_TAG_SERVICES } from "@/constants/services";
+import { useShortcut } from "@/hooks/useShortcut";
 import { client } from "@/store/apiStore";
 import { usePageActions } from "@/store/pageStore";
 import { useServices } from "@/store/servicesStore";
@@ -267,6 +268,10 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
       onClose();
     }
   }, [onClose, pendingChanges.length]);
+
+  useShortcut({
+    Escape: handleClose,
+  });
 
   // Get changes summary by service
   const changesByService = useMemo(() => {
