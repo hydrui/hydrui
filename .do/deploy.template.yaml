@@ -3,7 +3,7 @@ spec:
   static_sites:
     - environment_slug: html
       git:
-        branch: main
+        branch: master
         repo_clone_url: https://github.com/hydrui/hydrui.git
       name: hydrui
       output_dir: dist
