@@ -28,6 +28,7 @@ type Values struct {
 	TLSKeyFile     string
 	Secret         string
 	HydrusURL      string
+	HydrusSecure   bool
 	HydrusAPIKey   string
 	HtpasswdFile   string
 	UseACME        bool
@@ -69,6 +70,7 @@ func (v *Values) ParseFlags(args []string) error {
 	set.StringVar(&v.TLSKeyFile, "tls-key-file", v.TLSKeyFile, "TLS private key file to use for TLS port (PEM-formatted)")
 	SecretVar(set, &v.Secret, "secret", v.Secret, "secret key for JWT token")
 	set.StringVar(&v.HydrusURL, "hydrus-url", v.HydrusURL, "Hydrus URL")
+	set.BoolVar(&v.HydrusSecure, "hydrus-secure", v.HydrusSecure, "Enable validating the TLS certificate of the Hydrus server")
 	SecretVar(set, &v.HydrusAPIKey, "hydrus-api-key", v.HydrusAPIKey, "Hydrus API key")
 	set.StringVar(&v.HtpasswdFile, "htpasswd", v.HtpasswdFile, "Path to htpasswd file for authentication")
 	set.BoolVar(&v.UseACME, "acme", v.UseACME, "Enable ACME, acquire TLS certificate")

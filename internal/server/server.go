@@ -3,6 +3,7 @@ package server
 import (
 	"crypto/sha256"
 	"crypto/subtle"
+	"crypto/tls"
 	_ "embed"
 	"encoding/base64"
 	"encoding/json"
@@ -119,6 +120,7 @@ type Config struct {
 	TLSKeyFile     string
 	Secret         string
 	HydrusURL      string
+	HydrusSecure   bool
 	HydrusAPIKey   string
 	HtpasswdFile   *HtpasswdFile
 	Secure         bool
@@ -242,6 +244,14 @@ func New(config Config, clientData *pack.Pack) http.Handler {
 		})
 	}
 
+	proxyClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: !config.HydrusSecure,
+			},
+		},
+	}
+
 	// Hydrus proxy handler
 	mux.HandleFunc("/hydrus/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -286,8 +296,7 @@ func New(config Config, clientData *pack.Pack) http.Handler {
 		proxyReq.URL.RawQuery = q.Encode()
 		log.Printf("Proxy request: %s %s", proxyReq.Method, proxyReq.URL.String())
 
-		client := &http.Client{}
-		resp, err := client.Do(proxyReq)
+		resp, err := proxyClient.Do(proxyReq)
 		if err != nil {
 			http.Error(w, "Error making proxy request", http.StatusBadGateway)
 			return
