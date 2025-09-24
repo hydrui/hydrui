@@ -119,10 +119,10 @@ jobs:
           name: bin
       - name: Zip builds
         run: |
-          cd bin
-          for i in *
+          ls -la
+          for i in hydrui-*
           do
-            zip "../$(basename $i).zip" "$(basename $i)"
+            zip "$(basename $i).zip" "$(basename $i)"
           done
       - name: Create Release
         uses: softprops/action-gh-release@v2
