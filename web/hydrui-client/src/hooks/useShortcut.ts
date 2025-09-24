@@ -3,10 +3,10 @@ import { useEffect, useRef } from "react";
 type ShortcutCallback = (e: KeyboardEvent) => void;
 
 interface ShortcutMap {
-  [key: string]: ShortcutCallback;
+  [key: string]: ShortcutCallback | undefined;
 }
 
-const globalShortcuts = new Map<ShortcutMap, boolean>();
+const globalShortcuts = new Set<ShortcutMap>();
 
 const assertModifierOrder = (shortcutKey: string) => {
   const parts = shortcutKey.split("+");
@@ -25,6 +25,18 @@ const assertModifierOrder = (shortcutKey: string) => {
 };
 
 const globalKeydownHandler = (e: KeyboardEvent) => {
+  // Unfortunately there doesn't appear to be a good way to ignore events that
+  // were handled by native widget implementations, so we'll just disable global
+  // shortcuts when the focused element is certain input fields.
+  if (e.target instanceof Element) {
+    switch (e.target.tagName.toLowerCase()) {
+      case "input":
+      case "textarea":
+      case "select":
+        return;
+    }
+  }
+
   const keys: string[] = [];
   if (e.ctrlKey) keys.push("Control");
   if (e.altKey) keys.push("Alt");
@@ -34,7 +46,7 @@ const globalKeydownHandler = (e: KeyboardEvent) => {
   }
   const shortcutKey = keys.join("+");
 
-  for (const [shortcuts] of globalShortcuts) {
+  for (const shortcuts of globalShortcuts) {
     const callback = shortcuts[shortcutKey];
     if (callback) {
       callback(e);
@@ -47,16 +59,17 @@ export function useShortcut(shortcuts: ShortcutMap) {
 
   const shortcutsRef = useRef(shortcuts);
   shortcutsRef.current = shortcuts;
+  console.log("useShortcut", shortcuts, shortcutsRef);
 
   useEffect(() => {
     if (globalShortcuts.size === 0) {
       window.addEventListener("keydown", globalKeydownHandler);
     }
 
-    globalShortcuts.set(shortcutsRef.current, true);
+    globalShortcuts.add(shortcuts);
 
     return () => {
-      globalShortcuts.delete(shortcutsRef.current);
+      globalShortcuts.delete(shortcuts);
 
       if (globalShortcuts.size === 0) {
         window.removeEventListener("keydown", globalKeydownHandler);

@@ -13,6 +13,7 @@ import React, {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -78,6 +79,19 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
   const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null);
   const dragStartSelectionRef = useRef<number[]>([]);
 
+  // Modal state
+  const [modalIndex, setModalIndex] = useState<number>(-1);
+  const [showEditTagsModal, setShowEditTagsModal] = useState(false);
+  const [showEditUrlsModal, setShowEditUrlsModal] = useState(false);
+  const [showImportUrlsModal, setShowImportUrlsModal] = useState(false);
+  const [tagEditFiles, setTagEditFiles] = useState<FileMetadata[]>([]);
+  const [urlEditFiles, setUrlEditFiles] = useState<FileMetadata[]>([]);
+  const inModal =
+    modalIndex !== -1 ||
+    showEditTagsModal ||
+    showEditUrlsModal ||
+    showImportUrlsModal;
+
   const selectAllFiles = useCallback(() => {
     const { files } = usePageStore.getState();
     setSelectedFiles(
@@ -126,12 +140,20 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
     setPage(query, "virtual");
   };
 
-  useShortcut({
-    "Control+a": (e) => {
-      e.preventDefault();
-      selectAllFiles();
-    },
-  });
+  useShortcut(
+    useMemo(
+      () =>
+        inModal
+          ? {}
+          : {
+              "Control+a": (e) => {
+                e.preventDefault();
+                selectAllFiles();
+              },
+            },
+      [inModal, selectAllFiles],
+    ),
+  );
 
   const viewMenuItems: MenuItem[] = [
     {
@@ -273,16 +295,6 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
     pageType,
     updatePageContents,
   ]);
-
-  // Modal state
-  const [modalIndex, setModalIndex] = useState<number>(-1);
-
-  // State for tag edit modal
-  const [showEditTagsModal, setShowEditTagsModal] = useState(false);
-  const [showEditUrlsModal, setShowEditUrlsModal] = useState(false);
-  const [showImportUrlsModal, setShowImportUrlsModal] = useState(false);
-  const [tagEditFiles, setTagEditFiles] = useState<FileMetadata[]>([]);
-  const [urlEditFiles, setUrlEditFiles] = useState<FileMetadata[]>([]);
 
   // Handle click outside of file items
   useEffect(() => {
