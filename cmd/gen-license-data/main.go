@@ -9,7 +9,6 @@ import (
 	"io"
 	"log"
 	"maps"
-	"net/url"
 	"os"
 	"os/exec"
 	"slices"
@@ -140,28 +139,7 @@ following projects or developers.
 		log.Fatal(err)
 	}
 	for _, pkg := range npmPackages {
-		repoURL := pkg.Repository
-		licenseURL := repoURL
-		licensePath := pkg.LicenseFile
-		licensePath, _ = strings.CutPrefix(licensePath, "node_modules/")
-		licensePath, _ = strings.CutPrefix(licensePath, pkg.Name)
-		licensePath, _ = strings.CutPrefix(licensePath, "/")
-		if pkg.Repository != "" {
-			uri, err := url.Parse(pkg.Repository)
-			if err != nil {
-				log.Fatal(err)
-			}
-			switch uri.Host {
-			case "github.com":
-				uri.Path += "/blob/HEAD/" + licensePath
-				licenseURL = uri.String()
-			default:
-				log.Fatalf("Unknown repository host %s", uri.Host)
-			}
-		} else {
-			log.Fatalf("No repository for %s?", pkg.Name)
-		}
-		if _, err := fmt.Fprintf(outfile, `<li><a href="%s">%s %s</a>, <a href="%s">%s</a>`, repoURL, pkg.Name, pkg.Version, licenseURL, pkg.Licenses); err != nil {
+		if _, err := fmt.Fprintf(outfile, `<li><a href="%s">%s %s</a>, %s`, pkg.Repository, pkg.Name, pkg.Version, pkg.Licenses); err != nil {
 			log.Fatal(err)
 		}
 	}
