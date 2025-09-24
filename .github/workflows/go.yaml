@@ -76,15 +76,17 @@ jobs:
         run: |
           for GOOS in darwin freebsd linux windows; do
             EXT=""
+            FLAGS=""
             if [ "$GOOS" == "windows" ]; then
               EXT=".exe"
+              FLAGS="-ldflags=-H=windowsgui"
             fi
             OS="$GOOS"
             if [ "$GOOS" == "darwin" ]; then
               OS="macos"
             fi
             for GOARCH in arm64 amd64; do
-              CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -o "bin/hydrui-${OS}-${GOARCH}${EXT}" ./cmd/hydrui-server
+              CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build $FLAGS -o "bin/hydrui-${OS}-${GOARCH}${EXT}" ./cmd/hydrui-server
             done
           done
       - name: Upload builds
