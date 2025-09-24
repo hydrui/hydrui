@@ -84,7 +84,7 @@ jobs:
               OS="macos"
             fi
             for GOARCH in arm64 amd64; do
-              CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o "bin/hydrui-${OS}-${GOARCH}${EXT}" ./cmd/hydrui-server
+              CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -o "bin/hydrui-${OS}-${GOARCH}${EXT}" ./cmd/hydrui-server
             done
           done
       - name: Upload builds
