@@ -51,7 +51,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ onClose }) => {
 
               <div className="about-modal-section">
                 <h3 className="about-modal-section-title">License</h3>
-                <p className="about-modal-section-text">MIT License</p>
+                <p className="about-modal-section-text">ISC License</p>
               </div>
 
               <p>
