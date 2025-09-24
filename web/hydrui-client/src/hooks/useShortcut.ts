@@ -6,7 +6,7 @@ interface ShortcutMap {
   [key: string]: ShortcutCallback | undefined;
 }
 
-const globalShortcuts = new Set<ShortcutMap>();
+let globalShortcuts: ShortcutMap[] = [];
 
 const assertModifierOrder = (shortcutKey: string) => {
   const parts = shortcutKey.split("+");
@@ -49,7 +49,9 @@ const globalKeydownHandler = (e: KeyboardEvent) => {
   for (const shortcuts of globalShortcuts) {
     const callback = shortcuts[shortcutKey];
     if (callback) {
+      e.preventDefault();
       callback(e);
+      return;
     }
   }
 };
@@ -62,16 +64,16 @@ export function useShortcut(shortcuts: ShortcutMap) {
   console.log("useShortcut", shortcuts, shortcutsRef);
 
   useEffect(() => {
-    if (globalShortcuts.size === 0) {
+    if (globalShortcuts.length === 0) {
       window.addEventListener("keydown", globalKeydownHandler);
     }
 
-    globalShortcuts.add(shortcuts);
+    globalShortcuts.unshift(shortcuts);
 
     return () => {
-      globalShortcuts.delete(shortcuts);
+      globalShortcuts = globalShortcuts.filter((n) => n !== shortcuts);
 
-      if (globalShortcuts.size === 0) {
+      if (globalShortcuts.length === 0) {
         window.removeEventListener("keydown", globalKeydownHandler);
       }
     };
