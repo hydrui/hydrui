@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="{{lang}}">
+  <head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ strings.title }}</title>
+    <link rel="stylesheet" href="/assets/styles/index.scss">
+  </head>
+  <body class="{{bodyClass}} adaptive-theme">
+    <script>
+      (function () {
+        const storage = window.localStorage;
+        const overrideName = 'siteThemeOverride';
+        function reloadSiteTheme() {
+          const themeOverride = storage.getItem(overrideName);
+          const classes = document.body.classList;
+          if (themeOverride !== null) {
+            classes.remove('adaptive-theme');
+            if (themeOverride === 'dark') {
+              classes.add('dark-theme');
+            } else {
+              classes.remove('dark-theme');
+            }
+          } else {
+            classes.remove('dark-theme');
+            classes.add('adaptive-theme');
+          }
+        }
+        window.setSiteTheme = function (theme) {
+          if (theme === 'system') {
+            storage.removeItem(overrideName);
+          } else if (theme === 'light') {
+            storage.setItem(overrideName, 'light');
+          } else if (theme === 'dark') {
+            storage.setItem(overrideName, 'dark');
+          }
+          reloadSiteTheme();
+        };
+        reloadSiteTheme();
+      })();
+    </script>
+    <header>
+      <div class="container">
+        <h1>
+          <a href="/{{lang}}">Hydrui</a>
+          <svg
+            version="1.1"
+            viewBox="0 0 32 32"
+            xmlns="http://www.w3.org/2000/svg"
+            style="width: 32px; height: 32px"
+            aria-hidden="true"
+          >
+            <path d="m17.188 25.562v-2.875l0.35938-3.68e-4c0.46712-4.79e-4 1.4847-0.15478 2.0781-0.3151 0.25781-0.06966 0.72325-0.25202 1.0343-0.40526 1.602-0.7892 2.4568-2.0984 2.8157-4.3128 0.07533-0.4648 0.11291-1.3358 0.14821-3.4352 0.05311-3.1589 0.07809-3.3635 0.44849-3.6727 0.20171-0.1684 0.77887-0.42102 0.96191-0.42102 0.07005 0 0.09141-0.08761 0.09141-0.375v-0.375h-3.9286l-0.02498 4.0156c-0.02101 3.3776-0.04132 4.1056-0.12778 4.5817-0.30744 1.693-0.83834 2.5563-1.8802 3.0574-0.46626 0.22426-1.1389 0.42123-1.6789 0.49161l-0.29666 0.03867-0.01584-9.0144-0.01584-9.0144h-2.3125l0.04276 18.045-0.33388-0.04309c-1.9137-0.24698-3.0077-1.1392-3.424-2.7924-0.25541-1.0143-0.271-1.2951-0.29874-5.3809l-0.027055-3.9844h-3.9966l0.037488 0.6969 0.375 0.12569c0.40132 0.13451 0.7268 0.3487 0.87606 0.5765 0.1914 0.29212 0.22977 0.79984 0.27924 3.6947 0.06233 3.6479 0.13813 4.1901 0.76345 5.4617 0.82323 1.6741 2.4532 2.5642 5.0187 2.7409l0.6875 0.04734-0.02016 2.8594-0.02015 2.8594h2.3841z"/>
+          </svg>
+        </h1>
+        <nav>
+          <ul>
+            <li>
+              <a href="/{{lang}}">{{ strings.home }}</a>
+            </li>
+            <li>
+              <a href="/{{lang}}/docs">{{ strings.docs }}</a>
+            </li>
+            <li>
+              <a href="/{{lang}}/docs/self-hosting/run-locally/">{{ strings.download }}</a>
+            </li>
+            <li>
+              <a href="/client">{{ strings.login }}</a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+    {{ content }}
+    <footer>
+      <div class="container">
+        <div class="footer-columns">
+          <dl>
+            <dt>Site</dt>
+            <dd>
+              <ul>
+                <li><a href="/{{lang}}">Home</a></li>
+                <li><a href="/{{lang}}/docs">Docs</a></li>
+                <li><a href="/client">Client</a></li>
+              </ul>
+            </dd>
+          </dl>
+          <dl>
+            <dt>Contact</dt>
+            <dd>
+              <ul>
+                <li><a href="https://github.com/hydrui/hydrui">GitHub</a></li>
+              </ul>
+            </dd>
+          </dl>
+          <dl>
+            <dt>Language</dt>
+            <dd>
+              <ul>
+                {% for language in languages %}
+                  <li>
+                    <a href="/{{language.lang}}">{{ language.name }}</a>
+                  </li>
+                {% endfor %}
+              </ul>
+            </dd>
+          </dl>
+          <dl>
+            <dt>Theme</dt>
+            <dd>
+              <ul>
+                <li><a href="javascript:window.setSiteTheme('system')">System</a></li>
+                <li><a href="javascript:window.setSiteTheme('light')">Light</a></li>
+                <li><a href="javascript:window.setSiteTheme('dark')">Dark</a></li>
+              </ul>
+            </dd>
+          </dl>
+        </div>
+        <div class="privacy-notice"><b>Privacy notice:</b> This website does not use cookies.</div>
+        <div class="copyright">&copy; 2025 The Hydrui developers.</div>
+      </div>
+    </footer>
+  </body>
+</html>

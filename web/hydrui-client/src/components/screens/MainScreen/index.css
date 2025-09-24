@@ -1,0 +1,29 @@
+.main-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--color-gray-800);
+  color: var(--color-white);
+}
+
+.main-screen-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.main-screen-sidebar {
+  width: 25%;
+  border-right: 1px solid var(--color-gray-700);
+  overflow-y: auto;
+}
+
+.main-screen-tab-view {
+  flex: 1;
+  overflow: hidden;
+}
+
+.main-screen-status-bar {
+  padding: 0.5rem;
+  border-top: 1px solid var(--color-gray-700);
+}

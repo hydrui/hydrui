@@ -1,0 +1,337 @@
+.edit-urls-modal-container {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow-y: auto;
+}
+
+.edit-urls-modal-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.edit-urls-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.edit-urls-modal-content {
+  position: relative;
+  background-color: var(--color-gray-800);
+  border-radius: 0.5rem;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 56rem;
+  width: 100%;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.edit-urls-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-gray-700);
+}
+
+.edit-urls-modal-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-white);
+}
+
+.edit-urls-modal-close-button {
+  color: var(--color-gray-400);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.edit-urls-modal-close-button:hover {
+  color: var(--color-white);
+}
+
+.edit-urls-modal-close-icon {
+  height: 1.5rem;
+  width: 1.5rem;
+}
+
+.edit-urls-modal-tabs {
+  border-bottom: 1px solid var(--color-gray-700);
+}
+
+.edit-urls-modal-tabs-list {
+  display: flex;
+}
+
+.edit-urls-modal-tab {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.edit-urls-modal-tab-active {
+  color: var(--color-blue-400);
+  border-bottom: 2px solid var(--color-blue-400);
+}
+
+.edit-urls-modal-tab-inactive {
+  color: var(--color-gray-400);
+}
+
+.edit-urls-modal-tab-inactive:hover {
+  color: var(--color-gray-300);
+}
+
+.edit-urls-modal-content-area {
+  flex: 1;
+  padding: 1rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.edit-urls-modal-url-input-container {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.edit-urls-modal-url-input {
+  flex: 1;
+  padding: 0.5rem;
+  background-color: var(--color-gray-700);
+  border: 1px solid var(--color-gray-600);
+  border-radius: 0.25rem;
+  color: var(--color-white);
+  font-size: 0.875rem;
+}
+
+.edit-urls-modal-url-input:focus {
+  outline: 2px solid var(--color-blue-400);
+  outline-offset: 2px;
+}
+
+.edit-urls-modal-add-button {
+  padding: 0.5rem 1rem;
+  background-color: var(--color-blue-600);
+  color: var(--color-white);
+  font-size: 0.875rem;
+  border-radius: 0.25rem;
+  border: none;
+  cursor: pointer;
+}
+
+.edit-urls-modal-add-button:hover {
+  background-color: var(--color-blue-700);
+}
+
+.edit-urls-modal-add-button:disabled {
+  background-color: var(--color-gray-600);
+  color: var(--color-gray-400);
+  cursor: not-allowed;
+}
+
+.edit-urls-modal-validation-error {
+  color: var(--color-red-400);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.edit-urls-modal-url-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.edit-urls-modal-empty-message {
+  text-align: center;
+  padding: 1rem 0;
+  color: var(--color-gray-400);
+}
+
+.edit-urls-modal-url-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.edit-urls-modal-url-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.edit-urls-modal-url-item:hover {
+  background-color: var(--color-gray-700);
+}
+
+.edit-urls-modal-url-item-add {
+  background-color: rgba(6, 78, 59, 0.2);
+}
+
+.edit-urls-modal-url-item-remove {
+  background-color: rgba(127, 29, 29, 0.2);
+}
+
+.edit-urls-modal-url-value {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.edit-urls-modal-url-link {
+  color: var(--color-blue-400);
+  text-decoration: none;
+}
+
+.edit-urls-modal-url-link:hover {
+  text-decoration: underline;
+}
+
+.edit-urls-modal-url-item-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.edit-urls-modal-url-count {
+  color: var(--color-gray-400);
+  font-size: 0.875rem;
+}
+
+.edit-urls-modal-url-add-button {
+  padding: 0.25rem;
+  color: var(--color-gray-400);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.edit-urls-modal-url-add-button:hover {
+  color: var(--color-green-400);
+}
+
+.edit-urls-modal-url-remove-button {
+  padding: 0.25rem;
+  color: var(--color-gray-400);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.edit-urls-modal-url-remove-button:hover {
+  color: var(--color-red-400);
+}
+
+.edit-urls-modal-action-icon {
+  height: 1rem;
+  width: 1rem;
+}
+
+/* Summary section */
+.edit-urls-modal-summary {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.edit-urls-modal-changes-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.edit-urls-modal-change-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.edit-urls-modal-changes-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.edit-urls-modal-changes-title-add {
+  color: var(--color-green-400);
+}
+
+.edit-urls-modal-changes-title-remove {
+  color: var(--color-red-400);
+}
+
+.edit-urls-modal-changes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.edit-urls-modal-change-item-add {
+  background-color: rgba(6, 78, 59, 0.2);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.edit-urls-modal-change-item-remove {
+  background-color: rgba(127, 29, 29, 0.2);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.edit-urls-modal-footer {
+  padding: 1rem;
+  border-top: 1px solid var(--color-gray-700);
+}
+
+.edit-urls-modal-footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.edit-urls-modal-error {
+  color: var(--color-red-400);
+  font-size: 0.875rem;
+}
+
+.edit-urls-modal-changes-count {
+  color: var(--color-gray-400);
+  font-size: 0.875rem;
+}
+
+.edit-urls-modal-footer-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.edit-urls-modal-spinner-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.edit-urls-modal-spinner {
+  animation: var(--animate-spin);
+  border-radius: 9999px;
+  height: 1rem;
+  width: 1rem;
+  border: 2px solid var(--color-gray-300);
+  border-top-color: transparent;
+}

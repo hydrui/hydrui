@@ -1,0 +1,96 @@
+.file-preview-container {
+  height: 50%;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem;
+  overflow: hidden;
+}
+
+.file-preview-loading {
+  height: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-preview-spinner {
+  animation: var(--animate-spin);
+  border-radius: 9999px;
+  height: 2rem;
+  width: 2rem;
+  border: 2px solid var(--color-gray-400);
+  border-top-color: var(--color-white);
+}
+
+.file-preview-empty-message {
+  text-align: center;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  color: var(--color-gray-400);
+  font-size: var(--text-sm);
+}
+
+.file-preview-viewer {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-gray-900);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  position: relative;
+}
+
+.file-preview-error-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: color-mix(in oklab, var(--color-red-500) 10%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-preview-error-message {
+  color: var(--color-red-400);
+}
+
+.file-preview-metadata {
+  margin-top: 0.5rem;
+  font-size: var(--text-xs);
+  flex: none;
+}
+
+.file-preview-metadata-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  line-height: 16px;
+}
+
+.file-preview-metadata-label {
+  color: var(--color-gray-400);
+}
+
+.file-preview-ratings-divider {
+  border-top-width: 1px;
+  border-top-style: solid;
+  border-top-color: var(--color-gray-700);
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.file-preview-ratings-title {
+  margin-bottom: 4px;
+}
+
+.file-preview-rating-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.file-preview-rating-label {
+  font-size: var(--text-xs);
+  color: var(--color-gray-400);
+}

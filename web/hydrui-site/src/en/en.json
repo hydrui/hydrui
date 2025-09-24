@@ -1,0 +1,12 @@
+{
+  "layout": "layouts/base",
+  "lang": "en",
+  "strings": {
+    "title": "Hydrui",
+    "home": "Home",
+    "docs": "Docs",
+    "download": "Download",
+    "github": "GitHub",
+    "login": "Log in"
+  }
+}

@@ -1,0 +1,193 @@
+.import-urls-modal-container {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow-y: auto;
+}
+
+.import-urls-modal-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.import-urls-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: var(--color-black);
+  opacity: 0.5;
+}
+
+.import-urls-modal-content {
+  position: relative;
+  background-color: var(--color-gray-800);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--tw-shadow-xl);
+  max-width: var(--container-4xl);
+  width: 100%;
+}
+
+.import-urls-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-gray-700);
+}
+
+.import-urls-modal-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.import-urls-modal-close-button {
+  color: var(--color-gray-400);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.import-urls-modal-close-button:hover {
+  color: var(--color-white);
+}
+
+.import-urls-modal-close-icon {
+  height: 1.5rem;
+  width: 1.5rem;
+}
+
+.import-urls-modal-section {
+  padding: 1rem;
+}
+
+.import-urls-modal-space-y {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.import-urls-modal-label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-gray-300);
+  margin-bottom: 0.5rem;
+}
+
+.import-urls-modal-textarea {
+  width: 100%;
+  height: 8rem;
+  background-color: var(--color-gray-700);
+  border: 1px solid var(--color-gray-600);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem;
+  color: var(--color-white);
+}
+
+.import-urls-modal-service-tabs {
+  border-bottom: 1px solid var(--color-gray-700);
+}
+
+.import-urls-modal-tabs-list {
+  display: flex;
+}
+
+.import-urls-modal-tab {
+  padding: 0.5rem 1rem;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.import-urls-modal-tab-active {
+  color: var(--color-blue-400);
+  border-bottom: 2px solid var(--color-blue-400);
+}
+
+.import-urls-modal-tab-inactive {
+  color: var(--color-gray-400);
+}
+
+.import-urls-modal-tab-inactive:hover {
+  color: var(--color-gray-300);
+}
+
+.import-urls-modal-tag-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.import-urls-modal-empty-message {
+  text-align: center;
+  padding: 1rem 0;
+  color: var(--color-gray-400);
+}
+
+.import-urls-modal-tag-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.import-urls-modal-tag-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.import-urls-modal-tag-item:hover {
+  background-color: var(--color-gray-700);
+}
+
+.import-urls-modal-tag-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.import-urls-modal-tag-action-buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.import-urls-modal-remove-button {
+  padding: 0.25rem;
+  color: var(--color-gray-400);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.import-urls-modal-remove-button:hover {
+  color: var(--color-red-400);
+}
+
+.import-urls-modal-action-icon {
+  height: 1rem;
+  width: 1rem;
+}
+
+.import-urls-modal-error {
+  color: var(--color-red-400);
+  font-size: var(--text-sm);
+}
+
+.import-urls-modal-progress {
+  color: var(--color-gray-300);
+  font-size: var(--text-sm);
+}
+
+.import-urls-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-top: 1px solid var(--color-gray-700);
+}

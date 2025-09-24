@@ -1,0 +1,61 @@
+---
+layout: "layouts/base"
+lang: "en"
+strings: {
+  title: "htpasswd editor"
+}
+---
+<style>
+  #htpasswd-form table {
+    width: 100%;
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-primary);
+  }
+  #htpasswd-form table th {
+    text-align: left;
+    font-weight: bold;
+  }
+  #htpasswd-form .username-column,
+  #htpasswd-form .password-column {
+    width: 200px;
+  }
+  #htpasswd-form .username-column input,
+  #htpasswd-form .password-column input {
+    width: 180px;
+  }
+</style>
+<main>
+  <div class="container">
+    <h1>htpasswd editor</h1>
+    <noscript>This tool requires JavaScript to function. Sorry!</noscript>
+    <form action="" id="htpasswd-form">
+      <!-- Prevent action buttons from being selected as the default form button... -->
+      <button style="position: absolute; left: -9999px;"></button>
+      <table>
+        <thead>
+          <tr>
+            <th class="username-column"><label for="username">Username</label></th>
+            <th class="password-column"><label for="password">Password</label></th>
+            <th class="actions-column">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="users"></tbody>
+        <tfoot>
+          <tr>
+            <td class="username-column"><input id="username" name="username" type="text"></td>
+            <td class="password-column"><input id="password" name="password" type="password"></td>
+            <td class="actions-column"><input type="submit" value="Add" class="button button-primary button-small"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </form>
+    <input type="file" id="select-file" accept="text/plain">
+    <button class="button button-primary button-small" id="download-button">Download</button>
+    <button class="button button-secondary button-small" id="clear-button">Clear</button>
+    <h3>htpasswd data</h3>
+    <p>
+      <textarea id="htpasswd-textarea" cols="80" rows="10"></textarea>
+    </p>
+  </div>
+</main>
+<script src="./htpasswd.ts" type="module"></script>

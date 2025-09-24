@@ -1,0 +1,20 @@
+{
+  "name": "hydrui-site",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npx @11ty/eleventy",
+    "dev": "npx @11ty/eleventy --serve",
+    "test": "echo \"Nothing to test\""
+  },
+  "devDependencies": {
+    "@11ty/eleventy": "^3",
+    "@11ty/eleventy-plugin-vite": "^7",
+    "@shopify/prettier-plugin-liquid": "^1",
+    "html-minifier": "^4",
+    "prettier": "^3",
+    "sass": "^1"
+  },
+  "license": "ISC"
+}

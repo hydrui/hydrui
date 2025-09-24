@@ -1,0 +1,14 @@
+{
+  "name": "hydrui-util",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Utilities for Hydrui development",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo \"Nothing to build\"",
+    "pack": "tsx scripts/pack.ts",
+    "test": "echo \"Nothing to test\""
+  },
+  "license": "ISC"
+}

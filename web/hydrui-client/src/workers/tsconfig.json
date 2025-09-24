@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable",
+      "WebWorker",
+      "WebWorker.ImportScripts"
+    ]
+  },
+  "extends": "../../tsconfig.json"
+}

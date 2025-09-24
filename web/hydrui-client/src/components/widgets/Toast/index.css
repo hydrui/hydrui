@@ -1,0 +1,122 @@
+.toast-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.toast {
+  position: relative;
+  overflow: hidden;
+  width: 20rem;
+  padding: 1rem;
+  border-radius: 0.25rem;
+  border-width: 1px;
+  background-color: var(--color-gray-800);
+}
+
+.toast-error {
+  background-color: color-mix(in oklab, var(--color-gray-700) 50%, transparent);
+  backdrop-filter: blur(var(--blur-xs));
+  border: 1px solid var(--color-red-500);
+  color: var(--color-red-100);
+}
+
+.toast-warning {
+  background-color: color-mix(in oklab, var(--color-gray-700) 50%, transparent);
+  backdrop-filter: blur(var(--blur-xs));
+  border: 1px solid var(--color-yellow-500);
+  color: var(--color-yellow-100);
+}
+
+.toast-info {
+  background-color: color-mix(in oklab, var(--color-gray-700) 50%, transparent);
+  backdrop-filter: blur(var(--blur-xs));
+  border: 1px solid var(--color-blue-500);
+  color: var(--color-blue-100);
+}
+
+.toast-success {
+  background-color: color-mix(in oklab, var(--color-gray-700) 50%, transparent);
+  backdrop-filter: blur(var(--blur-xs));
+  border: 1px solid var(--color-green-500);
+  color: var(--color-green-100);
+}
+
+.toast-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.toast-message {
+  flex-grow: 1;
+}
+
+.toast-close-button {
+  color: currentColor;
+  opacity: 0.6;
+  transition-property: opacity;
+  transition-duration: var(--default-transition-duration);
+  transition-timing-function: var(--default-transition-timing-function);
+}
+
+.toast-close-button:hover {
+  opacity: 1;
+}
+
+.toast-close-icon {
+  height: 1.25rem;
+  width: 1.25rem;
+  cursor: pointer;
+}
+
+.toast-cancel-button {
+  color: var(--color-gray-400);
+  background-color: color-mix(in oklab, var(--color-gray-700) 50%, transparent);
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  margin-top: 0.5rem;
+  border-radius: var(--radius-md);
+}
+
+.toast-cancel-button:hover {
+  color: var(--color-gray-300);
+}
+
+.toast-progress-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 0.25rem;
+  background-color: color-mix(in oklab, var(--color-black) 10%, transparent);
+}
+
+.toast-progress-bar {
+  height: 100%;
+  transition-property: all;
+  transition-duration: 100ms;
+  transition-timing-function: linear;
+}
+
+.toast-progress-bar-error {
+  background-color: var(--color-red-500);
+}
+
+.toast-progress-bar-warning {
+  background-color: var(--color-yellow-500);
+}
+
+.toast-progress-bar-info {
+  background-color: var(--color-blue-500);
+}
+
+.toast-progress-bar-success {
+  background-color: var(--color-green-500);
+}

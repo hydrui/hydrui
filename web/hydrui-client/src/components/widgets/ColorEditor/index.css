@@ -1,0 +1,44 @@
+.color-editor {
+  display: flex;
+  flex-direction: column;
+}
+
+.color-editor-row {
+  display: flex;
+  flex-direction: row;
+  margin: 0.25rem;
+}
+
+.color-editor-row label {
+  font-weight: bold;
+  margin-right: 0.5rem;
+  width: 100px;
+}
+
+.color-editor-row label::after {
+  content: ":";
+}
+
+.color-editor-row-hex-input {
+  width: 100px;
+  background-color: var(--color-gray-700);
+  border: 1px solid var(--color-gray-600);
+  border-radius: var(--radius-sm);
+  margin-right: 0.5rem;
+}
+
+.color-editor-row-component-input {
+  width: 50px;
+  background-color: var(--color-gray-700);
+  border: 1px solid var(--color-gray-600);
+  border-radius: var(--radius-sm);
+  margin-right: 0.5rem;
+}
+
+.color-editor-row-colorswatch {
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid var(--color-gray-600);
+  margin: 0.25rem;
+}

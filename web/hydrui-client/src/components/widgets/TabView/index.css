@@ -1,0 +1,129 @@
+.tab-view-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.tab-bar {
+  display: flex;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--color-gray-600);
+}
+
+.tab-item {
+  display: flex;
+  align-items: center;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-right: 1px solid var(--color-gray-600);
+  border-top: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tab-item:focus {
+  outline-style: none;
+}
+
+@media (forced-colors: active) {
+  .tab-item:focus {
+    outline-offset: 2px;
+    outline: 2px solid transparent;
+  }
+}
+
+.tab-item:focus {
+  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0
+    calc(2px + var(--tw-ring-offset-width)) var(--color-blue-500);
+  --tw-ring-inset: inset;
+  box-shadow:
+    var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
+    var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+}
+
+.tab-item-active {
+  color: var(--color-blue-300);
+}
+
+.tab-item-selected {
+  background-color: var(--color-gray-600);
+}
+
+.tab-item-normal {
+  color: var(--color-white);
+}
+
+.tab-item:hover:not(.tab-item-active) {
+  background-color: color-mix(in oklab, var(--color-gray-600) 50%, transparent);
+}
+
+.tab-item-virtual {
+  border-top-color: var(--color-purple-500);
+}
+
+.tab-item-search {
+  border-top-color: var(--color-blue-500);
+}
+
+.tab-item-standard {
+  border-top-color: var(--color-green-500);
+}
+
+.tab-item-label {
+  margin-right: 0.5rem;
+}
+
+.tab-item-icon {
+  height: 1rem;
+  width: 1rem;
+  margin-right: 0.25rem;
+}
+
+.tab-virtual-indicator {
+  color: var(--color-purple-400);
+  margin-right: 0.25rem;
+}
+
+.tab-close-button {
+  color: var(--color-gray-400);
+}
+
+.tab-close-button:hover {
+  color: var(--color-white);
+}
+
+.tab-close-button:focus {
+  color: var(--color-white);
+  outline-style: none;
+}
+
+@media (forced-colors: active) {
+  .tab-close-button:focus {
+    outline-offset: 2px;
+    outline: 2px solid transparent;
+  }
+}
+
+.tab-close-icon {
+  height: 1rem;
+  width: 1rem;
+  cursor: pointer;
+}
+
+.tab-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+  background-color: var(--color-gray-800);
+}
+
+.tab-empty-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-gray-400);
+}

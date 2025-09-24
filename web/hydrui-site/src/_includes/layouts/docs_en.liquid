@@ -1,0 +1,44 @@
+---
+layout: "layouts/base"
+---
+<main>
+  <div class="container">
+    <div class="contents-with-sidebar">
+      <nav class="sidebar">
+        <ul>
+          <li>
+            <b>Hydrui Documentation</b>
+            <ul>
+              <li><a href="/{{lang}}/docs/">Introduction</a></li>
+              <li><a href="/{{lang}}/docs/alternatives/">Alternatives</a></li>
+              <li>
+                Basic Usage
+                <ul>
+                  <li><a href="/{{lang}}/docs/basic-usage/running-hydrus-network/">Running hydrus network</a></li>
+                  <li><a href="/{{lang}}/docs/basic-usage/getting-started/">Getting started</a></li>
+                </ul>
+              </li>
+              <li>
+                <a href="/{{lang}}/docs/self-hosting/">Self-hosting</a>
+                <ul>
+                  <li><a href="/{{lang}}/docs/self-hosting/run-locally/">Run locally</a></li>
+                  <li><a href="/{{lang}}/docs/self-hosting/compile-from-source/">Compile from source</a></li>
+                  <li><a href="/{{lang}}/docs/self-hosting/docker/">Using Docker/Podman</a></li>
+                  <li><a href="/{{lang}}/docs/self-hosting/static-site/">Using static site hosting</a></li>
+                  <li><a href="/{{lang}}/docs/self-hosting/nixos/">Using NixOS</a></li>
+                </ul>
+              </li>
+              <li><a href="/{{lang}}/docs/known-limitations/">Known limitations</a></li>
+              <li><a href="/{{lang}}/docs/server-mode/">Server vs Client-only mode</a></li>
+              <li><a href="/{{lang}}/docs/faq/">FAQ</a></li>
+              <li><a href="/{{lang}}/docs/thirdparty/">Third Party Licenses</a></li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+      <div class="contents">
+        {{ content }}
+      </div>
+    </div>
+  </div>
+</main>

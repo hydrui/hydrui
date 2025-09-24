@@ -1,0 +1,98 @@
+.tag-list-container {
+  height: 50%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tag-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  border-bottom: 1px solid var(--color-gray-700);
+}
+
+.tag-list-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: 20px;
+  color: var(--color-gray-300);
+  padding: 0.25rem;
+}
+
+.tag-list-loading {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+.tag-list-spinner {
+  animation: var(--animate-spin);
+  border-radius: 9999px;
+  height: 2rem;
+  width: 2rem;
+  border: 2px solid var(--color-gray-400);
+  border-top-color: var(--color-white);
+}
+
+/* Tag list content */
+.tag-list-content {
+  overflow-y: auto;
+  flex-grow: 1;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.tag-list-empty {
+  text-align: center;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  color: var(--color-gray-400);
+  font-size: var(--text-sm);
+}
+
+.tag-list > * + * {
+  margin-top: 0.25rem;
+}
+
+/* Tag list entry */
+.tag-list-entry {
+  display: flex;
+  align-items: center;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
+  font-size: var(--text-sm);
+  border-radius: 0.25rem;
+  line-height: 20px;
+  cursor: pointer;
+  margin-bottom: 4px;
+}
+
+.tag-list-entry:hover {
+  background-color: var(--color-gray-600);
+}
+
+.tag-list-entry.selected {
+  background-color: var(--color-blue-600);
+}
+
+.tag-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-grow: 1;
+}
+
+.tag-count {
+  color: var(--color-gray-400);
+  font-size: var(--text-xs);
+  margin-right: 0.25rem;
+}

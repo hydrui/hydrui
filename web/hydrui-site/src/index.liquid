@@ -1,0 +1,18 @@
+---
+layout: "layouts/base"
+lang: "en"
+---
+<main>
+  <div class="container">
+    <div class="hero">
+      <h2>Select Language</h2>
+      <ul>
+        {% for language in languages %}
+          <li>
+            <a href="/{{language.lang}}">{{ language.name }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</main>

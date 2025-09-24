@@ -1,0 +1,35 @@
+{
+  "name": "hydrui",
+  "workspaces": [
+    "web/hydrui-client",
+    "web/hydrui-site",
+    "web/hydrui-util"
+  ],
+  "scripts": {
+    "build": "npx vite build ./web/hydrui-client --outDir ../../dist --emptyOutDir",
+    "build:site": "./build-site.sh",
+    "dev:client": "npm run dev --workspace=web/hydrui-client",
+    "dev:site": "npm run dev --workspace=web/hydrui-site",
+    "generate": "npm run generate:go && npm run generate:license && npm run generate:pack && npm run generate:prettier",
+    "generate:go": "go generate ./...",
+    "generate:license": "go run ./cmd/gen-license-data ./web/hydrui-client/public/thirdparty.html ./web/hydrui-site/src/en/docs/thirdparty/index.html",
+    "generate:pack": "npm run build --workspaces && npm run pack --workspace=web/hydrui-util",
+    "generate:prettier": "npx prettier --write .",
+    "lint": "npm run lint:eslint && npm run lint:format && npm run lint:license",
+    "lint:eslint": "eslint --max-warnings 0",
+    "lint:format": "npx prettier --check .",
+    "lint:license": "npx license-checker-rseidelsohn --summary --onlyAllow 'MIT;ISC;Apache-2.0;Python-2.0;CC-BY-4.0;BSD-2-Clause;BSD-3-Clause' --excludePrivatePackages",
+    "test": "npm run test --workspaces"
+  },
+  "devDependencies": {
+    "@prettier/plugin-xml": "^3",
+    "@trivago/prettier-plugin-sort-imports": "^5",
+    "eslint": "^9",
+    "eslint-plugin-react": "^7",
+    "eslint-plugin-react-hooks": "^5",
+    "eslint-plugin-react-refresh": "^0.4",
+    "prettier": "^3",
+    "tsx": "^4.20.3",
+    "typescript-eslint": "^8"
+  }
+}

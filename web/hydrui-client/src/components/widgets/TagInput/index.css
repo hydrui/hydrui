@@ -1,0 +1,64 @@
+.tag-input-container {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.tag-input-field {
+  width: 100%;
+  background-color: var(--color-gray-700);
+  border: 1px solid var(--color-gray-600);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem;
+  color: var(--color-white);
+}
+
+.tag-input-field:focus {
+  outline: none;
+  border-color: var(--color-blue-500);
+  box-shadow: 0 0 0 2px var(--color-blue-500, rgba(59, 130, 246, 0.5));
+}
+
+.tag-input-field::placeholder {
+  color: var(--color-gray-400);
+}
+
+.tag-input-field:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tag-suggestions {
+  position: absolute;
+  margin-top: 0.25rem;
+  width: 100%;
+  max-height: 15rem;
+  overflow-y: auto;
+  background-color: var(--color-gray-700);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--tw-shadow-lg);
+  z-index: 10;
+}
+
+.tag-suggestion-item {
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tag-suggestion-item:hover {
+  background-color: var(--color-gray-600);
+}
+
+.tag-suggestion-item.selected {
+  background-color: var(--color-blue-600);
+}
+
+.tag-suggestion-count {
+  color: var(--color-gray-400);
+  font-size: var(--text-sm);
+}

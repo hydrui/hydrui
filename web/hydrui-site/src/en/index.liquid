@@ -1,0 +1,169 @@
+---
+bodyClass: "landing-page"
+---
+<main>
+  <div class="container">
+    <div class="hero">
+      <h2>Remotely manage hydrus network.</h2>
+      <p>Hydrus network manages your media files. Hydrui manages hydrus network.</p>
+      <div class="buttons">
+        <a class="button button-primary" href="/client"> Try Now! </a>
+        <a class="button button-secondary" href="/{{lang}}/docs"> Self-Host </a>
+      </div>
+    </div>
+    <svg class="grid-animation" viewBox="0 0 500 150" xmlns="http://www.w3.org/2000/svg">
+      <style>
+        .stop {
+          stop-color: currentcolor;
+        }
+      </style>
+      <!-- Adding noise reduces visible banding in gradients but it seems to tank performance. -->
+      <filter id='noise-filter'>
+        <feTurbulence
+          type='fractalNoise'
+          baseFrequency='2'
+          numOctaves='3'
+          stitchTiles='noStitch' />
+        <feComposite in2="SourceGraphic" operator="in" />
+      </filter>
+      <defs>
+        <linearGradient id="vertical" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-opacity="0" class="stop" />
+          <stop offset="100%" stop-opacity="1" class="stop" />
+        </linearGradient>
+        <linearGradient id="horizontal" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0%" stop-opacity="0" class="stop" />
+          <stop offset="50%" stop-opacity="1" class="stop" />
+          <stop offset="100%" stop-opacity="0" class="stop" />
+        </linearGradient>
+        <radialGradient id="background">
+          <stop offset="0%" stop-opacity="0.75" class="stop" />
+          <stop offset="50%" stop-opacity="0.4" class="stop" />
+          <stop offset="90%" stop-opacity="0.05" class="stop" />
+          <stop offset="100%" stop-opacity="0.0" class="stop" />
+        </radialGradient>
+      </defs>
+      <g>
+        <rect width="500" height="400" fill="url(#background)" opacity="0.5"></rect>
+        <g fill="url(#horizontal)">
+          <rect width="500" height="2" y="200" opacity="1">
+            <animate attributeName="y" values="200;0" dur="5s" repeatCount="indefinite" calcMode="spline"
+        keySplines="0.1 0.5 0.5 1;" />
+            <animate attributeName="opacity" values="1;0" dur="5s" repeatCount="indefinite" calcMode="spline"
+        keySplines="0.1 0.5 0.5 1;" />
+            <animate attributeName="height" values="2;0" dur="5s" repeatCount="indefinite" calcMode="spline"
+        keySplines="0.1 0.5 0.5 1;" />
+          </rect>
+          <rect width="500" height="2" y="200" opacity="1">
+            <animate attributeName="y" values="200;0" dur="5s" repeatCount="indefinite" begin="1s" calcMode="spline"
+        keySplines="0.1 0.5 0.5 1;" />
+            <animate attributeName="opacity" values="1;0" dur="5s" repeatCount="indefinite" begin="1s" calcMode="spline"
+        keySplines="0.1 0.5 0.5 1;" />
+            <animate attributeName="height" values="2;0" dur="5s" repeatCount="indefinite" begin="1s" calcMode="spline"
+        keySplines="0.1 0.5 0.5 1;" />
+          </rect>
+          <rect width="500" height="2" y="200" opacity="1">
+            <animate attributeName="y" values="200;0" dur="5s" repeatCount="indefinite" begin="2s" calcMode="spline"
+        keySplines="0.1 0.5 0.5 1;" />
+            <animate attributeName="opacity" values="1;0" dur="5s" repeatCount="indefinite" begin="2s" calcMode="spline"
+        keySplines="0.1 0.5 0.5 1;" />
+            <animate attributeName="height" values="2;0" dur="5s" repeatCount="indefinite" begin="2s" calcMode="spline"
+        keySplines="0.1 0.5 0.5 1;" />
+          </rect>
+          <rect width="500" height="2" y="200" opacity="1">
+            <animate attributeName="y" values="200;0" dur="5s" repeatCount="indefinite" begin="3s" calcMode="spline"
+        keySplines="0.1 0.5 0.5 1;" />
+            <animate attributeName="opacity" values="1;0" dur="5s" repeatCount="indefinite" begin="3s" calcMode="spline"
+        keySplines="0.1 0.5 0.5 1;" />
+            <animate attributeName="height" values="2;0" dur="5s" repeatCount="indefinite" begin="3s" calcMode="spline"
+        keySplines="0.1 0.5 0.5 1;" />
+          </rect>
+          <rect width="500" height="2" y="200" opacity="1">
+            <animate attributeName="y" values="200;0" dur="5s" repeatCount="indefinite" begin="4s" calcMode="spline"
+        keySplines="0.1 0.5 0.5 1;" />
+            <animate attributeName="opacity" values="1;0" dur="5s" repeatCount="indefinite" begin="4s" calcMode="spline"
+        keySplines="0.1 0.5 0.5 1;" />
+            <animate attributeName="height" values="2;0" dur="5s" repeatCount="indefinite" begin="4s" calcMode="spline"
+        keySplines="0.1 0.5 0.5 1;" />
+          </rect>
+        </g>
+        <g fill="url(#vertical)">
+          <rect width="1" height="200" x="399.5" transform="skewX(30)" opacity="0.45"></rect>
+          <rect width="1" height="200" x="349.5" transform="skewX(20)" opacity="0.75"></rect>
+          <rect width="1" height="200" x="299.5" transform="skewX(10)" opacity="0.9"></rect>
+          <rect width="1" height="200" x="249.5"></rect>
+          <rect width="1" height="200" x="199.5" transform="skewX(-10)" opacity="0.9"></rect>
+          <rect width="1" height="200" x="149.5" transform="skewX(-20)" opacity="0.75"></rect>
+          <rect width="1" height="200" x="99.5" transform="skewX(-30)" opacity="0.45"></rect>
+          <animate attributeName="opacity" values="0;1" dur="2.5s" />
+        </g>
+        <animate attributeName="opacity" values="0;1" dur="2s" />
+      </g>
+    </svg>
+  </div>
+</main>
+<section class="feature-rich">
+  <div class="container">
+    <div>
+      <h2>Feature rich</h2>
+      <p>
+        Upload files, edit tags and URLs, and more. Hydrui aims to support all of the hydrus client's API functionality.
+      </p>
+    </div>
+    <img
+      src="/assets/images/features.png"
+      width="300"
+      height="250"
+      title="Hydrui supports many of the most useful management features of the hydrus client, like editing tags or finding duplicates."
+      loading="lazy"
+    >
+  </div>
+</section>
+<section class="private-and-secure">
+  <div class="container">
+    <div>
+      <h2>Private and secure</h2>
+      <p>Hydrui doesn't use telemetry or phone home.</p>
+    </div>
+    <img
+      src="/assets/images/security.png"
+      width="300"
+      height="250"
+      title="As a bonus, if you run Hydrui in server mode, it will attempt to prevent itself from making any non-local requests, blocking data exfiltration. You still need to trust that the server component isn't compromised :)"
+      loading="lazy"
+    >
+  </div>
+</section>
+<section class="open-source">
+  <div class="container">
+    <div>
+      <h2>Open source</h2>
+      <p>
+        Hydrui is free and open source software. You can find the source code on
+        <a href="https://github.com/hydrui/hydrui">GitHub</a>.
+      </p>
+    </div>
+    <img
+      src="/assets/images/open-source.png"
+      width="300"
+      height="250"
+      title="The whole project is permissively licensed. Hope it is useful!"
+      loading="lazy"
+    >
+  </div>
+</section>
+<section class="lightweight">
+  <div class="container">
+    <div>
+      <h2>Lightweight</h2>
+      <p>Hydrui has fewer dependencies is less complex than most modern web apps.</p>
+    </div>
+    <img
+      src="/assets/images/lightweight.png"
+      width="300"
+      height="250"
+      title="Hydrui can even run pretty well in emerging browsers like Ladybird."
+      loading="lazy"
+    >
+  </div>
+</section>

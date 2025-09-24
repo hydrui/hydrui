@@ -1,0 +1,1006 @@
+import {
+  ArrowPathIcon,
+  ArrowTopRightOnSquareIcon,
+  ArrowUpTrayIcon,
+  ExclamationCircleIcon,
+  LinkIcon,
+  MinusCircleIcon,
+  PlusIcon,
+  TagIcon,
+} from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/solid";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+
+import { FileMetadata } from "@/api/types";
+import EditTagsModal from "@/components/modals/EditTagsModal/EditTagsModal";
+import EditUrlsModal from "@/components/modals/EditUrlsModal/EditUrlsModal";
+import FileViewerModal from "@/components/modals/FileViewerModal/FileViewerModal";
+import ImportUrlsModal from "@/components/modals/ImportUrlsModal/ImportUrlsModal";
+import ScrollView from "@/components/widgets/ScrollView/ScrollView";
+import { useContextMenu } from "@/hooks/useContextMenu";
+import { useShortcut } from "@/hooks/useShortcut";
+import { client } from "@/store/apiStore";
+import { MenuItem } from "@/store/contextMenuStore";
+import { usePageStore } from "@/store/pageStore";
+import { usePreferencesStore } from "@/store/preferencesStore";
+import { useSearchStore } from "@/store/searchStore";
+import { useToastStore } from "@/store/toastStore";
+
+import { SearchBar } from "./SearchBar";
+import { Thumbnail } from "./Thumbnail";
+import "./index.css";
+
+// PageView component to display files in a grid
+const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
+  const {
+    actions: {
+      addVirtualPage,
+      setPage,
+      setSelectedFiles,
+      addSelectedFiles,
+      clearSelectedFiles,
+      updatePageContents,
+      refreshPage,
+      setActiveFileId,
+      markActiveFileAsBetter,
+      removeFilesFromPage,
+    },
+    selectedFilesByPage,
+    activeFileByPage,
+    files,
+    isLoadingFiles,
+    clearDuringLoad,
+    error,
+    pageType,
+  } = usePageStore();
+
+  const { thumbnailSize } = usePreferencesStore();
+
+  const {
+    actions: { addToast, removeToast, updateToastProgress },
+  } = useToastStore();
+  const { searchStatus, searchTags, searchError } = useSearchStore();
+  const { showContextMenu } = useContextMenu();
+
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [, setFocusedFileId] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const inverseSelection = useRef(false);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  const [dragEnd, setDragEnd] = useState<{ x: number; y: number } | null>(null);
+  const dragStartSelectionRef = useRef<number[]>([]);
+
+  const selectAllFiles = useCallback(() => {
+    const { files } = usePageStore.getState();
+    setSelectedFiles(
+      pageKey,
+      files.map((f) => f.file_id),
+    );
+  }, [pageKey, setSelectedFiles]);
+
+  const findSimilarFiles = async (distance: number) => {
+    const selectedFiles = selectedFilesByPage[pageKey] || [];
+    const selectedFileHashes = files
+      .filter((f) => selectedFiles.includes(f.file_id))
+      .map((f) => f.hash);
+    const query =
+      "system:similar to " +
+      selectedFileHashes.join(", ") +
+      " with distance of " +
+      distance;
+    let abortController: AbortController | null = null;
+    if (typeof AbortController !== "undefined") {
+      abortController = new AbortController();
+    }
+    const toast = addToast(
+      "Searching for similar files...",
+      "info",
+      undefined,
+      () => {
+        abortController?.abort();
+        removeToast(toast);
+      },
+    );
+    const results = await client.searchFiles(
+      [query],
+      undefined,
+      abortController?.signal,
+    );
+    removeToast(toast);
+    if (abortController?.signal.aborted) {
+      return;
+    }
+    // Open a new virtual page with the results
+    addVirtualPage(query, {
+      name: "files (" + results.file_ids.length + ")",
+      fileIds: results.file_ids,
+    });
+    setPage(query, "virtual");
+  };
+
+  useShortcut({
+    "Control+a": (e) => {
+      e.preventDefault();
+      selectAllFiles();
+    },
+  });
+
+  const viewMenuItems: MenuItem[] = [
+    {
+      id: "select-all",
+      label: "Select All",
+      onClick: selectAllFiles,
+    },
+    {
+      id: "divider4",
+      divider: true,
+      label: "",
+    },
+    {
+      id: "import-url",
+      label: "Import URL",
+      icon: <ArrowUpTrayIcon />,
+      onClick: () => {
+        setShowImportUrlsModal(true);
+      },
+    },
+    {
+      id: "refresh",
+      label: "Refresh",
+      icon: <ArrowPathIcon />,
+      onClick: () => {
+        refreshPage(pageKey, pageType);
+      },
+    },
+  ];
+
+  const GAP_SIZE = 16;
+
+  // Calculate grid dimensions based on container width
+  const [gridDimensions, setGridDimensions] = useState({ cols: 4, rows: 1 });
+
+  useLayoutEffect(() => {
+    const calculateDimensions = () => {
+      if (!gridRef.current) return;
+      const width = gridRef.current.clientWidth - 32; // Account for container padding
+      const cols = Math.floor(width / (thumbnailSize + GAP_SIZE));
+      const rows = Math.ceil(files.length / cols);
+      setGridDimensions({ cols, rows });
+    };
+
+    calculateDimensions();
+
+    // ResizeObserver isn't supported in Servo yet, so let's have a fallback for now.
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(calculateDimensions);
+      if (gridRef.current) {
+        resizeObserver.observe(gridRef.current);
+      }
+    } else {
+      window.addEventListener("resize", calculateDimensions);
+    }
+
+    return () => {
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      } else {
+        window.removeEventListener("resize", calculateDimensions);
+      }
+    };
+  }, [files.length, thumbnailSize]);
+
+  // Handle drag and drop
+  useEffect(() => {
+    const handleDrop = async (event: DragEvent) => {
+      event.preventDefault();
+      for (const file of event.dataTransfer!.files) {
+        let abortController: AbortController | null = null;
+        if (typeof AbortController !== "undefined") {
+          abortController = new AbortController();
+        }
+        const toastId = addToast(
+          `Uploading ${file.name}...`,
+          "info",
+          undefined,
+          () => {
+            abortController?.abort();
+            removeToast(toastId);
+          },
+        );
+        try {
+          const response = await client.uploadFile(
+            file,
+            (progress) => {
+              updateToastProgress(toastId, progress);
+            },
+            abortController?.signal,
+          );
+          addToast(
+            `Uploaded ${file.name}${response.note ? `: ${response.note}` : ""}`,
+            "success",
+            5000,
+          );
+          await client.addFiles({
+            hashes: [response.hash],
+            page_key: pageKey,
+          });
+          await updatePageContents(pageKey, pageType, false);
+        } finally {
+          removeToast(toastId);
+        }
+      }
+    };
+
+    const handleDragOver = (event: DragEvent) => {
+      event.preventDefault();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "copy";
+        event.dataTransfer.effectAllowed = "copy";
+      }
+    };
+
+    const handleDragEnter = (event: DragEvent) => {
+      event.preventDefault();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "copy";
+        event.dataTransfer.effectAllowed = "copy";
+      }
+    };
+
+    window.addEventListener("drop", handleDrop);
+    window.addEventListener("dragover", handleDragOver);
+    window.addEventListener("dragenter", handleDragEnter);
+    return () => {
+      window.removeEventListener("drop", handleDrop);
+      window.removeEventListener("dragover", handleDragOver);
+      window.removeEventListener("dragenter", handleDragEnter);
+    };
+  }, [
+    pageKey,
+    setSelectedFiles,
+    addToast,
+    removeToast,
+    updateToastProgress,
+    pageType,
+    updatePageContents,
+  ]);
+
+  // Modal state
+  const [modalIndex, setModalIndex] = useState<number>(-1);
+
+  // State for tag edit modal
+  const [showEditTagsModal, setShowEditTagsModal] = useState(false);
+  const [showEditUrlsModal, setShowEditUrlsModal] = useState(false);
+  const [showImportUrlsModal, setShowImportUrlsModal] = useState(false);
+  const [tagEditFiles, setTagEditFiles] = useState<FileMetadata[]>([]);
+  const [urlEditFiles, setUrlEditFiles] = useState<FileMetadata[]>([]);
+
+  // Handle click outside of file items
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (gridRef.current && event.target instanceof Element) {
+        // Check if the click was on the grid but not on a file item
+        if (
+          gridRef.current.contains(event.target) &&
+          !event.target.closest("[data-file-item]") &&
+          !event.shiftKey &&
+          !event.ctrlKey
+        ) {
+          clearSelectedFiles(pageKey);
+          setActiveFileId(pageKey, null);
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [pageKey, clearSelectedFiles, setActiveFileId]);
+
+  const handleFileClick = (fileId: number, event: React.MouseEvent) => {
+    if (event.detail === 2) {
+      // Double click - open modal
+      const fileIndex = files.findIndex((f) => f.file_id === fileId);
+      if (fileIndex !== -1) {
+        setModalIndex(fileIndex);
+      }
+      return;
+    }
+
+    const selectedFiles = selectedFilesByPage[pageKey] || [];
+    const activeFileId = activeFileByPage[pageKey];
+
+    if (event.ctrlKey || event.metaKey) {
+      // Toggle selection with Ctrl/Cmd
+      if (selectedFiles.includes(fileId)) {
+        setSelectedFiles(
+          pageKey,
+          selectedFiles.filter((id) => id !== fileId),
+        );
+        if (activeFileId === fileId) {
+          setActiveFileId(pageKey, null);
+        }
+      } else {
+        addSelectedFiles(pageKey, [fileId]);
+        if (!activeFileId) {
+          setActiveFileId(pageKey, fileId);
+        }
+      }
+    } else if (event.shiftKey && selectedFiles.length > 0 && activeFileId) {
+      // Select range with Shift
+      const currentIndex = files.findIndex((f) => f.file_id === fileId);
+      const activeIndex = files.findIndex((f) => f.file_id === activeFileId);
+
+      if (currentIndex !== -1 && activeIndex !== -1) {
+        const start = Math.min(currentIndex, activeIndex);
+        const end = Math.max(currentIndex, activeIndex);
+        const rangeIds = files.slice(start, end + 1).map((f) => f.file_id);
+
+        setSelectedFiles(pageKey, rangeIds);
+      }
+    } else {
+      // Regular click - select only this file
+      setSelectedFiles(pageKey, [fileId]);
+      setActiveFileId(pageKey, fileId);
+    }
+  };
+
+  const handleViewContextMenu = (event: React.MouseEvent) => {
+    event.preventDefault();
+    showContextMenu(event, viewMenuItems);
+  };
+
+  const handleFileContextMenu = (event: React.MouseEvent, fileId: number) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    let selectedFiles = selectedFilesByPage[pageKey] || [];
+
+    // If the file isn't in the current selection, select only it
+    if (!selectedFiles.includes(fileId)) {
+      setSelectedFiles(pageKey, [fileId]);
+      selectedFiles = [fileId];
+    }
+    // Always make this file active
+    setActiveFileId(pageKey, fileId);
+
+    // Get the selected files' metadata
+    const selectedFileMetadata = files.filter((f) =>
+      selectedFiles.includes(f.file_id),
+    );
+
+    // Show context menu
+    showContextMenu(event, [
+      {
+        id: "open-new-tab",
+        label: "Open in New Tab",
+        icon: <ArrowTopRightOnSquareIcon />,
+        onClick: () => {
+          window.open(client.getFileUrl(fileId), "_blank");
+        },
+      },
+      {
+        id: "open-new-page",
+        label: "Open in New Page",
+        icon: <PlusIcon />,
+        onClick: () => {
+          addVirtualPage(Math.random().toString(36).substring(2), {
+            name: "files (" + selectedFileMetadata.length + ")",
+            fileIds: selectedFileMetadata.map((f) => f.file_id),
+          });
+          setPage(pageKey, "virtual");
+        },
+      },
+      {
+        id: "find-similar",
+        label: "Find Similar",
+        icon: <MagnifyingGlassIcon />,
+        items: [
+          {
+            id: "similar-0",
+            label: "Exact match",
+            onClick: () => findSimilarFiles(0),
+          },
+          {
+            id: "similar-2",
+            label: "Very similar",
+            onClick: () => findSimilarFiles(2),
+          },
+          {
+            id: "similar-4",
+            label: "Similar",
+            onClick: () => findSimilarFiles(4),
+          },
+          {
+            id: "similar-8",
+            label: "Speculative",
+            onClick: () => findSimilarFiles(8),
+          },
+        ],
+      },
+      {
+        id: "relationship-menu",
+        label: "Relationships",
+        icon: <LinkIcon />,
+        items: [
+          {
+            id: "open-best",
+            label: "Open best files in new page",
+            icon: <LinkIcon />,
+            onClick: () => {
+              addVirtualPage(Math.random().toString(36).substring(2), {
+                name: `best files (${selectedFiles.length})`,
+                hashes: selectedFileMetadata.map((f) => f.hash),
+              });
+              setPage(pageKey, "virtual");
+            },
+          },
+          {
+            id: "set-relationship",
+            label: "Set Relationship",
+            icon: <LinkIcon />,
+            disabled: selectedFiles.length < 2,
+            items: [
+              {
+                id: "relationship-better",
+                label: "This file is better than all selected files",
+                onClick: () => {
+                  markActiveFileAsBetter();
+                },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "remove-files",
+        label: "Remove files",
+        icon: <MinusCircleIcon />,
+        onClick: () => {
+          removeFilesFromPage(pageKey, pageType, selectedFiles);
+        },
+      },
+      {
+        id: "divider1",
+        divider: true,
+        label: "",
+      },
+      {
+        id: "copy-urls",
+        label: `Copy URL${selectedFileMetadata.length > 1 ? "s" : ""}`,
+        icon: <LinkIcon />,
+        onClick: () => {
+          navigator.clipboard.writeText(
+            selectedFileMetadata
+              .map((f) => client.getFileUrl(f.file_id))
+              .join("\n"),
+          );
+        },
+      },
+      {
+        id: "divider2",
+        divider: true,
+        label: "",
+      },
+      {
+        id: "edit-tags",
+        label: "Edit Tags",
+        icon: <TagIcon />,
+        onClick: () => {
+          setTagEditFiles(selectedFileMetadata);
+          setShowEditTagsModal(true);
+        },
+      },
+      {
+        id: "edit-urls",
+        label: "Edit URLs",
+        icon: <LinkIcon />,
+        onClick: () => {
+          setUrlEditFiles(selectedFileMetadata);
+          setShowEditUrlsModal(true);
+        },
+      },
+      {
+        id: "divider3",
+        divider: true,
+        label: "",
+      },
+      ...viewMenuItems,
+    ]);
+  };
+
+  const selectedFiles = selectedFilesByPage[pageKey] || [];
+  const activeFileId = activeFileByPage[pageKey];
+
+  // Modal navigation handlers
+  const handleModalClose = () => {
+    setModalIndex(-1);
+  };
+
+  const modalHasPrevious = modalIndex > 0;
+  const modalHasNext = modalIndex < files.length - 1;
+
+  const handleModalPrevious = () => {
+    if (modalHasPrevious) {
+      setModalIndex(modalIndex - 1);
+    }
+  };
+
+  const handleModalNext = () => {
+    if (modalHasNext) {
+      setModalIndex(modalIndex + 1);
+    }
+  };
+
+  // Handle keyboard navigation
+  const handleFileKeyDown = (fileId: number, event: React.KeyboardEvent) => {
+    const currentIndex = files.findIndex((f) => f.file_id === fileId);
+    if (currentIndex === -1) return;
+
+    let nextIndex: number | null = null;
+    const { cols } = gridDimensions;
+
+    switch (event.key) {
+      case "ArrowLeft":
+        event.preventDefault();
+        if (currentIndex % cols > 0) {
+          nextIndex = currentIndex - 1;
+        }
+        break;
+
+      case "ArrowRight":
+        event.preventDefault();
+        if (currentIndex % cols < cols - 1 && currentIndex < files.length - 1) {
+          nextIndex = currentIndex + 1;
+        }
+        break;
+
+      case "ArrowUp":
+        event.preventDefault();
+        if (currentIndex >= cols) {
+          nextIndex = currentIndex - cols;
+        }
+        break;
+
+      case "ArrowDown":
+        event.preventDefault();
+        if (currentIndex + cols < files.length) {
+          nextIndex = currentIndex + cols;
+        }
+        break;
+
+      case "Enter":
+      case " ":
+        event.preventDefault();
+        if (event.ctrlKey || event.metaKey) {
+          // Toggle selection with Ctrl/Cmd
+          if (selectedFiles.includes(fileId)) {
+            setSelectedFiles(
+              pageKey,
+              selectedFiles.filter((id) => id !== fileId),
+            );
+            if (activeFileId === fileId) {
+              setActiveFileId(pageKey, null);
+            }
+          } else {
+            addSelectedFiles(pageKey, [fileId]);
+            if (!activeFileId) {
+              setActiveFileId(pageKey, fileId);
+            }
+          }
+        } else if (event.shiftKey && selectedFiles.length > 0 && activeFileId) {
+          // Select range with Shift
+          const activeIndex = files.findIndex(
+            (f) => f.file_id === activeFileId,
+          );
+          if (activeIndex !== -1) {
+            const start = Math.min(currentIndex, activeIndex);
+            const end = Math.max(currentIndex, activeIndex);
+            const rangeIds = files.slice(start, end + 1).map((f) => f.file_id);
+            setSelectedFiles(pageKey, rangeIds);
+          }
+        } else {
+          // Regular activation
+          setSelectedFiles(pageKey, [fileId]);
+          setActiveFileId(pageKey, fileId);
+          if (event.key === "Enter") {
+            // Open modal on Enter
+            setModalIndex(currentIndex);
+          }
+        }
+        break;
+    }
+
+    if (nextIndex !== null && nextIndex >= 0 && nextIndex < files.length) {
+      const nextFileId = files[nextIndex].file_id;
+      setFocusedFileId(nextFileId);
+      document
+        .querySelector<HTMLElement>(`[data-file-id="${nextFileId}"]`)
+        ?.focus();
+    }
+  };
+
+  // Handle mouse down to start drag
+  const handleMouseDown = (event: React.MouseEvent) => {
+    // Only start drag on left click and if clicking the grid background
+    if (event.button !== 0 || event.target !== gridRef.current) return;
+
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    event.preventDefault();
+    setIsDragging(true);
+
+    const { pageX, pageY } = event;
+    const gridRect = grid.getBoundingClientRect();
+    const mouseX = pageX - gridRect.left + grid.scrollLeft;
+    const mouseY = pageY - gridRect.top + grid.scrollTop;
+    setDragStart({ x: mouseX, y: mouseY });
+    setDragEnd({ x: mouseX, y: mouseY });
+
+    // Store current selection to support Shift+drag
+    dragStartSelectionRef.current =
+      event.shiftKey || event.ctrlKey ? selectedFilesByPage[pageKey] || [] : [];
+
+    inverseSelection.current = event.ctrlKey;
+
+    // Clear selection if not holding Shift or Ctrl
+    if (!event.shiftKey && !event.ctrlKey) {
+      clearSelectedFiles(pageKey);
+      setActiveFileId(pageKey, null);
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+    }
+  };
+
+  // Handle mouse move during drag
+  const handleMouseMove = useCallback(
+    (event: MouseEvent) => {
+      if (!isDragging || !dragStart || !gridRef.current) return;
+
+      const { pageX, pageY } = event;
+      const grid = gridRef.current;
+      const gridRect = grid.getBoundingClientRect();
+      const mouseX = pageX - gridRect.left + grid.scrollLeft;
+      let mouseY = pageY - gridRect.top + grid.scrollTop;
+      const scrollSpeed = 50;
+
+      // Scroll up if mouse is near top edge and the scroll position is not already at the top
+      if (event.pageY - gridRect.top < 50 && grid.scrollTop > 0) {
+        grid.scrollTop = Math.max(0, grid.scrollTop - scrollSpeed);
+        mouseY -= scrollSpeed;
+      }
+
+      // Scroll down if mouse is near bottom edge
+      if (event.pageY - gridRect.top > grid.clientHeight - 50) {
+        grid.scrollTop = Math.min(
+          grid.scrollHeight - grid.clientHeight,
+          grid.scrollTop + scrollSpeed,
+        );
+        mouseY += scrollSpeed;
+      }
+
+      setDragEnd({
+        x: mouseX,
+        y: mouseY,
+      });
+
+      const selectionRect = {
+        left: Math.min(dragStart.x, mouseX),
+        top: Math.min(dragStart.y, mouseY),
+        width: Math.abs(mouseX - dragStart.x),
+        height: Math.abs(mouseY - dragStart.y),
+      };
+
+      // Find intersecting files
+      const selectedFiles: FileMetadata[] = [];
+
+      // Do a binary search to find the first file on the same row as the selection rect
+      // It'd be better if we exploited the grid layout more to do this more efficiently.
+      let start = 0;
+      let end = files.length - 1;
+      let firstCandidateIndex = files.length;
+
+      while (start <= end) {
+        const mid = Math.floor((start + end) / 2);
+        const element = document.querySelector(
+          `[data-file-id="${files[mid].file_id}"]`,
+        );
+
+        if (!element) {
+          start = mid + 1;
+          continue;
+        }
+
+        const fileRect = element.getBoundingClientRect();
+        const fileBottom = fileRect.bottom - gridRect.top + grid.scrollTop;
+
+        if (fileBottom < selectionRect.top) {
+          // File is above selection, look in right half
+          start = mid + 1;
+        } else {
+          // File intersects or is below, look in left half
+          firstCandidateIndex = mid;
+          end = mid - 1;
+        }
+      }
+
+      // Now check each file starting from firstCandidateIndex
+      for (let i = firstCandidateIndex; i < files.length; i++) {
+        const file = files[i];
+        const element = document.querySelector(
+          `[data-file-id="${file.file_id}"]`,
+        );
+        if (!element) continue;
+
+        const fileRect = element.getBoundingClientRect();
+
+        // Bail early if we're past the selection rect
+        if (
+          fileRect.top - gridRect.top + grid.scrollTop >
+          selectionRect.top + selectionRect.height
+        ) {
+          break;
+        }
+
+        // Skip if file is outside selection horizontally
+        if (
+          fileRect.left - gridRect.left + grid.scrollLeft >
+            selectionRect.left + selectionRect.width ||
+          fileRect.right - gridRect.left + grid.scrollLeft < selectionRect.left
+        ) {
+          continue;
+        }
+
+        selectedFiles.push(file);
+      }
+
+      // Update selection
+      let fileIds = [];
+      if (inverseSelection.current) {
+        const selectedFileSet = new Set(selectedFiles.map((f) => f.file_id));
+        fileIds = dragStartSelectionRef.current.filter(
+          (id) => !selectedFileSet.has(id),
+        );
+      } else {
+        fileIds = [
+          ...new Set([
+            ...dragStartSelectionRef.current,
+            ...selectedFiles.map((f) => f.file_id),
+          ]),
+        ];
+      }
+
+      if (
+        fileIds.length !== 0 ||
+        (selectedFilesByPage[pageKey] &&
+          selectedFilesByPage[pageKey].length !== 0)
+      ) {
+        setSelectedFiles(pageKey, fileIds);
+      }
+
+      // Update active file
+      if (fileIds.length > 0) {
+        if (
+          !activeFileByPage[pageKey] ||
+          !fileIds.includes(activeFileByPage[pageKey])
+        ) {
+          setActiveFileId(pageKey, fileIds[0]);
+        }
+      } else if (fileIds.length === 0 && activeFileByPage[pageKey]) {
+        if (activeFileByPage[pageKey]) {
+          setActiveFileId(pageKey, null);
+        }
+      }
+    },
+    [
+      isDragging,
+      dragStart,
+      files,
+      pageKey,
+      setSelectedFiles,
+      setActiveFileId,
+      activeFileByPage,
+      selectedFilesByPage,
+    ],
+  );
+
+  // Handle mouse up to end drag
+  const handleMouseUp = useCallback(() => {
+    if (!isDragging) return;
+
+    setIsDragging(false);
+    setDragStart(null);
+    setDragEnd(null);
+    dragStartSelectionRef.current = [];
+  }, [isDragging]);
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      return () => {
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+      };
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
+  const isLoading =
+    isLoadingFiles || (pageType === "search" && searchStatus === "loading");
+
+  return (
+    <div className="page-view-container">
+      {/* Render SearchBar only in search mode */}
+      {pageType === "search" && (
+        <div className="page-search-bar-container">
+          <SearchBar />
+        </div>
+      )}
+      <ScrollView
+        ref={gridRef}
+        className="files-grid"
+        style={{
+          gridTemplateColumns: `repeat(${gridDimensions.cols}, minmax(${thumbnailSize}px, 1fr))`,
+          gap: `${GAP_SIZE}px`,
+          cursor: isDragging ? "crosshair" : undefined,
+        }}
+        onMouseDown={handleMouseDown}
+        onContextMenu={handleViewContextMenu}
+        loaded={!(isLoading && clearDuringLoad)}
+      >
+        {/* Selection rectangle */}
+        {isDragging && dragStart && dragEnd && (
+          <div
+            className="page-selection-rectangle"
+            style={{
+              left: Math.min(dragStart.x, dragEnd.x),
+              top: Math.min(dragStart.y, dragEnd.y),
+              width: Math.abs(dragEnd.x - dragStart.x),
+              height: Math.abs(dragEnd.y - dragStart.y),
+            }}
+          />
+        )}
+
+        {isLoading && (clearDuringLoad || files.length === 0) ? (
+          // Loading state
+          <div className="files-grid-loading">
+            <div className="page-loading-spinner"></div>
+          </div>
+        ) : error ? (
+          // Error state
+          <div className="files-grid-error">
+            <div>{error}</div>
+          </div>
+        ) : files.length === 0 ? (
+          // Empty state
+          <div className="files-grid-empty">
+            {pageType === "search" ? (
+              !searchTags.length ? (
+                <>
+                  <MagnifyingGlassIcon className="files-grid-empty-icon" />
+                  <div>Start your search</div>
+                  <div className="files-grid-empty-text">
+                    Add tags above to find files
+                  </div>
+                </>
+              ) : searchStatus === "initial" ? (
+                <>
+                  <MagnifyingGlassIcon className="files-grid-empty-icon" />
+                  <div>
+                    Edit the search query or press the search button to start
+                  </div>
+                  <div className="files-grid-empty-text">
+                    Your previous search query was restored.
+                  </div>
+                </>
+              ) : searchError ? (
+                <>
+                  <ExclamationCircleIcon className="files-grid-error-icon" />
+                  <div>Error loading search results</div>
+                  <div className="files-grid-empty-text">
+                    Error: {searchError}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <MagnifyingGlassIcon className="files-grid-empty-icon" />
+                  <div>No search results</div>
+                  <div className="files-grid-empty-text">
+                    Try different tags
+                  </div>
+                </>
+              )
+            ) : (
+              <>
+                <div>No files in this page</div>
+              </>
+            )}
+          </div>
+        ) : (
+          // Files grid
+          files.map((file) => (
+            <div
+              key={file.file_id}
+              data-file-item
+              data-file-id={file.file_id}
+              className={`file-item ${
+                selectedFiles.includes(file.file_id)
+                  ? activeFileId === file.file_id
+                    ? "file-item-active"
+                    : "file-item-selected"
+                  : ""
+              }`}
+              style={{
+                width: `${thumbnailSize}px`,
+                height: `${thumbnailSize}px`,
+              }}
+              onClick={(e) => handleFileClick(file.file_id, e)}
+              onKeyDown={(e) => handleFileKeyDown(file.file_id, e)}
+              onMouseUp={(e) => {
+                if (e.button === 1) {
+                  e.preventDefault();
+                  window.open(client.getFileUrl(file.file_id), "_blank");
+                }
+              }}
+              onContextMenu={(e) => handleFileContextMenu(e, file.file_id)}
+              tabIndex={0}
+              role="button"
+              aria-selected={selectedFiles.includes(file.file_id)}
+              aria-label={`File ${file.file_id}`}
+            >
+              <Thumbnail fileId={file.file_id} className="thumbnail-wrapper" />
+            </div>
+          ))
+        )}
+      </ScrollView>
+
+      {modalIndex !== -1 && (
+        <FileViewerModal
+          fileId={files[modalIndex].file_id}
+          fileData={files[modalIndex]}
+          onClose={handleModalClose}
+          onPrevious={handleModalPrevious}
+          onNext={handleModalNext}
+          hasPrevious={modalHasPrevious}
+          hasNext={modalHasNext}
+        />
+      )}
+
+      {showEditTagsModal && (
+        <EditTagsModal
+          files={tagEditFiles}
+          onClose={() => setShowEditTagsModal(false)}
+        />
+      )}
+
+      {showImportUrlsModal && (
+        <ImportUrlsModal
+          pageKey={pageKey}
+          pageType={pageType}
+          onClose={() => setShowImportUrlsModal(false)}
+        />
+      )}
+
+      {showEditUrlsModal && (
+        <EditUrlsModal
+          files={urlEditFiles}
+          onClose={() => setShowEditUrlsModal(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default PageView;

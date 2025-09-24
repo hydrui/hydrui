@@ -1,0 +1,93 @@
+.file-viewer-modal-container {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background-color: rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+}
+
+.file-viewer-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: var(--color-gray-900);
+}
+
+.file-viewer-modal-file-info {
+  font-size: var(--text-sm);
+  color: var(--color-gray-300);
+}
+
+.file-viewer-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.file-viewer-modal-action-button {
+  color: var(--color-gray-400);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.file-viewer-modal-action-button:hover {
+  color: var(--color-white);
+}
+
+.file-viewer-modal-small-icon {
+  height: 1.25rem;
+  width: 1.25rem;
+}
+
+.file-viewer-modal-medium-icon {
+  height: 1.5rem;
+  width: 1.5rem;
+}
+
+.file-viewer-modal-large-icon {
+  height: 2rem;
+  width: 2rem;
+}
+
+.file-viewer-modal-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.file-viewer-modal-nav-button {
+  position: absolute;
+  padding: 0.5rem;
+  color: var(--color-gray-400);
+  background-color: rgba(17, 24, 39, 0.5);
+  border-radius: 9999px;
+  border: none;
+  z-index: 10;
+  cursor: pointer;
+}
+
+.file-viewer-modal-nav-button:hover {
+  color: var(--color-white);
+}
+
+.file-viewer-modal-prev-button {
+  left: 1rem;
+}
+
+.file-viewer-modal-next-button {
+  right: 1rem;
+}
+
+.file-viewer-modal-viewer-container {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

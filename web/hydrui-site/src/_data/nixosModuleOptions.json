@@ -1,0 +1,106 @@
+[
+  {
+    "default": false,
+    "description": "Whether to enable Hydrui Server.",
+    "example": true,
+    "location": { "column": 7, "file": "nix/module.nix", "line": 59 },
+    "name": "enable",
+    "type": "boolean"
+  },
+  {
+    "default": { "_type": "literalExpression", "text": "pkgs.hydrui-server" },
+    "description": "The hydrui-server package to use.",
+    "example": null,
+    "location": { "column": 7, "file": "nix/module.nix", "line": 62 },
+    "name": "package",
+    "type": "package"
+  },
+  {
+    "default": true,
+    "description": "Whether to automatically open the necessary ports in the firewall.",
+    "example": true,
+    "location": { "column": 7, "file": "nix/module.nix", "line": 63 },
+    "name": "openFirewall",
+    "type": "boolean"
+  },
+  {
+    "default": false,
+    "description": "Enable Hydrui's server mode, as opposed to the default client-only mode.\n\nWhen enabled, Hydrui Server will act as a proxy to the upstream hydrus client.\nThe API credentials will need to be specified directly to Hydrui Server. When\nthis value is set, hydrusUrl and hydrusApiKeyFile must be set.\n",
+    "example": true,
+    "location": { "column": 7, "file": "nix/module.nix", "line": 69 },
+    "name": "serverMode",
+    "type": "boolean"
+  },
+  {
+    "default": false,
+    "description": "Whether to enable automatic TLS with ACME.",
+    "example": true,
+    "location": { "column": 7, "file": "nix/module.nix", "line": 78 },
+    "name": "acme",
+    "type": "boolean"
+  },
+  {
+    "default": "",
+    "description": "Address to listen on; empty string for all interfaces.",
+    "example": "127.0.0.1",
+    "location": { "column": 7, "file": "nix/module.nix", "line": 79 },
+    "name": "bindAddress",
+    "type": "string"
+  },
+  {
+    "default": 8080,
+    "description": "Port to listen on, or null to disable listening on TCP.",
+    "example": null,
+    "location": { "column": 7, "file": "nix/module.nix", "line": 85 },
+    "name": "port",
+    "type": "null or 16 bit unsigned integer; between 0 and 65535 (both inclusive)"
+  },
+  {
+    "default": null,
+    "description": "UNIX domain socket path to bind, or null to disable listening on a UNIX domain socket.",
+    "example": "/var/run/hydrui.sock",
+    "location": { "column": 7, "file": "nix/module.nix", "line": 90 },
+    "name": "socket",
+    "type": "null or absolute path"
+  },
+  {
+    "default": null,
+    "description": "Hydrus client API server to connect to. (server mode only)",
+    "example": "http://localhost:45869",
+    "location": { "column": 7, "file": "nix/module.nix", "line": 96 },
+    "name": "hydrusUrl",
+    "type": "null or string"
+  },
+  {
+    "default": null,
+    "description": "Path to a file that contains the hydrus client API access key. (server mode only)",
+    "example": null,
+    "location": { "column": 7, "file": "nix/module.nix", "line": 102 },
+    "name": "hydrusApiKeyFile",
+    "type": "null or absolute path"
+  },
+  {
+    "default": null,
+    "description": "Path to a file that contains an htpasswd file for authentication. (server mode only)",
+    "example": null,
+    "location": { "column": 7, "file": "nix/module.nix", "line": 107 },
+    "name": "htpasswdFile",
+    "type": "null or absolute path"
+  },
+  {
+    "default": true,
+    "description": "Allow users to submit issue reports to the Hydrui Mothership. You can\ndisable this to improve privacy if you don't think you will ever use\nthe issue reporting functionality within Hydrui. (server mode only)\n",
+    "example": null,
+    "location": { "column": 7, "file": "nix/module.nix", "line": 112 },
+    "name": "allowReport",
+    "type": "null or boolean"
+  },
+  {
+    "default": null,
+    "description": "Secret keymatter used for session validation. If not specified, it will be generated and stored locally in /var/lib.",
+    "example": null,
+    "location": { "column": 7, "file": "nix/module.nix", "line": 121 },
+    "name": "secretFile",
+    "type": "null or absolute path"
+  }
+]

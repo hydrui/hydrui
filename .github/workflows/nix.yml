@@ -1,0 +1,20 @@
+name: Nix
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+jobs:
+  test:
+    name: Nix Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v19
+      - uses: DeterminateSystems/magic-nix-cache-action@v13
+      - uses: DeterminateSystems/flake-checker-action@v12
+        with:
+          ignore-missing-flake-lock: false
+          fail-mode: true
+      - name: Flake Check
+        run: nix flake check

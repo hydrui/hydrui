@@ -1,0 +1,70 @@
+.push-button {
+  padding: 0.5rem 1rem;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-md);
+  color: var(--color-white);
+  cursor: pointer;
+}
+
+.push-button:disabled {
+  cursor: not-allowed;
+}
+
+.push-button.primary {
+  background-color: var(--color-blue-600);
+  color: var(--color-white);
+}
+
+.push-button.primary:hover {
+  background-color: var(--color-blue-700);
+}
+
+.push-button.primary:active {
+  background-color: var(--color-blue-800);
+}
+
+.push-button.primary:disabled {
+  background-color: var(--color-gray-600);
+  color: var(--color-gray-400);
+}
+
+.push-button.secondary {
+  background-color: var(--color-gray-600);
+  color: var(--color-white);
+}
+
+.push-button.secondary:hover {
+  background-color: var(--color-gray-700);
+}
+
+.push-button.secondary:disabled {
+  background-color: var(--color-gray-600);
+  color: var(--color-gray-400);
+}
+
+.push-button.danger {
+  background-color: var(--color-red-600);
+  color: var(--color-white);
+}
+
+.push-button.danger:disabled {
+  background-color: var(--color-red-600);
+  color: var(--color-gray-400);
+}
+
+.push-button.danger:hover {
+  background-color: var(--color-red-700);
+}
+
+.push-button.muted {
+  color: var(--color-gray-300);
+}
+
+.push-button.muted:hover {
+  color: var(--color-white);
+}
+
+.push-button.muted:disabled {
+  color: var(--color-gray-100);
+}

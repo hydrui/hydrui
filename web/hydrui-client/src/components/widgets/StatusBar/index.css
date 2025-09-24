@@ -1,0 +1,71 @@
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--color-gray-300);
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.status-bar-info {
+  display: flex;
+  align-items: center;
+}
+
+.status-bar-section {
+  margin-right: 1rem;
+}
+
+.status-bar-loading-spinner {
+  animation: var(--animate-spin);
+  margin-right: 0.5rem;
+  height: 0.75rem;
+  width: 0.75rem;
+  border: 1px solid;
+  border-top-width: 2px;
+  border-top-color: var(--color-blue-500);
+  border-radius: 9999px;
+}
+
+.status-bar-cancel-button {
+  color: var(--color-red-400);
+  margin-left: 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.status-bar-cancel-button:hover {
+  color: var(--color-red-300);
+  background-color: color-mix(in oklab, var(--color-red-500) 20%, transparent);
+}
+
+.status-bar-cancel-icon {
+  height: 1rem;
+  width: 1rem;
+}
+
+.status-bar-text-muted {
+  color: var(--color-gray-400);
+}
+
+.status-bar-text-highlight {
+  color: var(--color-blue-300);
+  margin-right: 0.25rem;
+}
+
+.status-bar-text-error {
+  color: var(--color-red-400);
+}
+
+.status-bar-text-indent {
+  margin-left: 0.25rem;
+}
+
+.status-bar-file-stats {
+  font-size: var(--text-xs);
+  color: var(--color-gray-400);
+}
+
+.status-bar-file-stat {
+  margin-right: 0.5rem;
+}

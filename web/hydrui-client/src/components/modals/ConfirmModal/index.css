@@ -1,0 +1,55 @@
+.confirm-modal-container {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow-y: auto;
+}
+
+.confirm-modal-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.confirm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.confirm-modal-content {
+  position: relative;
+  background-color: var(--color-gray-800);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--tw-shadow-xl);
+  max-width: var(--container-md);
+  width: 100%;
+}
+
+.confirm-modal-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-gray-700);
+}
+
+.confirm-modal-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.confirm-modal-body {
+  padding: 1rem;
+}
+
+.confirm-modal-message {
+  color: var(--color-gray-300);
+}
+
+.confirm-modal-footer {
+  padding: 1rem;
+  border-top: 1px solid var(--color-gray-700);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}

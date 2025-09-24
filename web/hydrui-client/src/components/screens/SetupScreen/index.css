@@ -1,0 +1,72 @@
+.setup-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: var(--color-gray-900);
+}
+
+.setup-form-container {
+  width: 100%;
+  max-width: var(--container-md);
+  padding: 1.5rem;
+  background-color: var(--color-gray-800);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--tw-shadow-lg);
+}
+
+.setup-heading {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+  color: var(--color-white);
+  margin-bottom: 1.5rem;
+}
+
+.setup-input-group {
+  margin-bottom: 1rem;
+}
+
+.setup-input-group-large {
+  margin-bottom: 1.5rem;
+}
+
+.setup-label {
+  display: block;
+  color: var(--color-gray-300);
+  margin-bottom: 0.5rem;
+}
+
+.setup-help-text {
+  margin-top: 0.5rem;
+  font-size: var(--text-sm);
+  color: var(--color-gray-400);
+}
+
+.setup-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background-color: var(--color-gray-700);
+  color: var(--color-white);
+  border: 1px solid var(--color-gray-600);
+  border-radius: var(--radius-sm);
+}
+
+.setup-input:focus {
+  outline-style: none;
+  border-color: var(--color-blue-500);
+}
+
+.setup-error {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background-color: color-mix(in oklab, var(--color-red-900) 50%, transparent);
+  border: 1px solid var(--color-red-500);
+  border-radius: var(--radius-sm);
+  color: var(--color-red-200);
+}
+
+.setup-form-buttons {
+  display: flex;
+  gap: 0.5em;
+}

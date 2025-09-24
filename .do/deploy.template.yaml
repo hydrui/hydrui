@@ -1,0 +1,10 @@
+spec:
+  name: hydrui
+  static_sites:
+    - environment_slug: html
+      git:
+        branch: main
+        repo_clone_url: https://github.com/hydrui/hydrui.git
+      name: hydrui
+      output_dir: dist
+      build_command: npm run build
