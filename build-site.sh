@@ -1,5 +1,6 @@
 #!/bin/sh
 set -e
+export VITE_HYDRUI_VERSION=$(cat VERSION)
 rm -rf dist && mkdir -p dist
 npm run build --workspaces
 cp -R web/hydrui-client/dist .
