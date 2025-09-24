@@ -3,6 +3,8 @@ import { ServiceType } from "../constants/services";
 import {
   AddFileResponse,
   AddFilesRequest,
+  AddNotesRequest,
+  AddNotesResponse,
   AddUrlRequest,
   AddUrlResponse,
   FileMetadataResponse,
@@ -624,6 +626,24 @@ export class MockHydrusClient implements HydrusApiClient {
    * Set files as kings of their duplicate groups (mock implementation)
    */
   async setKings(): Promise<void> {
+    if (this.apiKey !== this.validApiKey) {
+      throw new Error("Invalid API key");
+    }
+
+    // Not implemented
+    return;
+  }
+
+  async addNotes(request: AddNotesRequest): Promise<AddNotesResponse> {
+    if (this.apiKey !== this.validApiKey) {
+      throw new Error("Invalid API key");
+    }
+
+    // Not implemented
+    return { notes: { ...request.notes } };
+  }
+
+  async deleteNotes(): Promise<void> {
     if (this.apiKey !== this.validApiKey) {
       throw new Error("Invalid API key");
     }

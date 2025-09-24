@@ -3,9 +3,12 @@ import { isServerMode } from "@/utils/serverMode";
 import {
   AddFileResponse,
   AddFilesRequest,
+  AddNotesRequest,
+  AddNotesResponse,
   AddUrlRequest,
   AddUrlResponse,
   AssociateUrlRequest,
+  DeleteNotesRequest,
   FileMetadataResponse,
   HydrusApiClient,
   PageInfoResponse,
@@ -176,7 +179,7 @@ export class HydrusClient implements HydrusApiClient {
     return this.request<FileMetadataResponse>(
       "/get_files/file_metadata",
       "GET",
-      { file_ids: fileIds },
+      { file_ids: fileIds, include_notes: true },
       null,
       signal,
     );
@@ -192,7 +195,7 @@ export class HydrusClient implements HydrusApiClient {
     return this.request<FileMetadataResponse>(
       "/get_files/file_metadata",
       "GET",
-      { hashes },
+      { hashes, include_notes: true },
       null,
       signal,
     );
@@ -420,5 +423,18 @@ export class HydrusClient implements HydrusApiClient {
       {},
       { file_ids: fileIds },
     );
+  }
+
+  async addNotes(request: AddNotesRequest): Promise<AddNotesResponse> {
+    return this.request<AddNotesResponse>(
+      "/add_notes/set_notes",
+      "POST",
+      {},
+      request,
+    );
+  }
+
+  async deleteNotes(request: DeleteNotesRequest): Promise<void> {
+    return this.request<void>("/add_notes/delete_notes", "POST", {}, request);
   }
 }

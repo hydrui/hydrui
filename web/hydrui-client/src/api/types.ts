@@ -57,6 +57,9 @@ export interface FileMetadata {
   ratings?: {
     [service_key: string]: boolean | number | null;
   };
+  notes?: {
+    [name: string]: string;
+  };
 }
 
 // Search response
@@ -202,6 +205,26 @@ export interface SetKingsRequest {
   file_ids: number[];
 }
 
+// Notes
+export interface AddNotesRequest {
+  notes: Record<string, string>;
+  hash?: string;
+  file_id?: number;
+  merge_cleverly?: boolean;
+  extend_existing_note_if_possible?: boolean;
+  conflict_resolution?: number;
+}
+
+export interface AddNotesResponse {
+  notes: Record<string, string>;
+}
+
+export interface DeleteNotesRequest {
+  note_names: string[];
+  hash?: string;
+  file_id?: number;
+}
+
 // API client interface
 export interface HydrusApiClient {
   // Authentication
@@ -269,4 +292,8 @@ export interface HydrusApiClient {
   // File relationship operations
   setFileRelationships: (request: SetFileRelationshipsRequest) => Promise<void>;
   setKings: (fileIds: number[]) => Promise<void>;
+
+  // Note operations
+  addNotes: (request: AddNotesRequest) => Promise<AddNotesResponse>;
+  deleteNotes: (request: DeleteNotesRequest) => Promise<void>;
 }

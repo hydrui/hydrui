@@ -5,6 +5,7 @@ import {
   ExclamationCircleIcon,
   LinkIcon,
   MinusCircleIcon,
+  PencilSquareIcon,
   PlusIcon,
   TagIcon,
 } from "@heroicons/react/24/outline";
@@ -19,6 +20,7 @@ import React, {
 } from "react";
 
 import { FileMetadata } from "@/api/types";
+import EditNotesModal from "@/components/modals/EditNotesModal/EditNotesModal";
 import EditTagsModal from "@/components/modals/EditTagsModal/EditTagsModal";
 import EditUrlsModal from "@/components/modals/EditUrlsModal/EditUrlsModal";
 import FileViewerModal from "@/components/modals/FileViewerModal/FileViewerModal";
@@ -83,13 +85,16 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
   const [modalIndex, setModalIndex] = useState<number>(-1);
   const [showEditTagsModal, setShowEditTagsModal] = useState(false);
   const [showEditUrlsModal, setShowEditUrlsModal] = useState(false);
+  const [showEditNotesModal, setShowEditNotesModal] = useState(false);
   const [showImportUrlsModal, setShowImportUrlsModal] = useState(false);
   const [tagEditFiles, setTagEditFiles] = useState<FileMetadata[]>([]);
   const [urlEditFiles, setUrlEditFiles] = useState<FileMetadata[]>([]);
+  const [editNotesFile, setEditNotesFile] = useState<FileMetadata | null>(null);
   const inModal =
     modalIndex !== -1 ||
     showEditTagsModal ||
     showEditUrlsModal ||
+    showEditNotesModal ||
     showImportUrlsModal;
 
   const selectAllFiles = useCallback(() => {
@@ -517,6 +522,19 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
         onClick: () => {
           setUrlEditFiles(selectedFileMetadata);
           setShowEditUrlsModal(true);
+        },
+      },
+      {
+        id: "edit-notes",
+        label: "Edit Notes",
+        icon: <PencilSquareIcon />,
+        onClick: () => {
+          const currentIndex = files.findIndex(
+            (f) => f.file_id === activeFileId,
+          );
+          if (currentIndex === -1) return;
+          setEditNotesFile(files[currentIndex]);
+          setShowEditNotesModal(true);
         },
       },
       {
@@ -1006,6 +1024,13 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
         <EditUrlsModal
           files={urlEditFiles}
           onClose={() => setShowEditUrlsModal(false)}
+        />
+      )}
+
+      {showEditNotesModal && editNotesFile && (
+        <EditNotesModal
+          file={editNotesFile}
+          onClose={() => setShowEditNotesModal(false)}
         />
       )}
     </div>
