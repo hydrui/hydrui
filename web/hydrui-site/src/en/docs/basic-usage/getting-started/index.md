@@ -61,9 +61,16 @@ In this example, you will be able to use <http://localhost:45869> as the client 
 
 You now have everything you need to log into Hydrui, but you may still need to deal with one last hurdle. First, try logging in by going to the [hosted log in page](/client) and entering your client API URL (e.g. <http://localhost:45869>) and API key (the access key from earlier). Depending on your browser, the operation may not succeed.
 
-A common reason for this is a security feature of modern web browsers that tries to upgrade requests to use HTTPS. In most cases, your hydrus client API service will not be accessible over HTTPS, and even if it is, it will not have a valid certificate. You can disable this security feature just for Hydrui. The exact method to do so will vary depending on browser. After performing a log-in attempt, here is the option in Librewolf:
+A common reason for this is a security feature of modern web browsers that tries to upgrade requests to use HTTPS. In most cases, your hydrus client API service will not be accessible over HTTPS, and even if it is, it will not have a valid certificate. You can disable this security feature just for Hydrui. The exact method to do so will vary depending on browser.
 
-![A screenshot showing the page information pop-over in the left-hand side of the address bar of Librewolf. In the pop-over, the “Automatically upgrade this site to a secure connection” drop down is selected and the mouse is hovering over the “Off” option.](./disable-https-upgrade.png)
+You can disable it in Chromium based browsers (like Google Chrome) by going to site settings and allowing Insecure Content:
+
+![A screenshot showing the "Site Settings" menu option in Chromium](./chromium-site-settings.png)
+![A screenshot showing the "Insecure Content" option in "Site Settings"](./chromium-allow-insecure-content.png)
+
+In Firefox-based browsers, you'll need to try to log in once and have it fail. After performing a log-in attempt, here is the option in Librewolf:
+
+![A screenshot showing the page information pop-over in the left-hand side of the address bar of Librewolf. In the pop-over, the “Automatically upgrade this site to a secure connection” drop down is selected and the mouse is hovering over the “Off” option.](./librewolf-disable-https-upgrade.png)
 
 After doing this, it should now be possible to log into your hydrus client API.
 
