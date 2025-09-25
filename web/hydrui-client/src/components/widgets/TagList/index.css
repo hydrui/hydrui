@@ -15,12 +15,23 @@
   border-bottom: 1px solid var(--color-gray-700);
 }
 
+.tag-list-header label input {
+  margin-right: 0.25rem;
+}
+
 .tag-list-title {
   font-size: var(--text-sm);
   font-weight: var(--font-weight-semibold);
   line-height: 20px;
   color: var(--color-gray-300);
   padding: 0.25rem;
+}
+
+.tag-list-quick-input {
+  margin-top: -0.5rem;
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
+  position: relative;
 }
 
 .tag-list-loading {
@@ -95,4 +106,19 @@
   color: var(--color-gray-400);
   font-size: var(--text-xs);
   margin-right: 0.25rem;
+}
+
+.tag-button {
+  width: 16px;
+  height: 16px;
+}
+.tag-button {
+  opacity: 0.5;
+}
+.tag-button:not(:disabled):hover {
+  opacity: 1;
+}
+.tag-button:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
 }
