@@ -1,7 +1,7 @@
 // This worker is used to handle sending data back to the Hydrui developers
 // Right now, it's only used to handle encrypting and sending broken PSDs.
 // Hydrui only sends data this way when the user explicitly requests it.
-import { sealedbox } from "@/utils/nacl";
+import { sealedbox } from "hydrui-util/src/nacl";
 
 // This is the public key of the Hydrui developers.
 // Once the request is encrypted using this key, it can only be decrypted by
