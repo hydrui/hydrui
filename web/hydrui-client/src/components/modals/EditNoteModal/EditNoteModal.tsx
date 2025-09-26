@@ -1,3 +1,4 @@
+import { FocusTrap } from "focus-trap-react";
 import React, { useCallback, useRef, useState } from "react";
 
 import ConfirmModal from "@/components/modals/ConfirmModal/ConfirmModal";
@@ -44,41 +45,47 @@ const EditNoteModal: React.FC<EditNoteProps> = ({
     Escape: handleClose,
   });
   return (
-    <div className="edit-note-modal-container">
-      <div className="edit-note-modal-wrapper">
-        <div className="edit-note-modal-backdrop" onClick={handleClose} />
-        <div className="edit-note-modal-content">
-          {/* Header */}
-          <div className="edit-note-modal-header">
-            <h3 className="edit-note-modal-title">Edit Note ({name})</h3>
-          </div>
-          {/* Content */}
-          <div className="edit-note-modal-body">
-            <textarea defaultValue={text} ref={textareaRef} autoFocus={true} />
-          </div>
-          {/* Footer */}
-          <div className="edit-note-modal-footer">
-            <PushButton onClick={handleClose} variant="secondary">
-              Cancel
-            </PushButton>
-            <PushButton onClick={saveNote} variant="primary">
-              Save
-            </PushButton>
+    <FocusTrap>
+      <div className="edit-note-modal-container">
+        <div className="edit-note-modal-wrapper">
+          <div className="edit-note-modal-backdrop" onClick={handleClose} />
+          <div className="edit-note-modal-content">
+            {/* Header */}
+            <div className="edit-note-modal-header">
+              <h3 className="edit-note-modal-title">Edit Note ({name})</h3>
+            </div>
+            {/* Content */}
+            <div className="edit-note-modal-body">
+              <textarea
+                defaultValue={text}
+                ref={textareaRef}
+                autoFocus={true}
+              />
+            </div>
+            {/* Footer */}
+            <div className="edit-note-modal-footer">
+              <PushButton onClick={handleClose} variant="secondary">
+                Cancel
+              </PushButton>
+              <PushButton onClick={saveNote} variant="primary">
+                Save
+              </PushButton>
+            </div>
           </div>
         </div>
+        {/* Discard changes modal */}
+        {showDiscardModal && (
+          <ConfirmModal
+            title="Discard Changes"
+            message="You have unsaved changes. Are you sure you want to discard them?"
+            confirmLabel="Discard"
+            cancelLabel="Keep Editing"
+            onConfirm={onCancel}
+            onCancel={() => setShowDiscardModal(false)}
+          />
+        )}
       </div>
-      {/* Discard changes modal */}
-      {showDiscardModal && (
-        <ConfirmModal
-          title="Discard Changes"
-          message="You have unsaved changes. Are you sure you want to discard them?"
-          confirmLabel="Discard"
-          cancelLabel="Keep Editing"
-          onConfirm={onCancel}
-          onCancel={() => setShowDiscardModal(false)}
-        />
-      )}
-    </div>
+    </FocusTrap>
   );
 };
 

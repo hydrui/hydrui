@@ -12,7 +12,6 @@
     "@11ty/eleventy": "^3",
     "@11ty/eleventy-plugin-vite": "^7",
     "@shopify/prettier-plugin-liquid": "^1",
-    "html-minifier": "^4",
     "prettier": "^3",
     "sass": "^1"
   },

@@ -1,4 +1,5 @@
 import { MinusIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import { FocusTrap } from "focus-trap-react";
 import React, { useCallback, useRef, useState } from "react";
 
 import EditColorModal from "@/components/modals/EditColorModal/EditColorModal";
@@ -35,115 +36,117 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
   });
 
   return (
-    <div className="settings-modal-container">
-      <div className="settings-modal-wrapper">
-        {/* Backdrop */}
-        <div className="settings-modal-backdrop" onClick={onClose} />
+    <FocusTrap>
+      <div className="settings-modal-container">
+        <div className="settings-modal-wrapper">
+          {/* Backdrop */}
+          <div className="settings-modal-backdrop" onClick={onClose} />
 
-        {/* Modal */}
-        <div className="settings-modal-content">
-          {/* Header */}
-          <div className="settings-modal-header">
-            <h2 className="settings-modal-title">Settings</h2>
-            <button
-              onClick={onClose}
-              className="settings-modal-close-button"
-              aria-label="Close"
-            >
-              <XMarkIcon className="settings-modal-close-icon" />
-            </button>
-          </div>
-
-          {/* Tabs */}
-          <div className="settings-modal-tabs">
-            <div className="settings-modal-tabs-list">
+          {/* Modal */}
+          <div className="settings-modal-content">
+            {/* Header */}
+            <div className="settings-modal-header">
+              <h2 className="settings-modal-title">Settings</h2>
               <button
-                onClick={() => setActiveTab("api")}
-                className={`settings-modal-tab ${
-                  activeTab === "api"
-                    ? "settings-modal-tab-active"
-                    : "settings-modal-tab-inactive"
-                }`}
+                onClick={onClose}
+                className="settings-modal-close-button"
+                aria-label="Close"
               >
-                {isServerMode ? "Authentication" : "API"}
-              </button>
-              <button
-                onClick={() => setActiveTab("general")}
-                className={`settings-modal-tab ${
-                  activeTab === "general"
-                    ? "settings-modal-tab-active"
-                    : "settings-modal-tab-inactive"
-                }`}
-              >
-                General
-              </button>
-              <button
-                onClick={() => setActiveTab("thumbnails")}
-                className={`settings-modal-tab ${
-                  activeTab === "thumbnails"
-                    ? "settings-modal-tab-active"
-                    : "settings-modal-tab-inactive"
-                }`}
-              >
-                Thumbnails
+                <XMarkIcon className="settings-modal-close-icon" />
               </button>
             </div>
-          </div>
 
-          {/* Content */}
-          <div className="settings-modal-content-area">
-            {activeTab === "api" && (
-              <fieldset>
-                <legend>Connection</legend>
-                {isServerMode ? (
-                  <>
-                    <p>Connected to the Hydrui Server.</p>
-                    <div>
-                      <PushButton onClick={logout} variant="danger">
-                        Log Out
-                      </PushButton>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <p>Currently connnected to {baseUrl}.</p>
-                    <div className="buttons">
-                      <PushButton onClick={logout} variant="danger">
-                        Log Out
-                      </PushButton>
-                    </div>
-                  </>
-                )}
-              </fieldset>
-            )}
-            {activeTab === "general" && (
-              <>
-                <MimeTypesEditor />
-                <TagColorsEditor editColor={setEditingColor} />
-              </>
-            )}
-            {activeTab === "thumbnails" && (
-              <>
-                <ThumbnailSettings />
-              </>
-            )}
-          </div>
-          <div className="settings-modal-buttons">
-            <PushButton onClick={onClose} variant="secondary">
-              Close
-            </PushButton>
+            {/* Tabs */}
+            <div className="settings-modal-tabs">
+              <div className="settings-modal-tabs-list">
+                <button
+                  onClick={() => setActiveTab("api")}
+                  className={`settings-modal-tab ${
+                    activeTab === "api"
+                      ? "settings-modal-tab-active"
+                      : "settings-modal-tab-inactive"
+                  }`}
+                >
+                  {isServerMode ? "Authentication" : "API"}
+                </button>
+                <button
+                  onClick={() => setActiveTab("general")}
+                  className={`settings-modal-tab ${
+                    activeTab === "general"
+                      ? "settings-modal-tab-active"
+                      : "settings-modal-tab-inactive"
+                  }`}
+                >
+                  General
+                </button>
+                <button
+                  onClick={() => setActiveTab("thumbnails")}
+                  className={`settings-modal-tab ${
+                    activeTab === "thumbnails"
+                      ? "settings-modal-tab-active"
+                      : "settings-modal-tab-inactive"
+                  }`}
+                >
+                  Thumbnails
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="settings-modal-content-area">
+              {activeTab === "api" && (
+                <fieldset>
+                  <legend>Connection</legend>
+                  {isServerMode ? (
+                    <>
+                      <p>Connected to the Hydrui Server.</p>
+                      <div>
+                        <PushButton onClick={logout} variant="danger">
+                          Log Out
+                        </PushButton>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p>Currently connnected to {baseUrl}.</p>
+                      <div className="buttons">
+                        <PushButton onClick={logout} variant="danger">
+                          Log Out
+                        </PushButton>
+                      </div>
+                    </>
+                  )}
+                </fieldset>
+              )}
+              {activeTab === "general" && (
+                <>
+                  <MimeTypesEditor />
+                  <TagColorsEditor editColor={setEditingColor} />
+                </>
+              )}
+              {activeTab === "thumbnails" && (
+                <>
+                  <ThumbnailSettings />
+                </>
+              )}
+            </div>
+            <div className="settings-modal-buttons">
+              <PushButton onClick={onClose} variant="secondary">
+                Close
+              </PushButton>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Edit color modal */}
-      {editingColor !== undefined && (
-        <EditColorModal
-          namespace={editingColor}
-          onClose={() => setEditingColor(undefined)}
-        />
-      )}
-    </div>
+        {/* Edit color modal */}
+        {editingColor !== undefined && (
+          <EditColorModal
+            namespace={editingColor}
+            onClose={() => setEditingColor(undefined)}
+          />
+        )}
+      </div>
+    </FocusTrap>
   );
 };
 

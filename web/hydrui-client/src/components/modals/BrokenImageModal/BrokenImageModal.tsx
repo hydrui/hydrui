@@ -1,3 +1,4 @@
+import { FocusTrap } from "focus-trap-react";
 import React, { useCallback, useState } from "react";
 
 import PushButton from "@/components/widgets/PushButton/PushButton";
@@ -56,66 +57,69 @@ const BrokenImageModal: React.FC<BrokenImageModalProps> = ({
   });
 
   return (
-    <div className="broken-image-modal-container">
-      <div className="broken-image-modal-wrapper">
-        <div className="broken-image-modal-backdrop" onClick={onClose} />
+    <FocusTrap>
+      <div className="broken-image-modal-container">
+        <div className="broken-image-modal-wrapper">
+          <div className="broken-image-modal-backdrop" onClick={onClose} />
 
-        <div className="broken-image-modal-content">
-          <div className="broken-image-modal-header">
-            <h3 className="broken-image-modal-title">Broken Image</h3>
-          </div>
+          <div className="broken-image-modal-content">
+            <div className="broken-image-modal-header">
+              <h3 className="broken-image-modal-title">Broken Image</h3>
+            </div>
 
-          <div className="broken-image-modal-body">
-            <p className="broken-image-modal-message">
-              The Hydrui PSD viewer is experimental. We&rsquo;re working on
-              improving the accuracy, but it&rsquo;s challenging due to the
-              complexity of the PSD format.
-            </p>
-            <p className="broken-image-modal-message">
-              Please send us PSDs that you have that load or render improperly.
-              It helps us triage and prioritize different kinds of bugs in our
-              parsing and rendering code.
-            </p>
-            <p className="broken-image-modal-message">
-              We realize there is some sketchy and personal stuff inside of many
-              PSDs. Rest assured that we don&lsquo;t really care what&lsquo;s in
-              the files, beyond that it is not CSAM. Reports are encrypted
-              end-to-end so only Hydrui devs can see them, even in the event of
-              a server breach, and we never store the full IP address of a
-              request (but you can use a VPN or Tor if you want, still.) Once we
-              have reproduced the issue in a new PSD file, we can delete the
-              submission; they are not intended to be kept long-term.
-            </p>
-            <input
-              className="broken-image-modal-checkbox"
-              type="checkbox"
-              id="agree"
-              checked={isAgreed}
-              onChange={() => setIsAgreed(!isAgreed)}
-            />
-            <label
-              className="broken-image-modal-checkbox-label"
-              htmlFor="agree"
-            >
-              I understand and want to submit a broken file.
-            </label>
-            <PushButton
-              onClick={sendBrokenImage}
-              variant="secondary"
-              disabled={!isAgreed}
-            >
-              Submit Current File
-            </PushButton>
-          </div>
+            <div className="broken-image-modal-body">
+              <p className="broken-image-modal-message">
+                The Hydrui PSD viewer is experimental. We&rsquo;re working on
+                improving the accuracy, but it&rsquo;s challenging due to the
+                complexity of the PSD format.
+              </p>
+              <p className="broken-image-modal-message">
+                Please send us PSDs that you have that load or render
+                improperly. It helps us triage and prioritize different kinds of
+                bugs in our parsing and rendering code.
+              </p>
+              <p className="broken-image-modal-message">
+                We realize there is some sketchy and personal stuff inside of
+                many PSDs. Rest assured that we don&lsquo;t really care
+                what&lsquo;s in the files, beyond that it is not CSAM. Reports
+                are encrypted end-to-end so only Hydrui devs can see them, even
+                in the event of a server breach, and we never store the full IP
+                address of a request (but you can use a VPN or Tor if you want,
+                still.) Once we have reproduced the issue in a new PSD file, we
+                can delete the submission; they are not intended to be kept
+                long-term.
+              </p>
+              <input
+                className="broken-image-modal-checkbox"
+                type="checkbox"
+                id="agree"
+                checked={isAgreed}
+                onChange={() => setIsAgreed(!isAgreed)}
+              />
+              <label
+                className="broken-image-modal-checkbox-label"
+                htmlFor="agree"
+              >
+                I understand and want to submit a broken file.
+              </label>
+              <PushButton
+                onClick={sendBrokenImage}
+                variant="secondary"
+                disabled={!isAgreed}
+              >
+                Submit Current File
+              </PushButton>
+            </div>
 
-          <div className="broken-image-modal-footer">
-            <PushButton onClick={onClose} variant="secondary">
-              Close
-            </PushButton>
+            <div className="broken-image-modal-footer">
+              <PushButton onClick={onClose} variant="secondary">
+                Close
+              </PushButton>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </FocusTrap>
   );
 };
 

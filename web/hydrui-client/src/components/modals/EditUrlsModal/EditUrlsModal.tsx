@@ -1,4 +1,5 @@
 import { MinusIcon, PlusIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import { FocusTrap } from "focus-trap-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { FileMetadata } from "@/api/types";
@@ -188,246 +189,250 @@ const EditUrlsModal: React.FC<EditUrlsModalProps> = ({ files, onClose }) => {
   });
 
   return (
-    <div className="edit-urls-modal-container">
-      <div className="edit-urls-modal-wrapper">
-        <div className="edit-urls-modal-backdrop" onClick={handleClose} />
+    <FocusTrap>
+      <div className="edit-urls-modal-container">
+        <div className="edit-urls-modal-wrapper">
+          <div className="edit-urls-modal-backdrop" onClick={handleClose} />
 
-        <div className="edit-urls-modal-content">
-          {/* Header */}
-          <div className="edit-urls-modal-header">
-            <h2 className="edit-urls-modal-title">
-              Edit URLs ({files.length} file{files.length !== 1 ? "s" : ""})
-            </h2>
-            <button
-              onClick={() => {
-                if (urlsToAdd.size > 0 || urlsToRemove.size > 0) {
-                  setShowDiscardModal(true);
-                } else {
-                  onClose();
-                }
-              }}
-              className="edit-urls-modal-close-button"
-            >
-              <XMarkIcon className="edit-urls-modal-close-icon" />
-            </button>
-          </div>
-
-          {/* Tabs */}
-          <div className="edit-urls-modal-tabs">
-            <div className="edit-urls-modal-tabs-list">
+          <div className="edit-urls-modal-content">
+            {/* Header */}
+            <div className="edit-urls-modal-header">
+              <h2 className="edit-urls-modal-title">
+                Edit URLs ({files.length} file{files.length !== 1 ? "s" : ""})
+              </h2>
               <button
-                onClick={() => setActiveTab("edit")}
-                className={`edit-urls-modal-tab ${
-                  activeTab === "edit"
-                    ? "edit-urls-modal-tab-active"
-                    : "edit-urls-modal-tab-inactive"
-                }`}
+                onClick={() => {
+                  if (urlsToAdd.size > 0 || urlsToRemove.size > 0) {
+                    setShowDiscardModal(true);
+                  } else {
+                    onClose();
+                  }
+                }}
+                className="edit-urls-modal-close-button"
               >
-                Edit URLs
-              </button>
-              <button
-                onClick={() => setActiveTab("summary")}
-                className={`edit-urls-modal-tab ${
-                  activeTab === "summary"
-                    ? "edit-urls-modal-tab-active"
-                    : "edit-urls-modal-tab-inactive"
-                }`}
-              >
-                Summary
+                <XMarkIcon className="edit-urls-modal-close-icon" />
               </button>
             </div>
-          </div>
 
-          {/* Content */}
-          <div className="edit-urls-modal-content-area">
-            {activeTab === "edit" ? (
-              <>
-                {/* URL input */}
-                <div className="edit-urls-modal-url-input-container">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    placeholder="Enter a URL..."
-                    className="edit-urls-modal-url-input"
-                    disabled={isSubmitting}
-                    onKeyDown={handleInputKeyDown}
-                  />
-                </div>
-                {/* URL list */}
-                <div className="edit-urls-modal-url-list">
-                  {urlCounts.length === 0 ? (
-                    <div className="edit-urls-modal-empty-message">No URLs</div>
+            {/* Tabs */}
+            <div className="edit-urls-modal-tabs">
+              <div className="edit-urls-modal-tabs-list">
+                <button
+                  onClick={() => setActiveTab("edit")}
+                  className={`edit-urls-modal-tab ${
+                    activeTab === "edit"
+                      ? "edit-urls-modal-tab-active"
+                      : "edit-urls-modal-tab-inactive"
+                  }`}
+                >
+                  Edit URLs
+                </button>
+                <button
+                  onClick={() => setActiveTab("summary")}
+                  className={`edit-urls-modal-tab ${
+                    activeTab === "summary"
+                      ? "edit-urls-modal-tab-active"
+                      : "edit-urls-modal-tab-inactive"
+                  }`}
+                >
+                  Summary
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="edit-urls-modal-content-area">
+              {activeTab === "edit" ? (
+                <>
+                  {/* URL input */}
+                  <div className="edit-urls-modal-url-input-container">
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      placeholder="Enter a URL..."
+                      className="edit-urls-modal-url-input"
+                      disabled={isSubmitting}
+                      onKeyDown={handleInputKeyDown}
+                    />
+                  </div>
+                  {/* URL list */}
+                  <div className="edit-urls-modal-url-list">
+                    {urlCounts.length === 0 ? (
+                      <div className="edit-urls-modal-empty-message">
+                        No URLs
+                      </div>
+                    ) : (
+                      <div className="edit-urls-modal-url-items">
+                        {urlCounts.map((url) => {
+                          return (
+                            <div
+                              key={url.value}
+                              className={`edit-urls-modal-url-item ${
+                                urlsToAdd.has(url.value)
+                                  ? "edit-urls-modal-url-item-add"
+                                  : urlsToRemove.has(url.value)
+                                    ? "edit-urls-modal-url-item-remove"
+                                    : ""
+                              }`}
+                            >
+                              <div className="edit-urls-modal-url-value">
+                                <a
+                                  href={url.value}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="edit-urls-modal-url-link"
+                                >
+                                  {url.value}
+                                </a>
+                              </div>
+                              <div className="edit-urls-modal-url-item-right">
+                                <span className="edit-urls-modal-url-count">
+                                  {url.count}/{url.total}
+                                </span>
+                                {url.count < url.total && (
+                                  <button
+                                    onClick={() => handleAddUrl(url.value)}
+                                    className="edit-urls-modal-url-add-button"
+                                    title="Add to all files"
+                                  >
+                                    <PlusIcon className="h-4 w-4" />
+                                  </button>
+                                )}
+                                {url.count > 0 && (
+                                  <button
+                                    onClick={() => handleRemoveUrl(url.value)}
+                                    className="edit-urls-modal-url-remove-button"
+                                    title="Remove from all files"
+                                  >
+                                    <MinusIcon className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                /* Summary tab */
+                <div className="edit-urls-modal-summary">
+                  {urlsToAdd.size + urlsToRemove.size === 0 ? (
+                    <div className="edit-urls-modal-empty-message">
+                      No pending changes
+                    </div>
                   ) : (
-                    <div className="edit-urls-modal-url-items">
-                      {urlCounts.map((url) => {
-                        return (
-                          <div
-                            key={url.value}
-                            className={`edit-urls-modal-url-item ${
-                              urlsToAdd.has(url.value)
-                                ? "edit-urls-modal-url-item-add"
-                                : urlsToRemove.has(url.value)
-                                  ? "edit-urls-modal-url-item-remove"
-                                  : ""
-                            }`}
-                          >
-                            <div className="edit-urls-modal-url-value">
-                              <a
-                                href={url.value}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="edit-urls-modal-url-link"
+                    <div className="edit-urls-modal-changes-group">
+                      {urlsToAdd.size > 0 && (
+                        <div className="edit-urls-modal-change-section">
+                          <h4 className="edit-urls-modal-changes-title edit-urls-modal-changes-title-add">
+                            Adding:
+                          </h4>
+                          <div className="edit-urls-modal-changes-list">
+                            {Array.from(urlsToAdd).map((url) => (
+                              <div
+                                key={url}
+                                className="edit-urls-modal-change-item-add"
                               >
-                                {url.value}
-                              </a>
-                            </div>
-                            <div className="edit-urls-modal-url-item-right">
-                              <span className="edit-urls-modal-url-count">
-                                {url.count}/{url.total}
-                              </span>
-                              {url.count < url.total && (
-                                <button
-                                  onClick={() => handleAddUrl(url.value)}
-                                  className="edit-urls-modal-url-add-button"
-                                  title="Add to all files"
+                                <a
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="edit-urls-modal-url-link"
                                 >
-                                  <PlusIcon className="h-4 w-4" />
-                                </button>
-                              )}
-                              {url.count > 0 && (
-                                <button
-                                  onClick={() => handleRemoveUrl(url.value)}
-                                  className="edit-urls-modal-url-remove-button"
-                                  title="Remove from all files"
-                                >
-                                  <MinusIcon className="h-4 w-4" />
-                                </button>
-                              )}
-                            </div>
+                                  {url}
+                                </a>
+                              </div>
+                            ))}
                           </div>
-                        );
-                      })}
+                        </div>
+                      )}
+                      {urlsToRemove.size > 0 && (
+                        <div className="edit-urls-modal-change-section">
+                          <h4 className="edit-urls-modal-changes-title edit-urls-modal-changes-title-remove">
+                            Removing:
+                          </h4>
+                          <div className="edit-urls-modal-changes-list">
+                            {Array.from(urlsToRemove).map((url) => (
+                              <div
+                                key={url}
+                                className="edit-urls-modal-change-item-remove"
+                              >
+                                <a
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="edit-urls-modal-url-link"
+                                >
+                                  {url}
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              </>
-            ) : (
-              /* Summary tab */
-              <div className="edit-urls-modal-summary">
-                {urlsToAdd.size + urlsToRemove.size === 0 ? (
-                  <div className="edit-urls-modal-empty-message">
-                    No pending changes
-                  </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="edit-urls-modal-footer">
+              <div className="edit-urls-modal-footer-content">
+                {error ? (
+                  <div className="edit-urls-modal-error">{error}</div>
                 ) : (
-                  <div className="edit-urls-modal-changes-group">
-                    {urlsToAdd.size > 0 && (
-                      <div className="edit-urls-modal-change-section">
-                        <h4 className="edit-urls-modal-changes-title edit-urls-modal-changes-title-add">
-                          Adding:
-                        </h4>
-                        <div className="edit-urls-modal-changes-list">
-                          {Array.from(urlsToAdd).map((url) => (
-                            <div
-                              key={url}
-                              className="edit-urls-modal-change-item-add"
-                            >
-                              <a
-                                href={url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="edit-urls-modal-url-link"
-                              >
-                                {url}
-                              </a>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {urlsToRemove.size > 0 && (
-                      <div className="edit-urls-modal-change-section">
-                        <h4 className="edit-urls-modal-changes-title edit-urls-modal-changes-title-remove">
-                          Removing:
-                        </h4>
-                        <div className="edit-urls-modal-changes-list">
-                          {Array.from(urlsToRemove).map((url) => (
-                            <div
-                              key={url}
-                              className="edit-urls-modal-change-item-remove"
-                            >
-                              <a
-                                href={url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="edit-urls-modal-url-link"
-                              >
-                                {url}
-                              </a>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                  <div className="edit-urls-modal-changes-count">
+                    {urlsToAdd.size + urlsToRemove.size} pending change
+                    {urlsToAdd.size + urlsToRemove.size !== 1 ? "s" : ""}
                   </div>
                 )}
-              </div>
-            )}
-          </div>
 
-          {/* Footer */}
-          <div className="edit-urls-modal-footer">
-            <div className="edit-urls-modal-footer-content">
-              {error ? (
-                <div className="edit-urls-modal-error">{error}</div>
-              ) : (
-                <div className="edit-urls-modal-changes-count">
-                  {urlsToAdd.size + urlsToRemove.size} pending change
-                  {urlsToAdd.size + urlsToRemove.size !== 1 ? "s" : ""}
+                <div className="edit-urls-modal-footer-buttons">
+                  <PushButton
+                    onClick={handleClose}
+                    variant="secondary"
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </PushButton>
+                  <PushButton
+                    onClick={handleSubmit}
+                    disabled={
+                      isSubmitting || urlsToAdd.size + urlsToRemove.size === 0
+                    }
+                    variant="primary"
+                  >
+                    {isSubmitting ? (
+                      <span className="edit-urls-modal-spinner-container">
+                        <div className="edit-urls-modal-spinner" />
+                        Saving...
+                      </span>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </PushButton>
                 </div>
-              )}
-
-              <div className="edit-urls-modal-footer-buttons">
-                <PushButton
-                  onClick={handleClose}
-                  variant="secondary"
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </PushButton>
-                <PushButton
-                  onClick={handleSubmit}
-                  disabled={
-                    isSubmitting || urlsToAdd.size + urlsToRemove.size === 0
-                  }
-                  variant="primary"
-                >
-                  {isSubmitting ? (
-                    <span className="edit-urls-modal-spinner-container">
-                      <div className="edit-urls-modal-spinner" />
-                      Saving...
-                    </span>
-                  ) : (
-                    "Save Changes"
-                  )}
-                </PushButton>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Discard changes modal */}
-      {showDiscardModal && (
-        <ConfirmModal
-          title="Discard Changes"
-          message="You have unsaved changes. Are you sure you want to discard them?"
-          confirmLabel="Discard"
-          cancelLabel="Keep Editing"
-          onConfirm={onClose}
-          onCancel={() => setShowDiscardModal(false)}
-        />
-      )}
-    </div>
+        {/* Discard changes modal */}
+        {showDiscardModal && (
+          <ConfirmModal
+            title="Discard Changes"
+            message="You have unsaved changes. Are you sure you want to discard them?"
+            confirmLabel="Discard"
+            cancelLabel="Keep Editing"
+            onConfirm={onClose}
+            onCancel={() => setShowDiscardModal(false)}
+          />
+        )}
+      </div>
+    </FocusTrap>
   );
 };
 

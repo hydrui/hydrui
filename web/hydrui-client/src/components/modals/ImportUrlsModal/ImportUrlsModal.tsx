@@ -1,4 +1,5 @@
 import { MinusIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import { FocusTrap } from "focus-trap-react";
 import React, { useEffect, useMemo, useState } from "react";
 
 import PushButton from "@/components/widgets/PushButton/PushButton";
@@ -163,127 +164,133 @@ const ImportUrlsModal: React.FC<ImportUrlModalProps> = ({
   });
 
   return (
-    <div className="import-urls-modal-container">
-      <div className="import-urls-modal-wrapper">
-        <div className="import-urls-modal-backdrop" onClick={onClose} />
+    <FocusTrap>
+      <div className="import-urls-modal-container">
+        <div className="import-urls-modal-wrapper">
+          <div className="import-urls-modal-backdrop" onClick={onClose} />
 
-        <div className="import-urls-modal-content">
-          {/* Header */}
-          <div className="import-urls-modal-header">
-            <h2 className="import-urls-modal-title">Import URLs</h2>
-            <button
-              onClick={onClose}
-              className="import-urls-modal-close-button"
-            >
-              <XMarkIcon className="import-urls-modal-close-icon" />
-            </button>
-          </div>
-
-          {/* Content */}
-          <div>
-            {/* URL input */}
-            <div className="import-urls-modal-section import-urls-modal-space-y">
-              <label className="import-urls-modal-label">
-                URLs (one per line)
-              </label>
-              <textarea
-                className="import-urls-modal-textarea"
-                placeholder="Enter URLs here..."
-                onChange={(e) => handleUrlInput(e.target.value)}
-                disabled={isImporting}
-              />
+          <div className="import-urls-modal-content">
+            {/* Header */}
+            <div className="import-urls-modal-header">
+              <h2 className="import-urls-modal-title">Import URLs</h2>
+              <button
+                onClick={onClose}
+                className="import-urls-modal-close-button"
+              >
+                <XMarkIcon className="import-urls-modal-close-icon" />
+              </button>
             </div>
 
-            {/* Tag services tabs */}
-            <div className="import-urls-modal-service-tabs">
-              <div className="import-urls-modal-tabs-list">
-                {tagServices.map(({ key, name }) => (
-                  <button
-                    key={key}
-                    onClick={() => setActiveServiceKey(key)}
-                    className={`import-urls-modal-tab ${
-                      activeServiceKey === key
-                        ? "import-urls-modal-tab-active"
-                        : "import-urls-modal-tab-inactive"
-                    }`}
-                  >
-                    {name}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="import-urls-modal-section import-urls-modal-space-y">
-              {/* Tag input for active service */}
-              {activeServiceKey && (
-                <TagInput
-                  serviceKey={activeServiceKey}
-                  value={tagsByService[activeServiceKey] || []}
-                  onChange={(tags) => handleTagInput(activeServiceKey, tags)}
+            {/* Content */}
+            <div>
+              {/* URL input */}
+              <div className="import-urls-modal-section import-urls-modal-space-y">
+                <label className="import-urls-modal-label">
+                  URLs (one per line)
+                </label>
+                <textarea
+                  className="import-urls-modal-textarea"
+                  placeholder="Enter URLs here..."
+                  onChange={(e) => handleUrlInput(e.target.value)}
                   disabled={isImporting}
                 />
-              )}
-              {/* Tag list */}
-              <div className="import-urls-modal-tag-list">
-                {!activeServiceKey ||
-                !tagsByService[activeServiceKey] ||
-                tagsByService[activeServiceKey].length === 0 ? (
-                  <div className="import-urls-modal-empty-message">No tags</div>
-                ) : (
-                  <div className="import-urls-modal-tag-items">
-                    {tagsByService[activeServiceKey].map((tag) => {
-                      return (
-                        <div key={tag} className="import-urls-modal-tag-item">
-                          <TagLabel tag={tag} />
-                          <div className="import-urls-modal-tag-actions">
-                            <div className="import-urls-modal-tag-action-buttons">
-                              <button
-                                onClick={() => handleRemoveTag(tag)}
-                                className="import-urls-modal-remove-button"
-                                title="Remove from all files"
-                              >
-                                <MinusIcon className="import-urls-modal-action-icon" />
-                              </button>
+              </div>
+
+              {/* Tag services tabs */}
+              <div className="import-urls-modal-service-tabs">
+                <div className="import-urls-modal-tabs-list">
+                  {tagServices.map(({ key, name }) => (
+                    <button
+                      key={key}
+                      onClick={() => setActiveServiceKey(key)}
+                      className={`import-urls-modal-tab ${
+                        activeServiceKey === key
+                          ? "import-urls-modal-tab-active"
+                          : "import-urls-modal-tab-inactive"
+                      }`}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="import-urls-modal-section import-urls-modal-space-y">
+                {/* Tag input for active service */}
+                {activeServiceKey && (
+                  <TagInput
+                    serviceKey={activeServiceKey}
+                    value={tagsByService[activeServiceKey] || []}
+                    onChange={(tags) => handleTagInput(activeServiceKey, tags)}
+                    disabled={isImporting}
+                  />
+                )}
+                {/* Tag list */}
+                <div className="import-urls-modal-tag-list">
+                  {!activeServiceKey ||
+                  !tagsByService[activeServiceKey] ||
+                  tagsByService[activeServiceKey].length === 0 ? (
+                    <div className="import-urls-modal-empty-message">
+                      No tags
+                    </div>
+                  ) : (
+                    <div className="import-urls-modal-tag-items">
+                      {tagsByService[activeServiceKey].map((tag) => {
+                        return (
+                          <div key={tag} className="import-urls-modal-tag-item">
+                            <TagLabel tag={tag} />
+                            <div className="import-urls-modal-tag-actions">
+                              <div className="import-urls-modal-tag-action-buttons">
+                                <button
+                                  onClick={() => handleRemoveTag(tag)}
+                                  className="import-urls-modal-remove-button"
+                                  title="Remove from all files"
+                                >
+                                  <MinusIcon className="import-urls-modal-action-icon" />
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Error message */}
+                {error && (
+                  <div className="import-urls-modal-error">{error}</div>
+                )}
+
+                {/* Progress */}
+                {isImporting && (
+                  <div className="import-urls-modal-progress">
+                    Importing URLs ({progress.completed} of {progress.total})...
                   </div>
                 )}
               </div>
-
-              {/* Error message */}
-              {error && <div className="import-urls-modal-error">{error}</div>}
-
-              {/* Progress */}
-              {isImporting && (
-                <div className="import-urls-modal-progress">
-                  Importing URLs ({progress.completed} of {progress.total})...
-                </div>
-              )}
             </div>
-          </div>
 
-          {/* Footer */}
-          <div className="import-urls-modal-footer">
-            <PushButton
-              onClick={onClose}
-              variant="secondary"
-              disabled={isImporting}
-            >
-              Cancel
-            </PushButton>
-            <PushButton
-              onClick={handleImport}
-              variant="primary"
-              disabled={urls.length === 0 || isImporting}
-            >
-              {isImporting ? "Importing..." : "Import"}
-            </PushButton>
+            {/* Footer */}
+            <div className="import-urls-modal-footer">
+              <PushButton
+                onClick={onClose}
+                variant="secondary"
+                disabled={isImporting}
+              >
+                Cancel
+              </PushButton>
+              <PushButton
+                onClick={handleImport}
+                variant="primary"
+                disabled={urls.length === 0 || isImporting}
+              >
+                {isImporting ? "Importing..." : "Import"}
+              </PushButton>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </FocusTrap>
   );
 };
 

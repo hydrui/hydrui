@@ -1,3 +1,4 @@
+import { FocusTrap } from "focus-trap-react";
 import React, { useCallback, useState } from "react";
 
 import ColorEditor from "@/components/widgets/ColorEditor/ColorEditor";
@@ -59,30 +60,34 @@ const EditColorModal: React.FC<EditColorProps> = ({ namespace, onClose }) => {
     Escape: onClose,
   });
   return (
-    <div className="edit-color-modal-container">
-      <div className="edit-color-modal-wrapper">
-        <div className="edit-color-modal-backdrop" onClick={onClose} />
-        <div className="edit-color-modal-content">
-          {/* Header */}
-          <div className="edit-color-modal-header">
-            <h3 className="edit-color-modal-title">Edit Color ({colorName})</h3>
-          </div>
-          {/* Content */}
-          <div className="edit-color-modal-body">
-            <ColorEditor color={color} setColor={setColor}></ColorEditor>
-          </div>
-          {/* Footer */}
-          <div className="edit-color-modal-footer">
-            <PushButton onClick={onClose} variant="secondary">
-              Cancel
-            </PushButton>
-            <PushButton onClick={saveColor} variant="primary">
-              Save
-            </PushButton>
+    <FocusTrap>
+      <div className="edit-color-modal-container">
+        <div className="edit-color-modal-wrapper">
+          <div className="edit-color-modal-backdrop" onClick={onClose} />
+          <div className="edit-color-modal-content">
+            {/* Header */}
+            <div className="edit-color-modal-header">
+              <h3 className="edit-color-modal-title">
+                Edit Color ({colorName})
+              </h3>
+            </div>
+            {/* Content */}
+            <div className="edit-color-modal-body">
+              <ColorEditor color={color} setColor={setColor}></ColorEditor>
+            </div>
+            {/* Footer */}
+            <div className="edit-color-modal-footer">
+              <PushButton onClick={onClose} variant="secondary">
+                Cancel
+              </PushButton>
+              <PushButton onClick={saveColor} variant="primary">
+                Save
+              </PushButton>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </FocusTrap>
   );
 };
 

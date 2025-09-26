@@ -3,6 +3,7 @@ import {
   PencilSquareIcon,
   XMarkIcon,
 } from "@heroicons/react/24/solid";
+import { FocusTrap } from "focus-trap-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { FileMetadata } from "@/api/types";
@@ -202,251 +203,256 @@ const EditNotesModal: React.FC<EditNotesModalProps> = ({ file, onClose }) => {
   });
 
   return (
-    <div className="edit-notes-modal-container">
-      <div className="edit-notes-modal-wrapper">
-        <div className="edit-notes-modal-backdrop" onClick={handleClose} />
+    <FocusTrap>
+      <div className="edit-notes-modal-container">
+        <div className="edit-notes-modal-wrapper">
+          <div className="edit-notes-modal-backdrop" onClick={handleClose} />
 
-        <div className="edit-notes-modal-content">
-          {/* Header */}
-          <div className="edit-notes-modal-header">
-            <h2 className="edit-notes-modal-title">Edit Notes</h2>
-            <button
-              onClick={handleClose}
-              className="edit-notes-modal-close-button"
-            >
-              <XMarkIcon className="edit-notes-modal-close-icon" />
-            </button>
-          </div>
-
-          {/* Tabs */}
-          <div className="edit-notes-modal-tabs">
-            <div className="edit-notes-modal-tabs-list">
+          <div className="edit-notes-modal-content">
+            {/* Header */}
+            <div className="edit-notes-modal-header">
+              <h2 className="edit-notes-modal-title">Edit Notes</h2>
               <button
-                onClick={() => setActiveTab("edit")}
-                className={`edit-notes-modal-tab ${
-                  activeTab === "edit"
-                    ? "edit-notes-modal-tab-active"
-                    : "edit-notes-modal-tab-inactive"
-                }`}
+                onClick={handleClose}
+                className="edit-notes-modal-close-button"
               >
-                Edit Notes
-              </button>
-              <button
-                onClick={() => setActiveTab("summary")}
-                className={`edit-notes-modal-tab ${
-                  activeTab === "summary"
-                    ? "edit-notes-modal-tab-active"
-                    : "edit-notes-modal-tab-inactive"
-                }`}
-              >
-                Summary
+                <XMarkIcon className="edit-notes-modal-close-icon" />
               </button>
             </div>
-          </div>
 
-          {/* Content */}
-          <div className="edit-notes-modal-content-area">
-            {activeTab === "edit" ? (
-              <>
-                {/* Note name input */}
-                <div className="edit-notes-modal-name-input-container">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    placeholder="Enter a note name..."
-                    className="edit-notes-modal-name-input"
-                    disabled={isSubmitting}
-                    onKeyDown={handleInputKeyDown}
-                  />
-                </div>
-                {/* Note list */}
-                <div className="edit-notes-modal-note-list">
-                  {notes.length === 0 ? (
+            {/* Tabs */}
+            <div className="edit-notes-modal-tabs">
+              <div className="edit-notes-modal-tabs-list">
+                <button
+                  onClick={() => setActiveTab("edit")}
+                  className={`edit-notes-modal-tab ${
+                    activeTab === "edit"
+                      ? "edit-notes-modal-tab-active"
+                      : "edit-notes-modal-tab-inactive"
+                  }`}
+                >
+                  Edit Notes
+                </button>
+                <button
+                  onClick={() => setActiveTab("summary")}
+                  className={`edit-notes-modal-tab ${
+                    activeTab === "summary"
+                      ? "edit-notes-modal-tab-active"
+                      : "edit-notes-modal-tab-inactive"
+                  }`}
+                >
+                  Summary
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="edit-notes-modal-content-area">
+              {activeTab === "edit" ? (
+                <>
+                  {/* Note name input */}
+                  <div className="edit-notes-modal-name-input-container">
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      placeholder="Enter a note name..."
+                      className="edit-notes-modal-name-input"
+                      disabled={isSubmitting}
+                      onKeyDown={handleInputKeyDown}
+                    />
+                  </div>
+                  {/* Note list */}
+                  <div className="edit-notes-modal-note-list">
+                    {notes.length === 0 ? (
+                      <div className="edit-notes-modal-empty-message">
+                        No notes
+                      </div>
+                    ) : (
+                      <div className="edit-notes-modal-note-items">
+                        {notes.map(([name, text]) => {
+                          return (
+                            <div
+                              key={name}
+                              className={`edit-notes-modal-note-item ${
+                                notesToAdd.has(name)
+                                  ? "edit-notes-modal-note-item-add"
+                                  : notesToRemove.has(name)
+                                    ? "edit-notes-modal-note-item-remove"
+                                    : notesToEdit.has(name)
+                                      ? "edit-notes-modal-note-item-edit"
+                                      : ""
+                              }`}
+                            >
+                              <div className="edit-notes-modal-note-value">
+                                {name}
+                              </div>
+                              <div className="edit-notes-modal-name-item-right">
+                                <button
+                                  onClick={() => editNote(name, text, false)}
+                                  className="edit-notes-modal-note-edit-button"
+                                  title="Add to all files"
+                                >
+                                  <PencilSquareIcon />
+                                </button>
+                                <button
+                                  onClick={() => handleRemoveNote(name)}
+                                  className="edit-notes-modal-note-remove-button"
+                                  title="Remove from all files"
+                                >
+                                  <MinusIcon />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                /* Summary tab */
+                <div className="edit-notes-modal-summary">
+                  {notesToAdd.size + notesToRemove.size + notesToEdit.size ===
+                  0 ? (
                     <div className="edit-notes-modal-empty-message">
-                      No notes
+                      No pending changes
                     </div>
                   ) : (
-                    <div className="edit-notes-modal-note-items">
-                      {notes.map(([name, text]) => {
-                        return (
-                          <div
-                            key={name}
-                            className={`edit-notes-modal-note-item ${
-                              notesToAdd.has(name)
-                                ? "edit-notes-modal-note-item-add"
-                                : notesToRemove.has(name)
-                                  ? "edit-notes-modal-note-item-remove"
-                                  : notesToEdit.has(name)
-                                    ? "edit-notes-modal-note-item-edit"
-                                    : ""
-                            }`}
-                          >
-                            <div className="edit-notes-modal-note-value">
-                              {name}
-                            </div>
-                            <div className="edit-notes-modal-name-item-right">
-                              <button
-                                onClick={() => editNote(name, text, false)}
-                                className="edit-notes-modal-note-edit-button"
-                                title="Add to all files"
+                    <div className="edit-notes-modal-changes-group">
+                      {notesToAdd.size > 0 && (
+                        <div className="edit-notes-modal-change-section">
+                          <h4 className="edit-notes-modal-changes-title edit-notes-modal-changes-title-add">
+                            Adding:
+                          </h4>
+                          <div className="edit-notes-modal-changes-list">
+                            {Array.from(notesToAdd).map(([name]) => (
+                              <div
+                                key={name}
+                                className="edit-notes-modal-change-item-add"
                               >
-                                <PencilSquareIcon />
-                              </button>
-                              <button
-                                onClick={() => handleRemoveNote(name)}
-                                className="edit-notes-modal-note-remove-button"
-                                title="Remove from all files"
-                              >
-                                <MinusIcon />
-                              </button>
-                            </div>
+                                {name}
+                              </div>
+                            ))}
                           </div>
-                        );
-                      })}
+                        </div>
+                      )}
+                      {notesToRemove.size > 0 && (
+                        <div className="edit-notes-modal-change-section">
+                          <h4 className="edit-notes-modal-changes-title edit-notes-modal-changes-title-remove">
+                            Removing:
+                          </h4>
+                          <div className="edit-notes-modal-changes-list">
+                            {Array.from(notesToRemove).map((name) => (
+                              <div
+                                key={name}
+                                className="edit-notes-modal-change-item-remove"
+                              >
+                                {name}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {notesToEdit.size > 0 && (
+                        <div className="edit-notes-modal-change-section">
+                          <h4 className="edit-notes-modal-changes-title edit-notes-modal-changes-title-edit">
+                            Editing:
+                          </h4>
+                          <div className="edit-notes-modal-changes-list">
+                            {Array.from(notesToEdit).map(([name]) => (
+                              <div
+                                key={name}
+                                className="edit-notes-modal-change-item-edit"
+                              >
+                                {name}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              </>
-            ) : (
-              /* Summary tab */
-              <div className="edit-notes-modal-summary">
-                {notesToAdd.size + notesToRemove.size + notesToEdit.size ===
-                0 ? (
-                  <div className="edit-notes-modal-empty-message">
-                    No pending changes
-                  </div>
-                ) : (
-                  <div className="edit-notes-modal-changes-group">
-                    {notesToAdd.size > 0 && (
-                      <div className="edit-notes-modal-change-section">
-                        <h4 className="edit-notes-modal-changes-title edit-notes-modal-changes-title-add">
-                          Adding:
-                        </h4>
-                        <div className="edit-notes-modal-changes-list">
-                          {Array.from(notesToAdd).map(([name]) => (
-                            <div
-                              key={name}
-                              className="edit-notes-modal-change-item-add"
-                            >
-                              {name}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {notesToRemove.size > 0 && (
-                      <div className="edit-notes-modal-change-section">
-                        <h4 className="edit-notes-modal-changes-title edit-notes-modal-changes-title-remove">
-                          Removing:
-                        </h4>
-                        <div className="edit-notes-modal-changes-list">
-                          {Array.from(notesToRemove).map((name) => (
-                            <div
-                              key={name}
-                              className="edit-notes-modal-change-item-remove"
-                            >
-                              {name}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {notesToEdit.size > 0 && (
-                      <div className="edit-notes-modal-change-section">
-                        <h4 className="edit-notes-modal-changes-title edit-notes-modal-changes-title-edit">
-                          Editing:
-                        </h4>
-                        <div className="edit-notes-modal-changes-list">
-                          {Array.from(notesToEdit).map(([name]) => (
-                            <div
-                              key={name}
-                              className="edit-notes-modal-change-item-edit"
-                            >
-                              {name}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="edit-notes-modal-footer">
-            <div className="edit-notes-modal-footer-content">
-              {error ? (
-                <div className="edit-notes-modal-error">{error}</div>
-              ) : (
-                <div className="edit-notes-modal-changes-count">
-                  {notesToAdd.size + notesToRemove.size + notesToEdit.size}{" "}
-                  pending change
-                  {notesToAdd.size + notesToRemove.size + notesToEdit.size !== 1
-                    ? "s"
-                    : ""}
                 </div>
               )}
+            </div>
 
-              <div className="edit-notes-modal-footer-buttons">
-                <PushButton
-                  onClick={handleClose}
-                  variant="secondary"
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </PushButton>
-                <PushButton
-                  onClick={handleSubmit}
-                  disabled={
-                    isSubmitting ||
-                    notesToAdd.size + notesToRemove.size + notesToEdit.size ===
-                      0
-                  }
-                  variant="primary"
-                >
-                  {isSubmitting ? (
-                    <span className="edit-notes-modal-spinner-container">
-                      <div className="edit-notes-modal-spinner" />
-                      Saving...
-                    </span>
-                  ) : (
-                    "Save Changes"
-                  )}
-                </PushButton>
+            {/* Footer */}
+            <div className="edit-notes-modal-footer">
+              <div className="edit-notes-modal-footer-content">
+                {error ? (
+                  <div className="edit-notes-modal-error">{error}</div>
+                ) : (
+                  <div className="edit-notes-modal-changes-count">
+                    {notesToAdd.size + notesToRemove.size + notesToEdit.size}{" "}
+                    pending change
+                    {notesToAdd.size + notesToRemove.size + notesToEdit.size !==
+                    1
+                      ? "s"
+                      : ""}
+                  </div>
+                )}
+
+                <div className="edit-notes-modal-footer-buttons">
+                  <PushButton
+                    onClick={handleClose}
+                    variant="secondary"
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </PushButton>
+                  <PushButton
+                    onClick={handleSubmit}
+                    disabled={
+                      isSubmitting ||
+                      notesToAdd.size +
+                        notesToRemove.size +
+                        notesToEdit.size ===
+                        0
+                    }
+                    variant="primary"
+                  >
+                    {isSubmitting ? (
+                      <span className="edit-notes-modal-spinner-container">
+                        <div className="edit-notes-modal-spinner" />
+                        Saving...
+                      </span>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </PushButton>
+                </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Discard changes modal */}
+        {showDiscardModal && (
+          <ConfirmModal
+            title="Discard Changes"
+            message="You have unsaved changes. Are you sure you want to discard them?"
+            confirmLabel="Discard"
+            cancelLabel="Keep Editing"
+            onConfirm={onClose}
+            onCancel={() => setShowDiscardModal(false)}
+          />
+        )}
+
+        {/* Edit note modal */}
+        {showEditModal && (
+          <EditNoteModal
+            name={editName}
+            text={editText}
+            isNew={editIsNew}
+            onSave={(name, text) => {
+              handleAddNote(name, text);
+              setShowEditModal(false);
+            }}
+            onCancel={() => setShowEditModal(false)}
+          />
+        )}
       </div>
-
-      {/* Discard changes modal */}
-      {showDiscardModal && (
-        <ConfirmModal
-          title="Discard Changes"
-          message="You have unsaved changes. Are you sure you want to discard them?"
-          confirmLabel="Discard"
-          cancelLabel="Keep Editing"
-          onConfirm={onClose}
-          onCancel={() => setShowDiscardModal(false)}
-        />
-      )}
-
-      {/* Edit note modal */}
-      {showEditModal && (
-        <EditNoteModal
-          name={editName}
-          text={editText}
-          isNew={editIsNew}
-          onSave={(name, text) => {
-            handleAddNote(name, text);
-            setShowEditModal(false);
-          }}
-          onCancel={() => setShowEditModal(false)}
-        />
-      )}
-    </div>
+    </FocusTrap>
   );
 };
 

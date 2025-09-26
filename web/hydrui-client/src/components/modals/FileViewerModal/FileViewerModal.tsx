@@ -5,6 +5,7 @@ import {
   ChevronRightIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
+import { FocusTrap } from "focus-trap-react";
 import React, { useEffect, useRef, useState } from "react";
 
 import { FileMetadata } from "@/api/types";
@@ -170,83 +171,88 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({
   const showBrokenImageReport = fileData.mime === "image/vnd.adobe.photoshop";
 
   return (
-    <div className="file-viewer-modal-container">
-      {/* Header */}
-      <div className="file-viewer-modal-header">
-        <div className="file-viewer-modal-file-info">
-          {fileData.width &&
-            fileData.height &&
-            `${fileData.width} × ${fileData.height} • `}
-          {fileData.duration && `${formatDuration(fileData.duration)} • `}
-          {`${formatFileSize(fileData.size)} • `}
-          {`${fileData.mime}`}
-        </div>
-        <div className="file-viewer-modal-actions">
-          {showBrokenImageReport && (
-            <PushButton
-              variant="muted"
-              onClick={() => setIsBrokenImageModalOpen(true)}
+    <FocusTrap>
+      <div className="file-viewer-modal-container">
+        {/* Header */}
+        <div className="file-viewer-modal-header">
+          <div className="file-viewer-modal-file-info">
+            {fileData.width &&
+              fileData.height &&
+              `${fileData.width} × ${fileData.height} • `}
+            {fileData.duration && `${formatDuration(fileData.duration)} • `}
+            {`${formatFileSize(fileData.size)} • `}
+            {`${fileData.mime}`}
+          </div>
+          <div className="file-viewer-modal-actions">
+            {showBrokenImageReport && (
+              <PushButton
+                variant="muted"
+                onClick={() => setIsBrokenImageModalOpen(true)}
+              >
+                Broken image?
+              </PushButton>
+            )}
+            <a
+              href={client.getFileUrl(fileId)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="file-viewer-modal-action-button"
             >
-              Broken image?
-            </PushButton>
-          )}
-          <a
-            href={client.getFileUrl(fileId)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="file-viewer-modal-action-button"
+              <ArrowTopRightOnSquareIcon className="file-viewer-modal-small-icon" />
+            </a>
+            <a
+              href={`${client.getFileUrl(fileId)}&download=true`}
+              download={generateFileName(fileData)}
+              className="file-viewer-modal-action-button"
+            >
+              <ArrowDownTrayIcon className="file-viewer-modal-small-icon" />
+            </a>
+            <button
+              onClick={onClose}
+              className="file-viewer-modal-action-button"
+            >
+              <XMarkIcon className="file-viewer-modal-medium-icon" />
+            </button>
+          </div>
+        </div>
+
+        {/* Main content */}
+        <div className="file-viewer-modal-content">
+          {/* Navigation buttons */}
+          <button
+            onClick={onPrevious}
+            className="file-viewer-modal-nav-button file-viewer-modal-prev-button"
           >
-            <ArrowTopRightOnSquareIcon className="file-viewer-modal-small-icon" />
-          </a>
-          <a
-            href={`${client.getFileUrl(fileId)}&download=true`}
-            download={generateFileName(fileData)}
-            className="file-viewer-modal-action-button"
-          >
-            <ArrowDownTrayIcon className="file-viewer-modal-small-icon" />
-          </a>
-          <button onClick={onClose} className="file-viewer-modal-action-button">
-            <XMarkIcon className="file-viewer-modal-medium-icon" />
+            <ChevronLeftIcon className="file-viewer-modal-large-icon" />
           </button>
+
+          <button
+            onClick={onNext}
+            className="file-viewer-modal-nav-button file-viewer-modal-next-button"
+          >
+            <ChevronRightIcon className="file-viewer-modal-large-icon" />
+          </button>
+
+          {/* File content */}
+          <div className="file-viewer-modal-viewer-container" ref={previewRef}>
+            <FileViewer
+              fileId={fileId}
+              fileData={fileData}
+              autoActivate={true}
+              navigateLeft={hasPrevious ? onPrevious : undefined}
+              navigateRight={hasNext ? onNext : undefined}
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Main content */}
-      <div className="file-viewer-modal-content">
-        {/* Navigation buttons */}
-        <button
-          onClick={onPrevious}
-          className="file-viewer-modal-nav-button file-viewer-modal-prev-button"
-        >
-          <ChevronLeftIcon className="file-viewer-modal-large-icon" />
-        </button>
-
-        <button
-          onClick={onNext}
-          className="file-viewer-modal-nav-button file-viewer-modal-next-button"
-        >
-          <ChevronRightIcon className="file-viewer-modal-large-icon" />
-        </button>
-
-        {/* File content */}
-        <div className="file-viewer-modal-viewer-container" ref={previewRef}>
-          <FileViewer
-            fileId={fileId}
-            fileData={fileData}
-            autoActivate={true}
-            navigateLeft={hasPrevious ? onPrevious : undefined}
-            navigateRight={hasNext ? onNext : undefined}
+        {isBrokenImageModalOpen && (
+          <BrokenImageModal
+            onClose={() => setIsBrokenImageModalOpen(false)}
+            url={client.getFileUrl(fileId)}
           />
-        </div>
+        )}
       </div>
-
-      {isBrokenImageModalOpen && (
-        <BrokenImageModal
-          onClose={() => setIsBrokenImageModalOpen(false)}
-          url={client.getFileUrl(fileId)}
-        />
-      )}
-    </div>
+    </FocusTrap>
   );
 };
 

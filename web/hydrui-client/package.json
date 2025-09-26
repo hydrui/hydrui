@@ -17,7 +17,7 @@
   "dependencies": {
     "@heroicons/react": "^2",
     "@ruffle-rs/ruffle": "^0.1.0-nightly.2025.3.15",
-    "html-minifier": "^4.0.0",
+    "focus-trap-react": "^11.0.4",
     "ogv": "^1.9.0",
     "react-error-boundary": "^5",
     "react-pdf": "^9",

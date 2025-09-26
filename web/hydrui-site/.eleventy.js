@@ -1,4 +1,4 @@
-import htmlmin from "html-minifier";
+import htmlmin from "html-minifier-next";
 import EleventyVitePlugin from "@11ty/eleventy-plugin-vite";
 
 export default function (eleventyConfig) {
