@@ -23,7 +23,7 @@ const TabRow: React.FC<TabRowProps> = ({ tabs }) => {
     actions: { setPage, removeVirtualPage, setSelectedPageKeys },
   } = usePageStore();
 
-  const [currentIndex, setCurrentIndex] = useState<number>(
+  const [currentIndex, setCurrentIndex] = useState<number>(() =>
     activePageKey
       ? tabs.findIndex((tab) => tabContainsKey(tab, activePageKey))
       : -1,
