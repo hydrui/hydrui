@@ -308,35 +308,19 @@ export const usePageStore = create<PageState>()(
             try {
               const response = await client.getPages();
 
-              // Extract all page tabs from the nested structure
-              const extractPages = (rootPage: Page): Page[] => {
-                const result: Page[] = [];
-                const stack: Page[] = [rootPage];
-
-                while (stack.length > 0) {
-                  const page = stack.pop()!;
-                  result.push(page);
-
-                  if (page.pages) {
-                    for (let i = page.pages.length - 1; i >= 0; i--) {
-                      stack.push(page.pages[i]);
-                    }
-                  }
-                }
-
-                return result;
-              };
-
-              const allPages = extractPages(response.pages);
-              // Filter only media pages
-              const mediaPages = allPages.filter((page) => page.is_media_page);
-
-              set({ pages: mediaPages });
+              set({ pages: response.pages.pages });
 
               // If we don't have an active page yet, use the first API page or the search page
               const { activePageKey } = get();
-              if (!activePageKey && mediaPages.length > 0) {
-                await get().actions.setPage(mediaPages[0].page_key, "hydrus");
+              if (
+                !activePageKey &&
+                response.pages.pages &&
+                response.pages.pages.length > 0
+              ) {
+                await get().actions.setPage(
+                  response.pages.pages[0].page_key,
+                  "hydrus",
+                );
               } else if (!activePageKey) {
                 await get().actions.setPage(SEARCH_PAGE_KEY, "search");
               }

@@ -1,28 +1,48 @@
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/solid";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 import PageView from "@/components/widgets/PageView/PageView";
 import { Tab, useTabs } from "@/hooks/useTabs";
-import { usePageStore } from "@/store/pageStore";
+import { usePageActions, usePageStore } from "@/store/pageStore";
 
 import "./index.css";
 
-// TabView component to display and manage tabs
-const TabView: React.FC = () => {
+interface TabRowProps {
+  tabs: Tab[];
+}
+
+function tabContainsKey(tab: Tab, key: string): boolean {
+  return tab.key === key || tab.tabs.some((tab) => tabContainsKey(tab, key));
+}
+
+// TabRow handles a single row of tabs.
+const TabRow: React.FC<TabRowProps> = ({ tabs }) => {
   const {
     activePageKey,
     selectedPageKeys,
-    actions: { setPage, fetchPages, removeVirtualPage, setSelectedPageKeys },
+    actions: { setPage, removeVirtualPage, setSelectedPageKeys },
   } = usePageStore();
 
-  const tabs = useTabs();
+  const [currentIndex, setCurrentIndex] = useState<number>(
+    activePageKey
+      ? tabs.findIndex((tab) => tabContainsKey(tab, activePageKey))
+      : -1,
+  );
 
-  // Initial fetch of pages
-  useEffect(() => {
-    fetchPages();
-  }, [fetchPages]);
+  const setTab = async (index: number) => {
+    // Don't bother doing anything if we're already in a sub tab of this one.
+    if (activePageKey && tabContainsKey(tabs[index], activePageKey)) {
+      return;
+    }
+    setPage(tabs[index].key, tabs[index].type);
+    setCurrentIndex(index);
+  };
 
-  const handleTabClick = async (tab: Tab, event: React.MouseEvent) => {
+  const handleTabClick = async (index: number, event: React.MouseEvent) => {
+    const tab = tabs[index];
+    if (!tab) {
+      return;
+    }
     if (event.ctrlKey || event.metaKey) {
       // Toggle selection with Ctrl/Cmd
       if (selectedPageKeys.includes(tab.key)) {
@@ -48,14 +68,18 @@ const TabView: React.FC = () => {
       }
     } else {
       // Regular click sets the active page
-      await setPage(tab.key, tab.type);
+      await setTab(index);
     }
   };
 
   const handleCloseTab = async (
-    tab: Tab,
+    index: number,
     event?: React.MouseEvent | React.KeyboardEvent,
   ) => {
+    const tab = tabs[index];
+    if (!tab) {
+      return;
+    }
     if (event) {
       event.stopPropagation();
     }
@@ -80,22 +104,26 @@ const TabView: React.FC = () => {
       const remainingTabs = tabs.filter((t) => t.key !== tab.key);
 
       if (remainingTabs.length > 0) {
-        // Try to switch to the tab to the left, otherwise take first remaining tab
-        const prevIndex = Math.max(0, currentIndex - 1);
-        const nextTab = remainingTabs[prevIndex] || remainingTabs[0];
-        await setPage(nextTab.key, nextTab.type);
+        // Try to switch to the tab to the left.
+        await setTab(Math.max(0, currentIndex - 1));
       }
     }
   };
 
-  const handleTabKeyDown = async (tab: Tab, event: React.KeyboardEvent) => {
-    const currentIndex = tabs.findIndex((t) => t.key === tab.key);
+  const handleTabKeyDown = async (
+    index: number,
+    event: React.KeyboardEvent,
+  ) => {
+    const tab = tabs[index];
+    if (!tab) {
+      return;
+    }
 
     switch (event.key) {
       case "ArrowLeft":
         event.preventDefault();
-        if (currentIndex > 0) {
-          const prevTab = tabs[currentIndex - 1];
+        if (index > 0) {
+          const prevTab = tabs[index - 1];
           if (prevTab.key)
             document
               .querySelector<HTMLElement>(`[data-tab-key="${prevTab.key}"]`)
@@ -105,8 +133,8 @@ const TabView: React.FC = () => {
 
       case "ArrowRight":
         event.preventDefault();
-        if (currentIndex < tabs.length - 1) {
-          const nextTab = tabs[currentIndex + 1];
+        if (index < tabs.length - 1) {
+          const nextTab = tabs[index + 1];
           if (nextTab.key)
             document
               .querySelector<HTMLElement>(`[data-tab-key="${nextTab.key}"]`)
@@ -133,8 +161,8 @@ const TabView: React.FC = () => {
           );
 
           if (lastSelectedIndex !== -1) {
-            const start = Math.min(currentIndex, lastSelectedIndex);
-            const end = Math.max(currentIndex, lastSelectedIndex);
+            const start = Math.min(index, lastSelectedIndex);
+            const end = Math.max(index, lastSelectedIndex);
 
             const keysInRange = tabs.slice(start, end + 1).map((t) => t.key);
             setSelectedPageKeys([
@@ -144,14 +172,14 @@ const TabView: React.FC = () => {
         } else {
           // Regular activation - select only this tab and make it active
           setSelectedPageKeys([tab.key]);
-          await setPage(tab.key, tab.type);
+          await setTab(index);
         }
         break;
 
       case "Delete":
         event.preventDefault();
         if (tab.closeable) {
-          await handleCloseTab(tab, event);
+          await handleCloseTab(index, event);
         }
         break;
     }
@@ -161,12 +189,12 @@ const TabView: React.FC = () => {
     <div className="tab-view-container">
       {/* Tab bar */}
       <div className="tab-bar" role="tablist" aria-label="Page tabs">
-        {tabs.map((tab) => (
+        {tabs.map((tab, index) => (
           <div
             key={tab.key}
             data-tab-key={tab.key}
             className={`tab-item ${
-              activePageKey === tab.key ? "tab-item-active" : ""
+              currentIndex === index ? "tab-item-active" : ""
             } ${
               selectedPageKeys.includes(tab.key)
                 ? "tab-item-selected"
@@ -182,8 +210,8 @@ const TabView: React.FC = () => {
             tabIndex={0}
             aria-selected={activePageKey === tab.key}
             aria-controls={`panel-${tab.key}`}
-            onClick={(e) => handleTabClick(tab, e)}
-            onKeyDown={(e) => handleTabKeyDown(tab, e)}
+            onClick={(e) => handleTabClick(index, e)}
+            onKeyDown={(e) => handleTabKeyDown(index, e)}
           >
             {tab.type === "search" && (
               <MagnifyingGlassIcon className="tab-item-icon" />
@@ -197,7 +225,7 @@ const TabView: React.FC = () => {
             {tab.closeable && (
               <button
                 className="tab-close-button"
-                onClick={(e) => handleCloseTab(tab, e)}
+                onClick={(e) => handleCloseTab(index, e)}
                 aria-label={`Close ${tab.name} tab`}
                 tabIndex={-1} // Exclude from tab sequence, accessible via delete key
               >
@@ -212,17 +240,33 @@ const TabView: React.FC = () => {
       <div
         className="tab-content"
         role="tabpanel"
-        id={`panel-${activePageKey}`}
+        id={`panel-${currentIndex}`}
         aria-labelledby={activePageKey || undefined}
       >
-        {activePageKey ? (
-          <PageView pageKey={activePageKey} />
-        ) : (
+        {currentIndex === -1 ? (
           <div className="tab-empty-message">No page selected</div>
+        ) : tabs[currentIndex].tabs.length > 0 ? (
+          <TabRow tabs={tabs[currentIndex].tabs} />
+        ) : (
+          <PageView pageKey={tabs[currentIndex].key} />
         )}
       </div>
     </div>
   );
+};
+
+// TabView component to display and manage tabs
+const TabView: React.FC = () => {
+  const { fetchPages } = usePageActions();
+
+  const tabs = useTabs();
+
+  // Initial fetch of pages
+  useEffect(() => {
+    fetchPages();
+  }, [fetchPages]);
+
+  return <TabRow tabs={tabs}></TabRow>;
 };
 
 export default TabView;

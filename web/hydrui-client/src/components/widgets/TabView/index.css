@@ -43,16 +43,17 @@
     var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
 }
 
+.tab-item-normal {
+  color: var(--color-white);
+}
+
 .tab-item-active {
+  background-color: var(--color-gray-700);
   color: var(--color-blue-300);
 }
 
 .tab-item-selected {
   background-color: var(--color-gray-600);
-}
-
-.tab-item-normal {
-  color: var(--color-white);
 }
 
 .tab-item:hover:not(.tab-item-active) {
