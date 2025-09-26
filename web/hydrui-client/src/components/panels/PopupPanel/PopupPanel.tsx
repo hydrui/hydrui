@@ -99,7 +99,7 @@ const PopupPanel: React.FC = () => {
         ) : (
           <ChevronUpIcon className="popup-collapsed-icon" />
         )}
-        <span>{error ? "Connection Error" : "Show Jobs"}</span>
+        <span>{error ? "Connection Error" : "Show Messages"}</span>
         {hasUnread && !error && (
           <span className="popup-notification-indicator" />
         )}
@@ -118,7 +118,7 @@ const PopupPanel: React.FC = () => {
               Connection Error
             </span>
           ) : (
-            "Job Status"
+            "Messages"
           )}
         </h3>
         <button
