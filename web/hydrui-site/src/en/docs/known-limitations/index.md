@@ -12,6 +12,4 @@ Hydrui has some limitations that may, at times, be counter-intuitive. Some of th
 
 - Hydrui allows certain operations, like drag'n'drop and file upload to the current tab, including hydrus client pages. Note that the hydrus client API does not offer a single atomic operation that performs all of the steps that occur during an upload, so **if your client gets interrupted it is possible for uploaded files to get "lost".**
 
-- **Hydrui does not handle complex hydrus client page hierarchies.** The behavior when nested pages are used will likely be incorrect.
-
 - Hydrui will show subscription job notifications, but **Hydrui can not yet perform actions like starting a gap downloader.**
