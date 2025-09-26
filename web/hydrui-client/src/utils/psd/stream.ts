@@ -1,4 +1,4 @@
-import { DataStream, SubFile } from "@/utils/stream";
+import { DataStream, SubFile } from "hydrui-util/src/stream";
 
 export class PSDDataStream extends DataStream {
   newCursor(atOffset?: number): PSDDataStream {

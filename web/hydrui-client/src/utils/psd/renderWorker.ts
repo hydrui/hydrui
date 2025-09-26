@@ -1,5 +1,6 @@
+import { createRemoteFile } from "hydrui-util/src/stream";
+
 import { Layer } from "@/utils/layerTree";
-import { createRemoteFile } from "@/utils/stream";
 import type { WorkerRequest, WorkerResponse } from "@/workers/psd.worker";
 
 import { PSDRenderer } from "./render";

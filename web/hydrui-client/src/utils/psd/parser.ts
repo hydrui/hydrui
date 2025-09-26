@@ -1,6 +1,6 @@
 // Basic parser for PSD files.
 // https://www.adobe.com/devnet-apps/photoshop/fileformatashtml
-import { File } from "@/utils/stream";
+import { File } from "hydrui-util/src/stream";
 
 import {
   PSDChannelID,
