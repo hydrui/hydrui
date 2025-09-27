@@ -5,8 +5,10 @@
 You can use the OCI containers that are published via GitHub. Running them is very similar to running the CLI binary directly.
 
 ```console
-docker run --rm -it ghcr.io/hydrui/hydrui
+docker run -p 8080:8080 --rm -it ghcr.io/hydrui/hydrui
 ```
+
+The server should be accessible at <http://localhost:8080>.
 
 Podman will also work here.
 
