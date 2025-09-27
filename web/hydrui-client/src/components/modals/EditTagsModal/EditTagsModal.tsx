@@ -348,7 +348,6 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
   const processAutotag = async () => {
     // TODO: handle multiple images?
     const file = files[0];
-    console.log(file);
     if (!file) {
       return;
     }

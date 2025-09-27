@@ -205,7 +205,6 @@ export async function loadModel(meta: TagModelMeta): Promise<Session> {
   const { InferenceSession } = await import("onnxruntime-web");
   const opfsRoot = await navigator.storage.getDirectory();
   const model = await opfsRoot.getFileHandle(meta.modelPath);
-  console.log(meta.modelPath);
   const modelData = await model.getFile();
   const tags = await opfsRoot.getFileHandle(meta.tagsPath);
   const tagsData = parseCsv(await (await tags.getFile()).text());
@@ -236,27 +235,25 @@ export async function fetchModelFiles(meta: TagModelMeta) {
   const cachedTagsName = `tagModels-${cacheKey}-tags.csv`;
   const tagsResponse = await fetch(tagsUrl);
   try {
-    const fileHandle = await opfsRoot.getFileHandle(cachedModelName, {
+    const fileHandle = await opfsRoot.getFileHandle(cachedTagsName, {
       create: true,
     });
     const writable = await fileHandle.createWritable();
     await writable.write(await tagsResponse.blob());
     await writable.close();
   } catch (writeError) {
-    throw new Error(
-      `Failed to save model to ${cachedModelName}: ${writeError}`,
-    );
+    throw new Error(`Failed to save tags to ${cachedTagsName}: ${writeError}`);
   }
   const modelResponse = await fetch(modelUrl);
   try {
-    const fileHandle = await opfsRoot.getFileHandle(cachedTagsName, {
+    const fileHandle = await opfsRoot.getFileHandle(cachedModelName, {
       create: true,
     });
     const writable = await fileHandle.createWritable();
     await writable.write(await modelResponse.blob());
     await writable.close();
   } catch (writeError) {
-    console.warn(`Failed to save tags to ${cachedTagsName}: ${writeError}`);
+    console.warn(`Failed to save model to ${cachedModelName}: ${writeError}`);
   }
   meta.tagsPath = cachedTagsName;
   meta.modelPath = cachedModelName;
