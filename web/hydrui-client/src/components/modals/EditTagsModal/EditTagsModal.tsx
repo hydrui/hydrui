@@ -376,7 +376,7 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
       }
       let existing = 0;
       for (const tag of result.tagResults) {
-        if (existingTags.has(tag.name)) {
+        if (!existingTags.has(tag.name)) {
           handleAddTag(tag.name);
         } else {
           existing++;
