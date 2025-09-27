@@ -12,9 +12,12 @@ import { ContentUpdateAction } from "@/constants/contentUpdates";
 import { REAL_TAG_SERVICES } from "@/constants/services";
 import { useShortcut } from "@/hooks/useShortcut";
 import { client } from "@/store/apiStore";
+import { useModelMetaStore } from "@/store/modelMetaStore";
 import { usePageActions } from "@/store/pageStore";
 import { useServices } from "@/store/servicesStore";
+import { useToastActions } from "@/store/toastStore";
 import { useUIStateActions, useUIStateStore } from "@/store/uiStateStore";
+import { processImage } from "@/utils/modelManager";
 
 import "./index.css";
 
@@ -35,7 +38,7 @@ interface PendingChange {
   serviceKey: string;
 }
 
-type TabType = "edit" | "summary";
+type TabType = "edit" | "autotag" | "summary";
 
 type TagMap = Map<string, { count: number; total: number }>;
 
@@ -43,6 +46,11 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
   const services = useServices();
   const { refreshFileMetadata } = usePageActions();
   const { setLastActiveTagService } = useUIStateActions();
+  const {
+    tagModelNames,
+    actions: { loadTagModel },
+  } = useModelMetaStore();
+  const { addToast, removeToast } = useToastActions();
   const [activeServiceKey, setActiveServiceKey] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("edit");
   const [initialCountsByService, setInitialCountsByService] = useState<
@@ -55,6 +63,8 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const [autotagThreshold, setAutotagThreshold] = useState(0.35);
+  const [autotagModel, setAutotagModel] = useState(tagModelNames[0] ?? "");
 
   const tagServices = useMemo(
     () =>
@@ -335,6 +345,56 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
     }
   };
 
+  const processAutotag = async () => {
+    // TODO: handle multiple images?
+    const file = files[0];
+    console.log(file);
+    if (!file) {
+      return;
+    }
+    const toast = addToast(`Processing autotag request...`, "info");
+    try {
+      const imageData = await (
+        await fetch(client.getFileUrl(file.file_id))
+      ).blob();
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        image.addEventListener("load", () => {
+          resolve(image);
+        });
+        image.addEventListener("error", (e) => {
+          reject(e.error);
+        });
+        image.src = URL.createObjectURL(imageData);
+      });
+      const session = await loadTagModel(autotagModel);
+      const result = await processImage(session, autotagThreshold, image);
+      const existingTags = new Set<string>();
+      for (const tag of tagCountsByService[activeServiceKey ?? ""]) {
+        if (tag.count === tag.total) {
+          existingTags.add(tag.value);
+        }
+      }
+      let existing = 0;
+      for (const tag of result.tagResults) {
+        if (existingTags.has(tag.name)) {
+          handleAddTag(tag.name);
+        } else {
+          existing++;
+        }
+      }
+      addToast(
+        `Autotag request succeeded: ${result.tagResults.length} tags found (${existing} already set).`,
+        "success",
+        10000,
+      );
+    } catch (e) {
+      addToast(`Error processing autotag request: ${e}`, "error", 10000);
+    } finally {
+      removeToast(toast);
+    }
+  };
+
   // Check if a tag has pending changes
   const getTagStatus = (tag: TagCount, serviceKey: string) => {
     const lastChange = [...pendingChanges]
@@ -379,6 +439,16 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
                   Edit Tags
                 </button>
                 <button
+                  onClick={() => setActiveTab("autotag")}
+                  className={`edit-tags-modal-tab ${
+                    activeTab === "autotag"
+                      ? "edit-tags-modal-tab-active"
+                      : "edit-tags-modal-tab-inactive"
+                  }`}
+                >
+                  Autotag
+                </button>
+                <button
                   onClick={() => setActiveTab("summary")}
                   className={`edit-tags-modal-tab ${
                     activeTab === "summary"
@@ -393,7 +463,8 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
 
             {/* Content */}
             <div className="edit-tags-modal-content-area">
-              {activeTab === "edit" ? (
+              {/* Edit tab */}
+              {activeTab === "edit" && (
                 <>
                   {/* Service tabs */}
                   <div className="edit-tags-modal-service-tabs">
@@ -492,8 +563,88 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
                     </div>
                   )}
                 </>
-              ) : (
-                /* Summary tab */
+              )}
+              {/* Autotag tab */}
+              {activeTab === "autotag" && (
+                <div className="edit-tags-modal-autotag-form">
+                  <div className="edit-tags-modal-autotag-form-row">
+                    <p>
+                      <b>Note:</b> Autotagging is experimental. If multiple
+                      files are selected, only one of them will be used for
+                      detection.
+                    </p>
+                  </div>
+                  <div className="edit-tags-modal-autotag-form-row">
+                    <label>Tag Service</label>
+                    <div className="edit-tags-modal-autotag-form-control">
+                      <select
+                        className="edit-tags-modal-autotag-model-select"
+                        value={activeServiceKey ?? ""}
+                        onChange={(e) =>
+                          setActiveServiceKey(e.currentTarget.value)
+                        }
+                      >
+                        {tagServices.map((service) => (
+                          <option key={service.key} value={service.key}>
+                            {service.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="edit-tags-modal-autotag-form-row">
+                    <label>Model</label>
+                    <div className="edit-tags-modal-autotag-form-control">
+                      <select
+                        className="edit-tags-modal-autotag-model-select"
+                        value={autotagModel}
+                        onChange={(e) => setAutotagModel(e.currentTarget.value)}
+                      >
+                        {tagModelNames.map((name) => (
+                          <option value={name} key={name}>
+                            {name}
+                          </option>
+                        ))}
+                      </select>
+                      <p>
+                        You can configure available tagging models in Settings.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="edit-tags-modal-autotag-form-row">
+                    <label>Threshold</label>
+                    <div className="edit-tags-modal-autotag-form-control">
+                      <input
+                        className="edit-tags-modal-autotag-number-input"
+                        type="number"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={autotagThreshold}
+                        onChange={(e) =>
+                          setAutotagThreshold(Number(e.currentTarget.value))
+                        }
+                      />
+                      <input
+                        className="edit-tags-modal-autotag-range-input"
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={autotagThreshold}
+                        onChange={(e) =>
+                          setAutotagThreshold(Number(e.currentTarget.value))
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="edit-tags-modal-autotag-form-row">
+                    <PushButton onClick={processAutotag}>Process</PushButton>
+                  </div>
+                </div>
+              )}
+              {/* Summary tab */}
+              {activeTab === "summary" && (
                 <div className="edit-tags-modal-summary">
                   {Object.entries(changesByService).length === 0 ? (
                     <div className="edit-tags-modal-empty-message">

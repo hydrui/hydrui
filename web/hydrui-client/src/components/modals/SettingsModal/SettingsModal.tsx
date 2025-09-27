@@ -1,26 +1,33 @@
 import { MinusIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import { CircleStackIcon } from "@heroicons/react/24/solid";
+import { TrashIcon } from "@heroicons/react/24/solid";
+import { ArrowDownTrayIcon } from "@heroicons/react/24/solid";
 import { FocusTrap } from "focus-trap-react";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import EditColorModal from "@/components/modals/EditColorModal/EditColorModal";
 import MimeInput from "@/components/widgets/MimeInput/MimeInput";
 import PushButton from "@/components/widgets/PushButton/PushButton";
 import { useShortcut } from "@/hooks/useShortcut";
 import { useApiStore } from "@/store/apiStore";
+import { useModelMetaStore } from "@/store/modelMetaStore";
 import { usePreferencesStore } from "@/store/preferencesStore";
+import { useToastActions } from "@/store/toastStore";
 import { isServerMode } from "@/utils/serverMode";
 
+import AddTagModelModal from "../AddTagModelModal/AddTagModelModal";
 import "./index.css";
 
 interface SettingsModalProps {
   onClose: () => void;
 }
 
-type TabType = "api" | "general" | "thumbnails";
+type TabType = "api" | "general" | "thumbnails" | "models";
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState<TabType>("general");
   const [editingColor, setEditingColor] = useState<string | boolean>();
+  const [showAddTagsModelModal, setShowAddTagsModelModal] = useState(false);
 
   const {
     actions: { setAuthenticated },
@@ -89,6 +96,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                 >
                   Thumbnails
                 </button>
+                <button
+                  onClick={() => setActiveTab("models")}
+                  className={`settings-modal-tab ${
+                    activeTab === "models"
+                      ? "settings-modal-tab-active"
+                      : "settings-modal-tab-inactive"
+                  }`}
+                >
+                  Models
+                </button>
               </div>
             </div>
 
@@ -129,6 +146,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                   <ThumbnailSettings />
                 </>
               )}
+              {activeTab === "models" && (
+                <>
+                  <ModelsManager
+                    setShowAddTagsModelModal={setShowAddTagsModelModal}
+                  />
+                </>
+              )}
             </div>
             <div className="settings-modal-buttons">
               <PushButton onClick={onClose} variant="secondary">
@@ -145,6 +169,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
             onClose={() => setEditingColor(undefined)}
           />
         )}
+
+        {/* Add tag model modal */}
+        {showAddTagsModelModal ? (
+          <AddTagModelModal onClose={() => setShowAddTagsModelModal(false)} />
+        ) : undefined}
       </div>
     </FocusTrap>
   );
@@ -337,5 +366,265 @@ const ColorSwatch: React.FC<{ color: string; onClick: () => void }> = ({
       tabIndex={0}
       onClick={onClick}
     ></button>
+  );
+};
+
+interface ModelsManagerProps {
+  setShowAddTagsModelModal: (show: boolean) => void;
+}
+
+const ModelsManager: React.FC<ModelsManagerProps> = ({
+  setShowAddTagsModelModal,
+}) => {
+  const {
+    tagModels,
+    tagModelNames,
+    actions: {
+      installTagModelFromBlob,
+      clearInstalledFiles,
+      downloadTagModel,
+      uninstallTagModel,
+      resetTagModels,
+    },
+  } = useModelMetaStore();
+  const { addToast, removeToast } = useToastActions();
+
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [usage, setUsage] = useState<StorageEstimate | null>(null);
+  useEffect(() => {
+    navigator.storage.estimate().then((usage) => setUsage(usage));
+  }, [isLoading]);
+
+  const zipInput = useRef<HTMLInputElement | null>(null);
+
+  const [dropActive, setDropActive] = useState(false);
+
+  const handleBlob = useCallback(
+    async (blob: Blob) => {
+      const toast = addToast("Attempting to install tag model...", "info");
+      setIsLoading(true);
+      try {
+        await installTagModelFromBlob(blob);
+      } catch (e) {
+        addToast(`Error installing model: ${e}`, "error", 10000);
+      } finally {
+        setIsLoading(false);
+        removeToast(toast);
+      }
+      addToast("Tag model successfully installed.", "success", 5000);
+    },
+    [addToast, installTagModelFromBlob, removeToast],
+  );
+
+  const clearFiles = useCallback(
+    async (name: string) => {
+      setIsLoading(true);
+      try {
+        await clearInstalledFiles(name);
+      } catch (e) {
+        addToast(`Error clearing tag model files: ${e}`, "error", 10000);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [addToast, clearInstalledFiles],
+  );
+
+  const download = useCallback(
+    async (name: string) => {
+      const toast = addToast("Downloading tag model...", "info");
+      setIsLoading(true);
+      try {
+        await downloadTagModel(name);
+      } catch (e) {
+        addToast(`Error downloading tag model: ${e}`, "error", 10000);
+      } finally {
+        setIsLoading(false);
+        removeToast(toast);
+      }
+      addToast("Tag model successfully downloaded.", "success", 5000);
+    },
+    [addToast, downloadTagModel, removeToast],
+  );
+
+  const reset = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      await resetTagModels();
+    } catch (e) {
+      addToast(`Error resetting all models: ${e}`, "error", 10000);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [addToast, resetTagModels]);
+
+  const uninstall = useCallback(
+    async (name: string) => {
+      setIsLoading(true);
+      try {
+        await uninstallTagModel(name);
+      } catch (e) {
+        addToast(`Error uninstalling tag model: ${e}`, "error", 10000);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [addToast, uninstallTagModel],
+  );
+
+  return (
+    <>
+      <fieldset className="settings-form">
+        <legend>Info</legend>
+        <p>
+          Hydrui has optional support for some features that use machine
+          learning.
+        </p>
+        <p>
+          These features run locally in your web browser. Please note that
+          neural network weights are generally large, so using these features
+          will use some bandwidth and disk space.
+        </p>
+        {isServerMode ? (
+          <p>
+            <b>
+              Since Hydrui is running in server mode, it will not be able to
+              fetch models on its own. You can still upload models.
+            </b>
+          </p>
+        ) : undefined}
+        {usage && usage.usage && usage.quota ? (
+          <p>
+            You are currently using about{" "}
+            {(usage.usage / 1024 / 1024).toFixed(2)} MiB (
+            {((usage.usage / usage.quota) * 100).toFixed(2)}
+            %) of your storage quota ({(usage.quota / 1024 / 1024).toFixed(
+              2,
+            )}{" "}
+            MiB).
+          </p>
+        ) : undefined}
+      </fieldset>
+      <fieldset className="settings-form">
+        <legend>Tagging Models</legend>
+        <div
+          className={`settings-model-dropzone ${dropActive ? "dropping" : ""}`}
+          onDragOver={(e) => {
+            if (isLoading) {
+              return;
+            }
+            e.preventDefault();
+            setDropActive(true);
+          }}
+          onDragLeave={() => {
+            if (isLoading) {
+              return;
+            }
+            setDropActive(false);
+          }}
+          onDrop={(e) => {
+            if (isLoading) {
+              return;
+            }
+            e.preventDefault();
+            e.stopPropagation();
+            setDropActive(false);
+            const file = e.dataTransfer?.files?.[0];
+            if (file) {
+              handleBlob(file);
+            }
+          }}
+        >
+          <div className="settings-model-dropzone-overlay">
+            <div className="settings-model-dropzone-text">
+              Drop zipped models here to install.
+            </div>
+          </div>
+          <div className="settings-model-rows">
+            {tagModelNames.map((name) => (
+              <div className="settings-model-row" key={name}>
+                <div className="settings-model-row-name">
+                  <CircleStackIcon width="24" height="24"></CircleStackIcon>
+                  {name}
+                  {tagModels[name].url
+                    ? tagModels[name].modelPath
+                      ? " (cached)"
+                      : " (not cached)"
+                    : " (local)"}
+                </div>
+                <div className="settings-model-row-right">
+                  {tagModels[name].url ? (
+                    tagModels[name].modelPath ? (
+                      <button
+                        onClick={() => clearFiles(name)}
+                        className="settings-model-row-clear-button"
+                        title="Clear all cached files"
+                        disabled={isLoading}
+                      >
+                        <TrashIcon />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => download(name)}
+                        className="settings-model-row-download-button"
+                        title="Download model into cache"
+                        disabled={isLoading}
+                      >
+                        <ArrowDownTrayIcon />
+                      </button>
+                    )
+                  ) : undefined}
+
+                  <button
+                    onClick={() => uninstall(name)}
+                    className="settings-model-row-remove-button"
+                    title="Remove model"
+                    disabled={isLoading}
+                  >
+                    <MinusIcon />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="settings-model-actions">
+          <PushButton
+            onClick={() => setShowAddTagsModelModal(true)}
+            disabled={isLoading}
+          >
+            Add by URL...
+          </PushButton>
+          <PushButton
+            onClick={() => {
+              zipInput.current?.click();
+            }}
+            disabled={isLoading}
+          >
+            Install Zipped Model...
+          </PushButton>
+          <PushButton
+            variant="danger"
+            onClick={() => reset()}
+            disabled={isLoading}
+          >
+            Reset All
+          </PushButton>
+          <input
+            type="file"
+            style={{ display: "none" }}
+            accept="application/zip"
+            ref={zipInput}
+            onChange={(e) => {
+              const file = e.currentTarget.files?.[0];
+              if (file) {
+                handleBlob(file);
+              }
+            }}
+          />
+        </div>
+      </fieldset>
+    </>
   );
 };

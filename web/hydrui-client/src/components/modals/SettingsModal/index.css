@@ -254,3 +254,110 @@
   border-radius: var(--radius-sm);
   margin-right: 0.5rem;
 }
+
+.settings-model-dropzone {
+  position: relative;
+}
+
+.settings-model-dropzone-overlay {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-gray-600);
+  opacity: 0.75;
+  content: "";
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.settings-model-dropzone.dropping .settings-model-dropzone-overlay {
+  display: flex;
+}
+
+.settings-model-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  background-color: var(--color-gray-900);
+  border: 1px solid var(--color-gray-600);
+  height: 200px;
+  overflow-y: scroll;
+}
+
+.settings-model-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.settings-model-row-name {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.settings-model-row:hover {
+  background-color: var(--color-gray-700);
+}
+
+.settings-model-row-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.settings-model-row-clear-button {
+  padding: 0.25rem;
+  color: var(--color-gray-400);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.settings-model-row-clear-button:hover {
+  color: var(--color-red-400);
+}
+
+.settings-model-row-download-button {
+  padding: 0.25rem;
+  color: var(--color-gray-400);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.settings-model-row-download-button:hover {
+  color: var(--color-green-400);
+}
+
+.settings-model-row-remove-button {
+  padding: 0.25rem;
+  color: var(--color-gray-400);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.settings-model-row-remove-button:hover {
+  color: var(--color-red-400);
+}
+
+.settings-model-actions {
+  display: flex;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+}

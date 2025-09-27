@@ -32,5 +32,9 @@
     "prettier": "^3",
     "tsx": "^4.20.3",
     "typescript-eslint": "^8"
+  },
+  "dependencies": {
+    "@zip.js/zip.js": "^2.8.2",
+    "onnxruntime-web": "^1.23.0"
   }
 }
