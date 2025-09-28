@@ -8,10 +8,18 @@ interface UIState {
   // Tab scroll positions
   scrollPositions: Record<string, number>;
 
+  // Autotag model
+  autotagModel: string;
+
+  // Autotag threshold
+  autotagThreshold: number;
+
   actions: {
     setLastActiveTagService: (serviceKey: string | null) => void;
     setScrollPosition: (pageKey: string, position: number) => void;
     getScrollPosition: (pageKey: string) => number;
+    setAutotagModel: (model: string) => void;
+    setAutotagThreshold: (threshold: number) => void;
   };
 }
 
@@ -25,6 +33,8 @@ export const useUIStateStore = create<UIState>()(
       lastActiveTagService: null,
       scrollPositions: {},
       scrollLocks: {},
+      autotagModel: "",
+      autotagThreshold: 0.85,
 
       // Actions
       actions: {
@@ -40,6 +50,14 @@ export const useUIStateStore = create<UIState>()(
           })),
 
         getScrollPosition: (pageKey) => get().scrollPositions[pageKey] || 0,
+
+        setAutotagModel(model: string) {
+          set({ autotagModel: model });
+        },
+
+        setAutotagThreshold(threshold: number) {
+          set({ autotagThreshold: threshold });
+        },
       },
     }),
     {
@@ -48,6 +66,8 @@ export const useUIStateStore = create<UIState>()(
       partialize: (state) => ({
         lastActiveTagService: state.lastActiveTagService,
         scrollPositions: state.scrollPositions,
+        autotagModel: state.autotagModel,
+        autotagThreshold: state.autotagThreshold,
       }),
     },
   ),

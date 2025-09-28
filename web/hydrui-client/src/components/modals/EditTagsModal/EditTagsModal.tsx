@@ -16,7 +16,7 @@ import { useModelMetaStore } from "@/store/modelMetaStore";
 import { usePageActions } from "@/store/pageStore";
 import { useServices } from "@/store/servicesStore";
 import { useToastActions } from "@/store/toastStore";
-import { useUIStateActions, useUIStateStore } from "@/store/uiStateStore";
+import { useUIStateStore } from "@/store/uiStateStore";
 import { processImage } from "@/utils/modelManager";
 
 import "./index.css";
@@ -45,8 +45,13 @@ type TagMap = Map<string, { count: number; total: number }>;
 const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
   const services = useServices();
   const { refreshFileMetadata } = usePageActions();
-  const { setLastActiveTagService } = useUIStateActions();
   const {
+    autotagModel,
+    autotagThreshold,
+    actions: { setLastActiveTagService, setAutotagModel, setAutotagThreshold },
+  } = useUIStateStore();
+  const {
+    tagModels,
     tagModelNames,
     actions: { loadTagModel },
   } = useModelMetaStore();
@@ -63,8 +68,6 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
-  const [autotagThreshold, setAutotagThreshold] = useState(0.35);
-  const [autotagModel, setAutotagModel] = useState(tagModelNames[0] ?? "");
 
   const tagServices = useMemo(
     () =>
@@ -75,8 +78,12 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
     [services],
   );
 
-  // Set initial active service to last used service or first available
   useEffect(() => {
+    // If the autotag model is not set or set to something invalid, try to set it to something valid.
+    if (!autotagModel || !tagModels[autotagModel]) {
+      setAutotagModel(tagModelNames[0] ?? "");
+    }
+    // Set initial active service to last used service or first available
     if (!activeServiceKey && tagServices.length > 0) {
       // Try to use last active service if it's still available
       const { lastActiveTagService } = useUIStateStore.getState();
@@ -88,7 +95,14 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
 
       setActiveServiceKey(serviceToUse);
     }
-  }, [tagServices, activeServiceKey]);
+  }, [
+    tagServices,
+    activeServiceKey,
+    autotagModel,
+    tagModels,
+    setAutotagModel,
+    tagModelNames,
+  ]);
 
   // Update last active service when it changes
   useEffect(() => {
