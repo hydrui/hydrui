@@ -8,6 +8,7 @@ import {
   PencilSquareIcon,
   PlusIcon,
   TagIcon,
+  WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/solid";
 import React, {
@@ -164,7 +165,7 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
       onClick: selectAllFiles,
     },
     {
-      id: "divider4",
+      id: "divider5",
       divider: true,
       label: "",
     },
@@ -539,6 +540,65 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
       },
       {
         id: "divider3",
+        divider: true,
+        label: "",
+      },
+      {
+        id: "utilities",
+        label: "Utilities",
+        icon: <WrenchScrewdriverIcon />,
+        items: [
+          {
+            id: "sauce-nao",
+            label: "Sauce Nao Lookup",
+            onClick: async () => {
+              const toast = addToast("Preparing Sauce Nao request...", "info");
+              try {
+                const thumbnail = await (
+                  await fetch(client.getThumbnailUrl(fileId))
+                ).blob();
+                const dataTransfer = new DataTransfer();
+                const file = new File([thumbnail], "image.jpg");
+                dataTransfer.items.add(file);
+                const form = document.createElement("form");
+                const fileInput = document.createElement("input");
+                const urlInput = document.createElement("input");
+                const submitInput = document.createElement("input");
+                form.target = "_blank";
+                form.enctype = "multipart/form-data";
+                form.method = "post";
+                form.action = "https://saucenao.com/search.php";
+                form.style.display = "none";
+                fileInput.type = "file";
+                fileInput.name = "file";
+                fileInput.files = dataTransfer.files;
+                urlInput.type = "text";
+                urlInput.name = "url";
+                urlInput.value = "Paste Image URL";
+                submitInput.type = "submit";
+                submitInput.value = "SEARCH";
+                form.appendChild(fileInput);
+                form.appendChild(urlInput);
+                form.appendChild(submitInput);
+                document.body.appendChild(form);
+                submitInput.click();
+                document.body.removeChild(form);
+                addToast("Dispatched Sauce Nao request.", "success", 10000);
+              } catch (e) {
+                addToast(
+                  `Error creating Sauce Nao request: ${e}`,
+                  "error",
+                  10000,
+                );
+              } finally {
+                removeToast(toast);
+              }
+            },
+          },
+        ],
+      },
+      {
+        id: "divider4",
         divider: true,
         label: "",
       },
