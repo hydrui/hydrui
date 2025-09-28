@@ -133,10 +133,18 @@ async function preprocessImage(image: HTMLImageElement, targetSize = 448) {
 
 function getTagNamespace(tagData: Record<string, string>): string {
   switch (Number(tagData.category)) {
-    case 9:
-      return "rating";
+    case 1:
+      return "creator";
+    case 3:
+      return "series";
     case 4:
       return "character";
+    case 5:
+      return "species";
+    case 7:
+      return "meta";
+    case 9:
+      return "rating";
     default:
       return "";
   }
