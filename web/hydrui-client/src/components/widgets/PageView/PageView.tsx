@@ -595,6 +595,27 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
               }
             },
           },
+          {
+            id: "photopea",
+            label: "Open in Photopea",
+            onClick: async () => {
+              window.open(
+                `https://www.photopea.com#${encodeURIComponent(
+                  JSON.stringify({
+                    files: selectedFileMetadata.map((file) =>
+                      client.getFileUrl(file.file_id),
+                    ),
+                    script: `${selectedFileMetadata
+                      .map(
+                        (file, i) =>
+                          `if(app.activeDocument==app.documents[${i}])app.activeDocument.name="file_${file.file_id}"`,
+                      )
+                      .join(";")}`,
+                  }),
+                )}`,
+              );
+            },
+          },
         ],
       },
       {
