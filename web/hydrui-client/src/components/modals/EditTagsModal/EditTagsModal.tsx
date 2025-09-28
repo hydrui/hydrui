@@ -383,9 +383,11 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
       const session = await loadTagModel(autotagModel);
       const result = await processImage(session, autotagThreshold, image);
       const existingTags = new Set<string>();
-      for (const tag of tagCountsByService[activeServiceKey ?? ""]) {
-        if (tag.count === tag.total) {
-          existingTags.add(tag.value);
+      if (activeServiceKey && tagCountsByService[activeServiceKey]) {
+        for (const tag of tagCountsByService[activeServiceKey]) {
+          if (tag.count === tag.total) {
+            existingTags.add(tag.value);
+          }
         }
       }
       let existing = 0;
