@@ -52,12 +52,12 @@ interface ModelMeta {
 
 const INITIAL_STATE: Omit<ModelMeta, "actions"> = {
   tagModels: {
-    "WD V1.4 Vit V2 Tagger": {
-      name: "WD V1.4 Vit V2 Tagger",
-      url: "https://models.hydrui.dev/wd-v1-4-vit-tagger-v2/info.json",
+    "WD ViT Tagger v3": {
+      name: "WD ViT Tagger v3",
+      url: "https://models.hydrui.dev/wd-vit-tagger-v3/info.json",
     },
   },
-  tagModelNames: ["WD V1.4 Vit V2 Tagger"],
+  tagModelNames: ["WD ViT Tagger v3"],
 };
 
 export const useModelMetaStoreActions = () =>
