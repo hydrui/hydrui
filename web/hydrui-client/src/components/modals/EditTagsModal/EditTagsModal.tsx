@@ -381,28 +381,34 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
         image.src = URL.createObjectURL(imageData);
       });
       const session = await loadTagModel(autotagModel);
-      const result = await processImage(session, autotagThreshold, image);
-      const existingTags = new Set<string>();
-      if (activeServiceKey && tagCountsByService[activeServiceKey]) {
-        for (const tag of tagCountsByService[activeServiceKey]) {
-          if (tag.count === tag.total) {
-            existingTags.add(tag.value);
+      let existing = 0;
+      try {
+        const result = await processImage(session, autotagThreshold, image);
+        const existingTags = new Set<string>();
+        if (activeServiceKey && tagCountsByService[activeServiceKey]) {
+          for (const tag of tagCountsByService[activeServiceKey]) {
+            if (tag.count === tag.total) {
+              existingTags.add(tag.value);
+            }
           }
         }
-      }
-      let existing = 0;
-      for (const tag of result.tagResults) {
-        if (!existingTags.has(tag.name)) {
-          handleAddTag(tag.name);
-        } else {
-          existing++;
+        for (const tag of result.tagResults) {
+          if (!existingTags.has(tag.name)) {
+            handleAddTag(tag.name);
+          } else {
+            existing++;
+          }
         }
+        addToast(
+          `Autotag request succeeded: ${result.tagResults.length} tags found (${existing} already set).`,
+          "success",
+          10000,
+        );
+      } finally {
+        // Ensure resources get released.
+        session.modelSession.release();
+        session.tagsData = [];
       }
-      addToast(
-        `Autotag request succeeded: ${result.tagResults.length} tags found (${existing} already set).`,
-        "success",
-        10000,
-      );
     } catch (e) {
       addToast(`Error processing autotag request: ${e}`, "error", 10000);
     } finally {
