@@ -299,7 +299,7 @@ export async function setupZippedTagModel(zip: Blob): Promise<TagModelMeta> {
   if (!navigator.storage || !navigator.storage.getDirectory) {
     throw new Error("Origin Private File System is not available!");
   }
-  const { BlobReader, ZipReader } = await import("@zip.js/zip.js");
+  const { BlobReader, ZipReader } = await import("./zipjs");
   const opfsRoot = await navigator.storage.getDirectory();
   const blobReader = new BlobReader(zip);
   const zipReader = new ZipReader(blobReader);
