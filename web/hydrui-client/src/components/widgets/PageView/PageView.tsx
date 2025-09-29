@@ -897,22 +897,15 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
       };
 
       const selectedFiles: FileMetadata[] = [];
-      const availableWidth = grid.clientWidth - GAP_SIZE * 2;
       const { cols } = gridDimensions;
-      const totalHorizontalGaps = (cols - 1) * GAP_SIZE;
-      const remainingWidth = availableWidth - totalHorizontalGaps;
-      const actualItemWidth = remainingWidth / cols;
-      const actualItemHeight = thumbnailSize;
-      const actualHorizontalGap =
-        cols > 1 ? (availableWidth - cols * actualItemWidth) / (cols - 1) : 0;
       const maxRow = Math.max(0, Math.ceil(files.length / cols) - 1);
       const firstRow = Math.min(
         maxRow,
         Math.max(
           0,
           Math.ceil(
-            (selectionRect.top - GAP_SIZE - actualItemHeight) /
-              (actualItemHeight + GAP_SIZE),
+            (selectionRect.top - GAP_SIZE - thumbnailSize) /
+              (thumbnailSize + GAP_SIZE),
           ),
         ),
       );
@@ -922,10 +915,14 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
           0,
           Math.floor(
             (selectionRect.top + selectionRect.height - GAP_SIZE) /
-              (actualItemHeight + GAP_SIZE),
+              (thumbnailSize + GAP_SIZE),
           ),
         ),
       );
+      const gridWidth = grid.clientWidth - GAP_SIZE * 2;
+      const extraWidth =
+        gridWidth - cols * thumbnailSize - (cols - 1) * GAP_SIZE;
+      const horizontalGutter = extraWidth / cols / 2;
       const firstFileIndex = firstRow * cols;
       const lastFileIndex = Math.min((lastRow + 1) * cols, files.length);
       for (let i = firstFileIndex; i < lastFileIndex; i++) {
@@ -933,10 +930,13 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
         const row = Math.floor(i / cols);
         const col = i % cols;
         const fileLeft =
-          GAP_SIZE + col * (actualItemWidth + actualHorizontalGap);
-        const fileTop = GAP_SIZE + row * (actualItemHeight + GAP_SIZE);
-        const fileRight = fileLeft + actualItemWidth;
-        const fileBottom = fileTop + actualItemHeight;
+          GAP_SIZE +
+          horizontalGutter +
+          col *
+            (thumbnailSize + horizontalGutter + GAP_SIZE + horizontalGutter);
+        const fileTop = GAP_SIZE + row * (thumbnailSize + GAP_SIZE);
+        const fileRight = fileLeft + thumbnailSize;
+        const fileBottom = fileTop + thumbnailSize;
         const intersects = !(
           fileRight < selectionRect.left ||
           fileLeft > selectionRect.left + selectionRect.width ||
