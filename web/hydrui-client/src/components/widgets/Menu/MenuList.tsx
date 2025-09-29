@@ -319,10 +319,15 @@ const MenuList: React.FC<MenuListProps> = ({
             aria-haspopup={!!item.items}
             aria-expanded={item.items ? isOpen : undefined}
             onClick={() => {
-              if (!item.disabled && !item.items && item.onClick) {
-                item.onClick();
+              if (item.disabled) {
+                return;
               }
-              closeMenu();
+              if (item.items) {
+                setActiveSubmenuPath([...parentPath, item.id]);
+              } else if (item.onClick) {
+                item.onClick();
+                closeMenu();
+              }
             }}
             onMouseEnter={() => handleMouseEnter(item)}
             onMouseLeave={() => handleMouseLeave()}
