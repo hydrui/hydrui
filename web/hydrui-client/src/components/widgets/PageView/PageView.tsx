@@ -364,6 +364,7 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
     updateToastProgress,
     pageType,
     updatePageContents,
+    addFilesToPage,
   ]);
 
   // Handle click outside of file items
