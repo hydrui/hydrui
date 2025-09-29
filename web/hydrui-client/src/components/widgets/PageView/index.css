@@ -149,6 +149,8 @@
   height: 100%;
   width: 100%;
   object-fit: contain;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .thumbnail-loading {
