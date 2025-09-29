@@ -38,6 +38,7 @@ interface PreferencesState {
   tagColors: TagColorPreferences;
   autopreviewMimeTypes: Set<string>;
   thumbnailSize: number;
+  useVirtualViewport: boolean;
   actions: {
     setNamespaceColor: (namespace: string, color: string) => void;
     clearNamespaceColor: (namespace: string) => void;
@@ -48,6 +49,7 @@ interface PreferencesState {
     removeAutopreviewMimeType: (mimeType: string) => void;
     resetAutopreviewMimeTypes: () => void;
     setThumbnailSize: (size: number) => void;
+    setVirtualViewport: (enabled: boolean) => void;
   };
 }
 
@@ -69,6 +71,9 @@ export const usePreferencesStore = create<PreferencesState>()(
 
       // Thumbnail size to use in page views
       thumbnailSize: DEFAULT_THUMBNAIL_SIZE,
+
+      // Use virtualized viewport for rendering thumbnails
+      useVirtualViewport: true,
 
       actions: {
         setNamespaceColor: (namespace: string, color: string) => {
@@ -169,6 +174,12 @@ export const usePreferencesStore = create<PreferencesState>()(
         setThumbnailSize: (size: number) => {
           set({
             thumbnailSize: size,
+          });
+        },
+
+        setVirtualViewport: (enabled: boolean) => {
+          set({
+            useVirtualViewport: enabled,
           });
         },
       },

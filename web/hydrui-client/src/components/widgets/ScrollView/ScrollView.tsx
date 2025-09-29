@@ -9,6 +9,7 @@ interface ScrollViewProps {
   style?: React.CSSProperties;
   onMouseDown?: React.MouseEventHandler<HTMLDivElement>;
   onContextMenu?: React.MouseEventHandler<HTMLDivElement>;
+  onScroll?: React.UIEventHandler<HTMLDivElement>;
   loaded?: boolean;
 }
 
@@ -20,6 +21,7 @@ const ScrollView = forwardRef<HTMLDivElement, ScrollViewProps>(
       style,
       onMouseDown,
       onContextMenu,
+      onScroll,
       loaded = false,
     },
     ref,
@@ -44,25 +46,30 @@ const ScrollView = forwardRef<HTMLDivElement, ScrollViewProps>(
     );
 
     // Save scroll position when user scrolls
-    const handleScroll = useCallback(() => {
-      if (!innerRef.current || !activePageKey) return;
+    const handleScroll = useCallback(
+      (e: React.UIEvent<HTMLDivElement>) => {
+        onScroll?.(e);
 
-      const maxScroll =
-        innerRef.current.scrollHeight - innerRef.current.clientHeight;
+        if (!innerRef.current || !activePageKey) return;
 
-      // If the viewport doesn't have any scroll area, don't save the scroll position.
-      if (maxScroll === 0) {
-        return;
-      }
+        const maxScroll =
+          innerRef.current.scrollHeight - innerRef.current.clientHeight;
 
-      // Calculate percentage scrolled (0 to 1)
-      const scrollPercentage = innerRef.current.scrollTop / maxScroll;
+        // If the viewport doesn't have any scroll area, don't save the scroll position.
+        if (maxScroll === 0) {
+          return;
+        }
 
-      userScrolledRef.current = true;
+        // Calculate percentage scrolled (0 to 1)
+        const scrollPercentage = innerRef.current.scrollTop / maxScroll;
 
-      // Update scroll position percentage in store
-      setScrollPosition(activePageKey, scrollPercentage);
-    }, [activePageKey, setScrollPosition]);
+        userScrolledRef.current = true;
+
+        // Update scroll position percentage in store
+        setScrollPosition(activePageKey, scrollPercentage);
+      },
+      [activePageKey, setScrollPosition, onScroll],
+    );
 
     // Restore scroll position when the active tab changes
     useEffect(() => {

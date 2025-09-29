@@ -64,7 +64,7 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
     pageType,
   } = usePageStore();
 
-  const { thumbnailSize } = usePreferencesStore();
+  const { thumbnailSize, useVirtualViewport } = usePreferencesStore();
 
   const {
     actions: { addToast, removeToast, updateToastProgress },
@@ -97,6 +97,13 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
     showEditUrlsModal ||
     showEditNotesModal ||
     showImportUrlsModal;
+  const [renderView, setRenderView] = useState({
+    firstIndex: 0,
+    lastIndex: files.length,
+    topRows: 0,
+    bottomRows: 0,
+    viewHeight: 0,
+  });
 
   const selectAllFiles = useCallback(() => {
     const { files } = usePageStore.getState();
@@ -192,6 +199,55 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
   // Calculate grid dimensions based on container width
   const [gridDimensions, setGridDimensions] = useState({ cols: 4, rows: 1 });
 
+  const handleRecalculateRenderView = useCallback(
+    (
+      filesLength: number,
+      gridDimensions: { rows: number; cols: number },
+      thumbnailSize: number,
+    ) => {
+      if (!useVirtualViewport) return;
+      if (!gridRef.current) return;
+      const { rows, cols } = gridDimensions;
+      const actualItemHeight = thumbnailSize;
+      const maxRow = Math.max(0, rows - 1);
+      const firstRow = Math.min(
+        maxRow,
+        Math.max(
+          0,
+          Math.ceil(
+            (gridRef.current.scrollTop - GAP_SIZE - actualItemHeight) /
+              (actualItemHeight + GAP_SIZE),
+          ),
+        ),
+      );
+      const lastRow = Math.min(
+        maxRow,
+        Math.max(
+          0,
+          Math.floor(
+            (gridRef.current.scrollTop +
+              gridRef.current.parentElement!.clientHeight -
+              GAP_SIZE) /
+              (actualItemHeight + GAP_SIZE),
+          ),
+        ),
+      );
+      const topRows = firstRow;
+      const bottomRows = maxRow - lastRow;
+      const firstIndex = firstRow * cols;
+      const lastIndex = Math.min((lastRow + 1) * cols, filesLength);
+      const viewHeight = rows * (thumbnailSize + GAP_SIZE) + GAP_SIZE;
+      setRenderView({
+        firstIndex,
+        lastIndex,
+        topRows,
+        bottomRows,
+        viewHeight,
+      });
+    },
+    [useVirtualViewport],
+  );
+
   useLayoutEffect(() => {
     const calculateDimensions = () => {
       if (!gridRef.current) return;
@@ -199,6 +255,7 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
       const cols = Math.floor(width / (thumbnailSize + GAP_SIZE));
       const rows = Math.ceil(files.length / cols);
       setGridDimensions({ cols, rows });
+      handleRecalculateRenderView(files.length, { cols, rows }, thumbnailSize);
     };
 
     calculateDimensions();
@@ -221,7 +278,7 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
         window.removeEventListener("resize", calculateDimensions);
       }
     };
-  }, [files.length, thumbnailSize]);
+  }, [files.length, handleRecalculateRenderView, thumbnailSize]);
 
   // Handle drag and drop
   useEffect(() => {
@@ -310,6 +367,14 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
           !event.shiftKey &&
           !event.ctrlKey
         ) {
+          // Ignore clicks on the scrollbar
+          const gridRect = gridRef.current.getBoundingClientRect();
+          if (
+            event.pageX - gridRect.left + gridRef.current.scrollLeft >
+            gridRef.current.clientWidth
+          ) {
+            return;
+          }
           clearSelectedFiles(pageKey);
           setActiveFileId(pageKey, null);
         }
@@ -745,12 +810,16 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
 
     const grid = gridRef.current;
     if (!grid) return;
+    // Ignore clicks on the scrollbar
+    const gridRect = grid.getBoundingClientRect();
+    if (event.pageX - gridRect.left + grid.scrollLeft > grid.clientWidth) {
+      return;
+    }
 
     event.preventDefault();
     setIsDragging(true);
 
     const { pageX, pageY } = event;
-    const gridRect = grid.getBoundingClientRect();
     const mouseX = pageX - gridRect.left + grid.scrollLeft;
     const mouseY = pageY - gridRect.top + grid.scrollTop;
     setDragStart({ x: mouseX, y: mouseY });
@@ -811,67 +880,56 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
         height: Math.abs(mouseY - dragStart.y),
       };
 
-      // Find intersecting files
       const selectedFiles: FileMetadata[] = [];
-
-      // Do a binary search to find the first file on the same row as the selection rect
-      // It'd be better if we exploited the grid layout more to do this more efficiently.
-      let start = 0;
-      let end = files.length - 1;
-      let firstCandidateIndex = files.length;
-
-      while (start <= end) {
-        const mid = Math.floor((start + end) / 2);
-        const element = document.querySelector(
-          `[data-file-id="${files[mid].file_id}"]`,
-        );
-
-        if (!element) {
-          start = mid + 1;
-          continue;
-        }
-
-        const fileRect = element.getBoundingClientRect();
-        const fileBottom = fileRect.bottom - gridRect.top + grid.scrollTop;
-
-        if (fileBottom < selectionRect.top) {
-          // File is above selection, look in right half
-          start = mid + 1;
-        } else {
-          // File intersects or is below, look in left half
-          firstCandidateIndex = mid;
-          end = mid - 1;
-        }
-      }
-
-      // Now check each file starting from firstCandidateIndex
-      for (let i = firstCandidateIndex; i < files.length; i++) {
+      const availableWidth = grid.clientWidth - GAP_SIZE * 2;
+      const { cols } = gridDimensions;
+      const totalHorizontalGaps = (cols - 1) * GAP_SIZE;
+      const remainingWidth = availableWidth - totalHorizontalGaps;
+      const actualItemWidth = remainingWidth / cols;
+      const actualItemHeight = thumbnailSize;
+      const actualHorizontalGap =
+        cols > 1 ? (availableWidth - cols * actualItemWidth) / (cols - 1) : 0;
+      const maxRow = Math.max(0, Math.ceil(files.length / cols) - 1);
+      const firstRow = Math.min(
+        maxRow,
+        Math.max(
+          0,
+          Math.ceil(
+            (selectionRect.top - GAP_SIZE - actualItemHeight) /
+              (actualItemHeight + GAP_SIZE),
+          ),
+        ),
+      );
+      const lastRow = Math.min(
+        maxRow,
+        Math.max(
+          0,
+          Math.floor(
+            (selectionRect.top + selectionRect.height - GAP_SIZE) /
+              (actualItemHeight + GAP_SIZE),
+          ),
+        ),
+      );
+      const firstFileIndex = firstRow * cols;
+      const lastFileIndex = Math.min((lastRow + 1) * cols, files.length);
+      for (let i = firstFileIndex; i < lastFileIndex; i++) {
         const file = files[i];
-        const element = document.querySelector(
-          `[data-file-id="${file.file_id}"]`,
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        const fileLeft =
+          GAP_SIZE + col * (actualItemWidth + actualHorizontalGap);
+        const fileTop = GAP_SIZE + row * (actualItemHeight + GAP_SIZE);
+        const fileRight = fileLeft + actualItemWidth;
+        const fileBottom = fileTop + actualItemHeight;
+        const intersects = !(
+          fileRight < selectionRect.left ||
+          fileLeft > selectionRect.left + selectionRect.width ||
+          fileBottom < selectionRect.top ||
+          fileTop > selectionRect.top + selectionRect.height
         );
-        if (!element) continue;
-
-        const fileRect = element.getBoundingClientRect();
-
-        // Bail early if we're past the selection rect
-        if (
-          fileRect.top - gridRect.top + grid.scrollTop >
-          selectionRect.top + selectionRect.height
-        ) {
-          break;
+        if (intersects) {
+          selectedFiles.push(file);
         }
-
-        // Skip if file is outside selection horizontally
-        if (
-          fileRect.left - gridRect.left + grid.scrollLeft >
-            selectionRect.left + selectionRect.width ||
-          fileRect.right - gridRect.left + grid.scrollLeft < selectionRect.left
-        ) {
-          continue;
-        }
-
-        selectedFiles.push(file);
       }
 
       // Update selection
@@ -921,6 +979,8 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
       setActiveFileId,
       activeFileByPage,
       selectedFilesByPage,
+      gridDimensions,
+      thumbnailSize,
     ],
   );
 
@@ -948,6 +1008,13 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
   const isLoading =
     isLoadingFiles || (pageType === "search" && searchStatus === "loading");
 
+  let renderFiles: FileMetadata[];
+  if (useVirtualViewport) {
+    renderFiles = files.slice(renderView.firstIndex, renderView.lastIndex);
+  } else {
+    renderFiles = files;
+  }
+
   return (
     <div className="page-view-container">
       {/* Render SearchBar only in search mode */}
@@ -966,7 +1033,14 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
         }}
         onMouseDown={handleMouseDown}
         onContextMenu={handleViewContextMenu}
-        loaded={!(isLoading && clearDuringLoad)}
+        onScroll={() =>
+          handleRecalculateRenderView(
+            files.length,
+            gridDimensions,
+            thumbnailSize,
+          )
+        }
+        loaded={!(isLoading && clearDuringLoad) && renderView.lastIndex !== 0}
       >
         {/* Selection rectangle */}
         {isDragging && dragStart && dragEnd && (
@@ -1038,7 +1112,7 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
           </div>
         ) : (
           // Files grid
-          files.map((file) => (
+          renderFiles.map((file, i) => (
             <div
               key={file.file_id}
               data-file-item
@@ -1053,6 +1127,14 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
               style={{
                 width: `${thumbnailSize}px`,
                 height: `${thumbnailSize}px`,
+                marginTop:
+                  useVirtualViewport && i < gridDimensions.cols
+                    ? renderView.topRows * (thumbnailSize + GAP_SIZE)
+                    : 0,
+                marginBottom:
+                  useVirtualViewport && i === renderFiles.length - 1
+                    ? renderView.bottomRows * (thumbnailSize + GAP_SIZE)
+                    : 0,
               }}
               onClick={(e) => handleFileClick(file.file_id, e)}
               onKeyDown={(e) => handleFileKeyDown(file.file_id, e)}

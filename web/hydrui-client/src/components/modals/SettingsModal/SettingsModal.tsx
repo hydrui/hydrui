@@ -223,7 +223,8 @@ const MimeTypesEditor: React.FC = () => {
 const ThumbnailSettings: React.FC = () => {
   const {
     thumbnailSize,
-    actions: { setThumbnailSize: setThumbnailSizeState },
+    useVirtualViewport,
+    actions: { setThumbnailSize: setThumbnailSizeState, setVirtualViewport },
   } = usePreferencesStore();
 
   const [thumbnailSizeInput, setThumbnailSizeInput] = useState(thumbnailSize);
@@ -257,6 +258,23 @@ const ThumbnailSettings: React.FC = () => {
             value={thumbnailSize}
             onChange={(e) => setThumbnailSize(parseInt(e.target.value) || 0)}
           ></input>
+        </div>
+      </fieldset>
+      <fieldset className="settings-form">
+        <legend>Page Rendering</legend>
+        <div>
+          <label>
+            <input
+              type="checkbox"
+              checked={useVirtualViewport}
+              onChange={(e) => setVirtualViewport(e.currentTarget.checked)}
+            />{" "}
+            Use Virtual Viewport
+          </label>
+          <p>
+            Virtual viewport greatly improves performance in large pages, but
+            can lead to increased scroll jank.
+          </p>
         </div>
       </fieldset>
     </>
