@@ -2,6 +2,7 @@ import { MinusIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import { FocusTrap } from "focus-trap-react";
 import React, { useEffect, useMemo, useState } from "react";
 
+import { AddUrlRequest } from "@/api/types";
 import PushButton from "@/components/widgets/PushButton/PushButton";
 import TagInput from "@/components/widgets/TagInput/TagInput";
 import TagLabel from "@/components/widgets/TagLabel/TagLabel";
@@ -122,12 +123,15 @@ const ImportUrlsModal: React.FC<ImportUrlModalProps> = ({
       await Promise.all(
         urls.map(async (url) => {
           try {
-            await client.addUrl({
+            const request: AddUrlRequest = {
               url,
-              destination_page_key: pageKey,
               service_keys_to_additional_tags: tagsByService,
               show_destination_page: false,
-            });
+            };
+            if (pageType === "hydrus") {
+              request.destination_page_key = pageKey;
+            }
+            await client.addUrl(request);
             successCount++;
             setProgress((prev) => ({
               ...prev,
@@ -148,9 +152,11 @@ const ImportUrlsModal: React.FC<ImportUrlModalProps> = ({
         5000,
       );
 
-      setTimeout(() => {
-        updatePageContents(pageKey, pageType, false);
-      }, 1000);
+      if (pageType === "hydrus") {
+        setTimeout(() => {
+          updatePageContents(pageKey, pageType, false);
+        }, 1000);
+      }
     } catch (error) {
       console.error("Failed to import URLs:", error);
       setError("Failed to import URLs. Please try again.");
