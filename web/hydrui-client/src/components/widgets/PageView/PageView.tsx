@@ -388,12 +388,7 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
   }, [pageKey, clearSelectedFiles, setActiveFileId]);
 
   const handleFileClick = (fileId: number, event: React.MouseEvent) => {
-    if (event.detail === 2) {
-      // Double click - open modal
-      const fileIndex = files.findIndex((f) => f.file_id === fileId);
-      if (fileIndex !== -1) {
-        setModalIndex(fileIndex);
-      }
+    if (event.detail > 1) {
       return;
     }
 
@@ -433,6 +428,15 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
       setSelectedFiles(pageKey, [fileId]);
       setActiveFileId(pageKey, fileId);
     }
+  };
+
+  const handleFileDoubleClick = (fileId: number) => {
+    // Double click - open modal
+    const fileIndex = files.findIndex((f) => f.file_id === fileId);
+    if (fileIndex !== -1) {
+      setModalIndex(fileIndex);
+    }
+    return;
   };
 
   const handleViewContextMenu = (event: React.MouseEvent) => {
@@ -1137,6 +1141,7 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
                     : 0,
               }}
               onClick={(e) => handleFileClick(file.file_id, e)}
+              onDoubleClick={() => handleFileDoubleClick(file.file_id)}
               onKeyDown={(e) => handleFileKeyDown(file.file_id, e)}
               onMouseUp={(e) => {
                 if (e.button === 1) {
