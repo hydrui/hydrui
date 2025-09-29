@@ -33,7 +33,7 @@ $
 You can now build the frontend portion of Hydrui.
 
 ```console
-$ npm run pack
+$ npm run generate:pack
 ```
 
 After a couple minutes, this should finish. Asset compression may take longer depending on your CPU.
