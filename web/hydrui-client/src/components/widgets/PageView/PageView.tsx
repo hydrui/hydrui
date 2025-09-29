@@ -28,9 +28,10 @@ import FileViewerModal from "@/components/modals/FileViewerModal/FileViewerModal
 import ImportUrlsModal from "@/components/modals/ImportUrlsModal/ImportUrlsModal";
 import ScrollView from "@/components/widgets/ScrollView/ScrollView";
 import { useContextMenu } from "@/hooks/useContextMenu";
+import useLongPress from "@/hooks/useLongPress";
 import { useShortcut } from "@/hooks/useShortcut";
 import { client } from "@/store/apiStore";
-import { MenuItem } from "@/store/contextMenuStore";
+import { MenuItem, useContextMenuStore } from "@/store/contextMenuStore";
 import { usePageStore } from "@/store/pageStore";
 import { usePreferencesStore } from "@/store/preferencesStore";
 import { useSearchStore } from "@/store/searchStore";
@@ -708,6 +709,30 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
     ]);
   };
 
+  const longPressHandlers = useLongPress((event) => {
+    if (
+      !useContextMenuStore.getState().isOpen &&
+      event.target &&
+      event.target instanceof Element
+    ) {
+      let target: Element | null = event.target;
+      while (target) {
+        if (target.hasAttribute("data-file-id")) {
+          break;
+        }
+        target = target.parentElement;
+      }
+      if (!target) {
+        return;
+      }
+      const fileId = target.getAttribute("data-file-id");
+      if (!fileId) {
+        return;
+      }
+      handleFileContextMenu(event, Number(fileId));
+    }
+  });
+
   const selectedFiles = selectedFilesByPage[pageKey] || [];
   const activeFileId = activeFileByPage[pageKey];
 
@@ -1166,6 +1191,7 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
               role="button"
               aria-selected={selectedFiles.includes(file.file_id)}
               aria-label={`File ${file.file_id}`}
+              {...longPressHandlers}
             >
               <Thumbnail fileId={file.file_id} className="thumbnail-wrapper" />
             </div>
