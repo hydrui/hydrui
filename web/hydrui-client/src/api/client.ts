@@ -9,6 +9,7 @@ import {
   AddUrlResponse,
   AssociateUrlRequest,
   DeleteNotesRequest,
+  FileIdentifiersResponse,
   FileMetadataResponse,
   HydrusApiClient,
   PageInfoResponse,
@@ -180,6 +181,22 @@ export class HydrusClient implements HydrusApiClient {
       "/get_files/file_metadata",
       "GET",
       { file_ids: fileIds, include_notes: true },
+      null,
+      signal,
+    );
+  }
+
+  /**
+   * Get file IDs for hashes
+   */
+  async getFileIdsByHashes(
+    hashes: string[],
+    signal?: AbortSignal,
+  ): Promise<FileIdentifiersResponse> {
+    return this.request<FileIdentifiersResponse>(
+      "/get_files/file_metadata",
+      "GET",
+      { hashes, only_include_identifiers: true },
       null,
       signal,
     );

@@ -7,6 +7,7 @@ import {
   AddNotesResponse,
   AddUrlRequest,
   AddUrlResponse,
+  FileIdentifiersResponse,
   FileMetadataResponse,
   HydrusApiClient,
   PageInfoResponse,
@@ -241,6 +242,27 @@ export class MockHydrusClient implements HydrusApiClient {
     const filteredMetadata = this.fileMetadata.metadata.filter((m) =>
       fileIds.includes(m.file_id),
     );
+
+    return {
+      ...this.fileMetadata,
+      metadata: filteredMetadata,
+    };
+  }
+
+  /**
+   * Get file IDs for hashes
+   */
+  async getFileIdsByHashes(hashes: string[]): Promise<FileIdentifiersResponse> {
+    if (this.apiKey !== this.validApiKey) {
+      throw new Error("Invalid API key");
+    }
+
+    const filteredMetadata = this.fileMetadata.metadata
+      .filter((m) => hashes.includes(m.hash))
+      .map(({ file_id, hash }) => ({
+        file_id,
+        hash,
+      }));
 
     return {
       ...this.fileMetadata,

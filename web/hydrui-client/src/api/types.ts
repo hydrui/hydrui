@@ -27,6 +27,12 @@ export interface ServicesResponse extends ApiResponse {
   services: Record<string, Service>;
 }
 
+// File identifier data
+export interface FileIdentifier {
+  file_id: number;
+  hash: string;
+}
+
 // File metadata types
 export interface FileMetadata {
   file_id: number;
@@ -72,6 +78,12 @@ export interface SearchFilesResponse extends ApiResponse {
 export interface FileMetadataResponse extends ApiResponse {
   services: ServicesObject;
   metadata: FileMetadata[];
+}
+
+// File metadata identifier-only response
+export interface FileIdentifiersResponse extends ApiResponse {
+  services: ServicesObject;
+  metadata: FileIdentifier[];
 }
 
 // Page types
@@ -244,6 +256,10 @@ export interface HydrusApiClient {
     fileIds: number[],
     signal?: AbortSignal,
   ) => Promise<FileMetadataResponse>;
+  getFileIdsByHashes: (
+    hashes: string[],
+    signal?: AbortSignal,
+  ) => Promise<FileIdentifiersResponse>;
   getFileMetadataByHashes: (
     hashes: string[],
     signal?: AbortSignal,
