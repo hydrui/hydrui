@@ -53,6 +53,7 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
       refreshPage,
       setActiveFileId,
       markActiveFileAsBetter,
+      addFilesToPage,
       removeFilesFromPage,
     },
     selectedFilesByPage,
@@ -311,11 +312,20 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
             "success",
             5000,
           );
-          await client.addFiles({
-            hashes: [response.hash],
-            page_key: pageKey,
-          });
-          await updatePageContents(pageKey, pageType, false);
+          if (pageType === "hydrus") {
+            await client.addFiles({
+              hashes: [response.hash],
+              page_key: pageKey,
+            });
+            await updatePageContents(pageKey, pageType, false);
+          } else {
+            const identifiers = await client.getFileIdsByHashes([
+              response.hash,
+            ]);
+            await addFilesToPage(pageKey, pageType, [
+              identifiers.metadata[0].file_id,
+            ]);
+          }
         } finally {
           removeToast(toastId);
         }
