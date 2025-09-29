@@ -63,6 +63,11 @@ interface PageState extends PersistedState {
     clearSelectedFiles: (pageKey: string) => void;
     setActiveFileId: (pageKey: string, fileId: number | null) => void;
     markActiveFileAsBetter: () => Promise<void>;
+    addFilesToPage: (
+      pageKey: string,
+      pageType: PageType,
+      fileIds: number[],
+    ) => Promise<void>;
     removeFilesFromPage: (
       pageKey: string,
       pageType: PageType,
@@ -677,6 +682,61 @@ export const usePageStore = create<PageState>()(
             await get().actions.refreshFileMetadata(selectedFileIds);
           },
 
+          addFilesToPage: async (
+            pageKey: string,
+            pageType: PageType,
+            fileIds: number[],
+          ) => {
+            switch (pageType) {
+              case "search": {
+                useSearchStore.setState({
+                  searchResults: [
+                    ...useSearchStore.getState().searchResults,
+                    ...fileIds,
+                  ],
+                });
+                await get().actions.updatePageContents(
+                  SEARCH_PAGE_KEY,
+                  "search",
+                  false,
+                );
+                break;
+              }
+              case "hydrus": {
+                await client.addFiles({
+                  file_ids: fileIds,
+                  page_key: pageKey,
+                });
+                await get().actions.updatePageContents(
+                  pageKey,
+                  "hydrus",
+                  false,
+                );
+                break;
+              }
+              case "virtual": {
+                set((state) => ({
+                  virtualPages: {
+                    ...state.virtualPages,
+                    [pageKey]: {
+                      ...state.virtualPages[pageKey],
+                      fileIds: [
+                        ...(state.virtualPages[pageKey].fileIds ?? []),
+                        ...fileIds,
+                      ],
+                    },
+                  },
+                }));
+                await get().actions.updatePageContents(
+                  pageKey,
+                  "virtual",
+                  false,
+                );
+                break;
+              }
+            }
+          },
+
           removeFilesFromPage: async (
             pageKey: string,
             pageType: PageType,
@@ -684,14 +744,16 @@ export const usePageStore = create<PageState>()(
           ) => {
             switch (pageType) {
               case "search": {
-                set((state) => ({
-                  selectedFilesByPage: {
-                    ...state.selectedFilesByPage,
-                    [pageKey]: state.selectedFilesByPage[pageKey].filter(
-                      (id) => !fileIds.includes(id),
-                    ),
-                  },
-                }));
+                useSearchStore.setState({
+                  searchResults: useSearchStore
+                    .getState()
+                    .searchResults.filter((id) => !fileIds.includes(id)),
+                });
+                await get().actions.updatePageContents(
+                  SEARCH_PAGE_KEY,
+                  "search",
+                  false,
+                );
                 break;
               }
               case "hydrus": {
