@@ -478,11 +478,12 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
         label: "Open in New Page",
         icon: <PlusIcon />,
         onClick: () => {
-          addVirtualPage(Math.random().toString(36).substring(2), {
+          const newPageKey = Math.random().toString(36).substring(2);
+          addVirtualPage(newPageKey, {
             name: "files (" + selectedFileMetadata.length + ")",
             fileIds: selectedFileMetadata.map((f) => f.file_id),
           });
-          setPage(pageKey, "virtual");
+          setPage(newPageKey, "virtual");
         },
       },
       {
