@@ -90,16 +90,23 @@ Note that the UI currently does not have a way to edit the default log-in userna
 
 Under Linux, macOS, FreeBSD and other platforms, the primary interface is the CLI for now.
 
+After extracting the program, mark it executable.
+
+```console
+$ unzip hydrui-linux-amd64.zip
+$ chmod +x ./hydrui-linux-amd64
+```
+
 Run the program from a terminal. For example:
 
 ```console
-$ ./hydrui-server
+$ ./hydrui-linux-amd64
 ```
 
 This will run Hydrui in client-only mode. To run in server mode, you need to supply the relevant flags:
 
 ```console
-$ ./hydrui-server -server-mode -hydrus-api-key=xxx -hydrus-url=http://localhost:45869
+$ ./hydrui-linux-amd64 -server-mode -hydrus-api-key=xxx -hydrus-url=http://localhost:45869
 ```
 
 Note that this will default to an insecure setup where the username and password is `admin`. You can supply an htpasswd file with the `-htpasswd` flag. For more information on what flags you can use, try passing `-help`.
