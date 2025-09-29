@@ -2,6 +2,7 @@ import { MinusIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import { CircleStackIcon } from "@heroicons/react/24/solid";
 import { TrashIcon } from "@heroicons/react/24/solid";
 import { ArrowDownTrayIcon } from "@heroicons/react/24/solid";
+import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/solid";
 import { FocusTrap } from "focus-trap-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
@@ -517,7 +518,8 @@ const ModelsManager: React.FC<ModelsManagerProps> = ({
           <p>
             <b>
               Since Hydrui is running in server mode, it will not be able to
-              fetch models on its own. You can still upload models.
+              fetch models on its own, as all external requests are blocked. You
+              can still upload models here by dragging them in.
             </b>
           </p>
         ) : undefined}
@@ -596,7 +598,7 @@ const ModelsManager: React.FC<ModelsManagerProps> = ({
                         onClick={() => download(name)}
                         className="settings-model-row-download-button"
                         title="Download model into cache"
-                        disabled={isLoading}
+                        disabled={isLoading || isServerMode}
                       >
                         <ArrowDownTrayIcon />
                       </button>
@@ -617,12 +619,14 @@ const ModelsManager: React.FC<ModelsManagerProps> = ({
           </div>
         </div>
         <div className="settings-model-actions">
-          <PushButton
-            onClick={() => setShowAddTagsModelModal(true)}
-            disabled={isLoading}
-          >
-            Add by URL...
-          </PushButton>
+          {isServerMode ? undefined : (
+            <PushButton
+              onClick={() => setShowAddTagsModelModal(true)}
+              disabled={isLoading}
+            >
+              Add by URL...
+            </PushButton>
+          )}
           <PushButton
             onClick={() => {
               zipInput.current?.click();
@@ -650,6 +654,21 @@ const ModelsManager: React.FC<ModelsManagerProps> = ({
               }
             }}
           />
+          <a
+            className="push-button primary"
+            style={{ marginLeft: "auto" }}
+            href="https://github.com/hydrui/hydrui/releases/tag/models"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <div style={{ display: "flex", gap: "8px" }}>
+              Model Downloads
+              <ArrowTopRightOnSquareIcon
+                width="20"
+                height="20"
+              ></ArrowTopRightOnSquareIcon>
+            </div>
+          </a>
         </div>
       </fieldset>
     </>

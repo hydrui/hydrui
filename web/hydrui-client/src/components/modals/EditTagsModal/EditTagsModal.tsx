@@ -18,6 +18,7 @@ import { useServices } from "@/store/servicesStore";
 import { useToastActions } from "@/store/toastStore";
 import { useUIStateStore } from "@/store/uiStateStore";
 import { processImage } from "@/utils/modelManager";
+import { isServerMode } from "@/utils/serverMode";
 
 import "./index.css";
 
@@ -595,6 +596,17 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
                       detection.
                     </p>
                   </div>
+                  {isServerMode ? (
+                    <div className="edit-tags-modal-autotag-form-row">
+                      <p>
+                        <b>
+                          Hydrui is in server mode and is not allowed to
+                          download models. Please install models in Hydrui →
+                          Settings before using Autotag.
+                        </b>
+                      </p>
+                    </div>
+                  ) : undefined}
                   <div className="edit-tags-modal-autotag-form-row">
                     <label>Tag Service</label>
                     <div className="edit-tags-modal-autotag-form-control">
