@@ -411,7 +411,9 @@ const ModelsManager: React.FC<ModelsManagerProps> = ({
 
   const [usage, setUsage] = useState<StorageEstimate | null>(null);
   useEffect(() => {
-    navigator.storage.estimate().then((usage) => setUsage(usage));
+    if (navigator.storage && navigator.storage.estimate) {
+      navigator.storage.estimate().then((usage) => setUsage(usage));
+    }
   }, [isLoading]);
 
   const zipInput = useRef<HTMLInputElement | null>(null);
