@@ -426,13 +426,13 @@ const ModelsManager: React.FC<ModelsManagerProps> = ({
       setIsLoading(true);
       try {
         await installTagModelFromBlob(blob);
+        addToast("Tag model successfully installed.", "success", 5000);
       } catch (e) {
         addToast(`Error installing model: ${e}`, "error", 10000);
       } finally {
         setIsLoading(false);
         removeToast(toast);
       }
-      addToast("Tag model successfully installed.", "success", 5000);
     },
     [addToast, installTagModelFromBlob, removeToast],
   );
@@ -457,13 +457,13 @@ const ModelsManager: React.FC<ModelsManagerProps> = ({
       setIsLoading(true);
       try {
         await downloadTagModel(name);
+        addToast("Tag model successfully downloaded.", "success", 5000);
       } catch (e) {
         addToast(`Error downloading tag model: ${e}`, "error", 10000);
       } finally {
         setIsLoading(false);
         removeToast(toast);
       }
-      addToast("Tag model successfully downloaded.", "success", 5000);
     },
     [addToast, downloadTagModel, removeToast],
   );

@@ -31,13 +31,13 @@ const AddTagModelModal: React.FC<AddTagModelModalProps> = ({ onClose }) => {
     setIsLoading(true);
     try {
       await installTagModelFromUrl(url);
+      addToast("Tag model successfully installed.", "success", 5000);
     } catch (e) {
       addToast(`Error installing tag model: ${e}`, "error", 10000);
     } finally {
       setIsLoading(false);
       removeToast(toast);
     }
-    addToast("Tag model successfully installed.", "success", 5000);
     onClose();
   }, [addToast, installTagModelFromUrl, removeToast, onClose]);
   const handleInputKeyDown = useCallback(
