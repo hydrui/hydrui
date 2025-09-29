@@ -4,6 +4,7 @@ import { TrashIcon } from "@heroicons/react/24/solid";
 import { ArrowDownTrayIcon } from "@heroicons/react/24/solid";
 import { FocusTrap } from "focus-trap-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 
 import EditColorModal from "@/components/modals/EditColorModal/EditColorModal";
 import MimeInput from "@/components/widgets/MimeInput/MimeInput";
@@ -147,11 +148,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                 </>
               )}
               {activeTab === "models" && (
-                <>
+                <ErrorBoundary
+                  fallbackRender={({ error }) => (
+                    <p>
+                      An error occurred in the model manager: {String(error)}
+                    </p>
+                  )}
+                >
                   <ModelsManager
                     setShowAddTagsModelModal={setShowAddTagsModelModal}
                   />
-                </>
+                </ErrorBoundary>
               )}
             </div>
             <div className="settings-modal-buttons">
