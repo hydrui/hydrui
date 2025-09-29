@@ -29,9 +29,29 @@ const TabRow: React.FC<TabRowProps> = ({ tabs }) => {
       : -1,
   );
 
+  useEffect(() => {
+    if (currentIndex === -1 || !tabs[currentIndex]) {
+      return;
+    }
+    if (!activePageKey) {
+      setCurrentIndex(-1);
+      return;
+    }
+    if (tabContainsKey(tabs[currentIndex], activePageKey)) {
+      return;
+    }
+    setCurrentIndex(
+      tabs.findIndex((tab) => tabContainsKey(tab, activePageKey)),
+    );
+  }, [tabs, currentIndex, activePageKey]);
+
   const setTab = async (index: number) => {
     // Don't bother doing anything if we're already in a sub tab of this one.
-    if (activePageKey && tabContainsKey(tabs[index], activePageKey)) {
+    if (
+      activePageKey &&
+      tabs[index].key != activePageKey &&
+      tabContainsKey(tabs[index], activePageKey)
+    ) {
       return;
     }
     setPage(tabs[index].key, tabs[index].type);
