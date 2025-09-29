@@ -210,6 +210,9 @@ export async function loadModel(meta: TagModelMeta): Promise<Session> {
   if (!meta.modelPath || !meta.tagsPath || !meta.info) {
     throw new Error("Model data is not cached.");
   }
+  if (!navigator.storage || !navigator.storage.getDirectory) {
+    throw new Error("Origin Private File System is not available!");
+  }
   const { InferenceSession } = await import("onnxruntime-web");
   const opfsRoot = await navigator.storage.getDirectory();
   const model = await opfsRoot.getFileHandle(meta.modelPath);
@@ -229,6 +232,9 @@ export async function loadModel(meta: TagModelMeta): Promise<Session> {
 export async function fetchModelFiles(meta: TagModelMeta) {
   if (!meta.url) {
     throw new Error("Model entry does not have a URL!");
+  }
+  if (!navigator.storage || !navigator.storage.getDirectory) {
+    throw new Error("Origin Private File System is not available!");
   }
   const opfsRoot = await navigator.storage.getDirectory();
   const infoResponse = await fetch(meta.url);
@@ -269,6 +275,9 @@ export async function fetchModelFiles(meta: TagModelMeta) {
 }
 
 export async function deleteSavedFiles(meta: TagModelMeta) {
+  if (!navigator.storage || !navigator.storage.getDirectory) {
+    throw new Error("Origin Private File System is not available!");
+  }
   const opfsRoot = await navigator.storage.getDirectory();
   if (meta.modelPath) {
     try {
@@ -287,6 +296,9 @@ export async function deleteSavedFiles(meta: TagModelMeta) {
 }
 
 export async function setupZippedTagModel(zip: Blob): Promise<TagModelMeta> {
+  if (!navigator.storage || !navigator.storage.getDirectory) {
+    throw new Error("Origin Private File System is not available!");
+  }
   const { BlobReader, ZipReader } = await import("@zip.js/zip.js");
   const opfsRoot = await navigator.storage.getDirectory();
   const blobReader = new BlobReader(zip);
