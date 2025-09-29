@@ -171,7 +171,7 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({
   const showBrokenImageReport = fileData.mime === "image/vnd.adobe.photoshop";
 
   return (
-    <FocusTrap>
+    <FocusTrap focusTrapOptions={{ allowOutsideClick: true }}>
       <div className="file-viewer-modal-container">
         {/* Header */}
         <div className="file-viewer-modal-header">

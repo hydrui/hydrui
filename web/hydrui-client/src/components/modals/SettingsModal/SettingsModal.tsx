@@ -43,7 +43,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
   });
 
   return (
-    <FocusTrap>
+    <FocusTrap focusTrapOptions={{ allowOutsideClick: true }}>
       <div className="settings-modal-container">
         <div className="settings-modal-wrapper">
           {/* Backdrop */}

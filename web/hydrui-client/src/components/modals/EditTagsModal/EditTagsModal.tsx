@@ -427,7 +427,7 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
   };
 
   return (
-    <FocusTrap>
+    <FocusTrap focusTrapOptions={{ allowOutsideClick: true }}>
       <div className="edit-tags-modal-container">
         <div className="edit-tags-modal-wrapper">
           <div className="edit-tags-modal-backdrop" onClick={handleClose} />

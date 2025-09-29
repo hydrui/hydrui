@@ -203,7 +203,7 @@ const EditNotesModal: React.FC<EditNotesModalProps> = ({ file, onClose }) => {
   });
 
   return (
-    <FocusTrap>
+    <FocusTrap focusTrapOptions={{ allowOutsideClick: true }}>
       <div className="edit-notes-modal-container">
         <div className="edit-notes-modal-wrapper">
           <div className="edit-notes-modal-backdrop" onClick={handleClose} />

@@ -189,7 +189,7 @@ const EditUrlsModal: React.FC<EditUrlsModalProps> = ({ files, onClose }) => {
   });
 
   return (
-    <FocusTrap>
+    <FocusTrap focusTrapOptions={{ allowOutsideClick: true }}>
       <div className="edit-urls-modal-container">
         <div className="edit-urls-modal-wrapper">
           <div className="edit-urls-modal-backdrop" onClick={handleClose} />

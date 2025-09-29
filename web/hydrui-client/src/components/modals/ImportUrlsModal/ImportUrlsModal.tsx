@@ -164,7 +164,7 @@ const ImportUrlsModal: React.FC<ImportUrlModalProps> = ({
   });
 
   return (
-    <FocusTrap>
+    <FocusTrap focusTrapOptions={{ allowOutsideClick: true }}>
       <div className="import-urls-modal-container">
         <div className="import-urls-modal-wrapper">
           <div className="import-urls-modal-backdrop" onClick={onClose} />

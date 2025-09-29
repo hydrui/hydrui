@@ -52,7 +52,7 @@ const AddTagModelModal: React.FC<AddTagModelModalProps> = ({ onClose }) => {
     [install],
   );
   return (
-    <FocusTrap>
+    <FocusTrap focusTrapOptions={{ allowOutsideClick: true }}>
       <div className="add-tag-model-modal-container">
         <div className="add-tag-model-modal-wrapper">
           <div className="add-tag-model-modal-backdrop" onClick={onClose} />

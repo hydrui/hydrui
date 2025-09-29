@@ -28,7 +28,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   });
 
   return (
-    <FocusTrap>
+    <FocusTrap focusTrapOptions={{ allowOutsideClick: true }}>
       <div className="confirm-modal-container">
         <div className="confirm-modal-wrapper">
           <div className="confirm-modal-backdrop" onClick={onCancel} />

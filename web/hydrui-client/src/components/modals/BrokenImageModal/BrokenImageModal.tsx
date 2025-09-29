@@ -57,7 +57,7 @@ const BrokenImageModal: React.FC<BrokenImageModalProps> = ({
   });
 
   return (
-    <FocusTrap>
+    <FocusTrap focusTrapOptions={{ allowOutsideClick: true }}>
       <div className="broken-image-modal-container">
         <div className="broken-image-modal-wrapper">
           <div className="broken-image-modal-backdrop" onClick={onClose} />

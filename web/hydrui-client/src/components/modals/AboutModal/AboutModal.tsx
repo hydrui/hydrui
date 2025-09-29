@@ -20,7 +20,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ onClose }) => {
   });
 
   return (
-    <FocusTrap>
+    <FocusTrap focusTrapOptions={{ allowOutsideClick: true }}>
       <div className="about-modal-container">
         <div className="about-modal-wrapper">
           {/* Backdrop */}

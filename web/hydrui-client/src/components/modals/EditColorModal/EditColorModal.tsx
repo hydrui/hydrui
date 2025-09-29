@@ -60,7 +60,7 @@ const EditColorModal: React.FC<EditColorProps> = ({ namespace, onClose }) => {
     Escape: onClose,
   });
   return (
-    <FocusTrap>
+    <FocusTrap focusTrapOptions={{ allowOutsideClick: true }}>
       <div className="edit-color-modal-container">
         <div className="edit-color-modal-wrapper">
           <div className="edit-color-modal-backdrop" onClick={onClose} />
