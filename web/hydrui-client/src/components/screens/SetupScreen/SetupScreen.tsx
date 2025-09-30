@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import PushButton from "@/components/widgets/PushButton/PushButton";
 import { client, useApiStore, verifyAuthentication } from "@/store/apiStore";
@@ -12,8 +12,8 @@ const SetupScreen: React.FC = () => {
     actions: { setCredentials, setAuthenticated },
   } = useApiStore();
 
-  const [inputApiKey, setInputApiKey] = useState(apiKey);
-  const [inputBaseUrl, setInputBaseUrl] = useState(baseUrl);
+  const apiKeyInput = useRef<HTMLInputElement>(null);
+  const baseUrlInput = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,7 +67,10 @@ const SetupScreen: React.FC = () => {
     e: React.FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>,
   ) => {
     e.preventDefault();
-    submit(inputBaseUrl, inputApiKey);
+    if (!baseUrlInput.current || !apiKeyInput.current) {
+      return;
+    }
+    submit(baseUrlInput.current.value, apiKeyInput.current.value);
   };
 
   return (
@@ -83,8 +86,8 @@ const SetupScreen: React.FC = () => {
               type="text"
               name="hydrusApiUrl"
               id="baseUrl"
-              value={inputBaseUrl}
-              onChange={(e) => setInputBaseUrl(e.target.value)}
+              ref={baseUrlInput}
+              defaultValue={baseUrl}
               className="setup-input"
               placeholder="Enter your Hydrus API URL"
               required
@@ -99,8 +102,8 @@ const SetupScreen: React.FC = () => {
               type="password"
               name="hydrusApiKey"
               id="apiKey"
-              value={inputApiKey}
-              onChange={(e) => setInputApiKey(e.target.value)}
+              ref={apiKeyInput}
+              defaultValue={apiKey}
               className="setup-input"
               placeholder="Enter your Hydrus API key"
               required
