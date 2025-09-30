@@ -267,6 +267,7 @@ export interface HydrusApiClient {
 
   // File operations
   getFileUrl: (fileId: number) => string;
+  getBridgeUrl: (fileId: number) => Promise<string>;
   getThumbnailUrl: (fileId: number) => string;
 
   // Rating operations

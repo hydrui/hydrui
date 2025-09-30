@@ -26,6 +26,7 @@ import EditTagsModal from "@/components/modals/EditTagsModal/EditTagsModal";
 import EditUrlsModal from "@/components/modals/EditUrlsModal/EditUrlsModal";
 import FileViewerModal from "@/components/modals/FileViewerModal/FileViewerModal";
 import ImportUrlsModal from "@/components/modals/ImportUrlsModal/ImportUrlsModal";
+import TokenPassingModal from "@/components/modals/TokenPassingModal/TokenPassingModal";
 import ScrollView from "@/components/widgets/ScrollView/ScrollView";
 import { useContextMenu } from "@/hooks/useContextMenu";
 import useLongPress from "@/hooks/useLongPress";
@@ -36,6 +37,7 @@ import { usePageStore } from "@/store/pageStore";
 import { usePreferencesStore } from "@/store/preferencesStore";
 import { useSearchStore } from "@/store/searchStore";
 import { useToastStore } from "@/store/toastStore";
+import { isServerMode } from "@/utils/serverMode";
 
 import { SearchBar } from "./SearchBar";
 import { Thumbnail } from "./Thumbnail";
@@ -66,7 +68,8 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
     pageType,
   } = usePageStore();
 
-  const { thumbnailSize, useVirtualViewport } = usePreferencesStore();
+  const { thumbnailSize, useVirtualViewport, allowTokenPassing } =
+    usePreferencesStore();
 
   const {
     actions: { addToast, removeToast, updateToastProgress },
@@ -90,6 +93,7 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
   const [showEditUrlsModal, setShowEditUrlsModal] = useState(false);
   const [showEditNotesModal, setShowEditNotesModal] = useState(false);
   const [showImportUrlsModal, setShowImportUrlsModal] = useState(false);
+  const [showTokenPassingModal, setShowTokenPassingModal] = useState(false);
   const [tagEditFiles, setTagEditFiles] = useState<FileMetadata[]>([]);
   const [urlEditFiles, setUrlEditFiles] = useState<FileMetadata[]>([]);
   const [editNotesFile, setEditNotesFile] = useState<FileMetadata | null>(null);
@@ -98,7 +102,8 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
     showEditTagsModal ||
     showEditUrlsModal ||
     showEditNotesModal ||
-    showImportUrlsModal;
+    showImportUrlsModal ||
+    showTokenPassingModal;
   const [renderView, setRenderView] = useState({
     firstIndex: 0,
     lastIndex: files.length,
@@ -681,16 +686,28 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
             id: "photopea",
             label: "Open in Photopea",
             onClick: async () => {
+              // Paranoid as it may be, users should be aware of the risks.
+              if (!isServerMode && !allowTokenPassing) {
+                setShowTokenPassingModal(true);
+                return;
+              }
+              const filesToOpen = await Promise.all(
+                selectedFileMetadata.map(async (meta) => {
+                  const url = await client.getBridgeUrl(meta.file_id);
+                  return {
+                    url,
+                    meta,
+                  };
+                }),
+              );
               window.open(
                 `https://www.photopea.com#${encodeURIComponent(
                   JSON.stringify({
-                    files: selectedFileMetadata.map((file) =>
-                      client.getFileUrl(file.file_id),
-                    ),
-                    script: `${selectedFileMetadata
+                    files: filesToOpen.map((file) => file.url),
+                    script: `${filesToOpen
                       .map(
                         (file, i) =>
-                          `if(app.activeDocument==app.documents[${i}])app.activeDocument.name="file_${file.file_id}"`,
+                          `if(app.activeDocument==app.documents[${i}])app.activeDocument.name="file_${file.meta.file_id}"`,
                       )
                       .join(";")}`,
                   }),
@@ -1238,6 +1255,12 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
           file={editNotesFile}
           onClose={() => setShowEditNotesModal(false)}
         />
+      )}
+
+      {showTokenPassingModal && (
+        <TokenPassingModal
+          onClose={() => setShowTokenPassingModal(false)}
+        ></TokenPassingModal>
       )}
     </div>
   );

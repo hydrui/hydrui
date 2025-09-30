@@ -299,6 +299,10 @@ export class MockHydrusClient implements HydrusApiClient {
     return `/mock-file-${fileId}`;
   }
 
+  async getBridgeUrl(fileId: number): Promise<string> {
+    return this.getFileUrl(fileId);
+  }
+
   /**
    * Get the direct URL for a thumbnail
    */

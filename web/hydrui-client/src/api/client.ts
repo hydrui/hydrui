@@ -226,6 +226,26 @@ export class HydrusClient implements HydrusApiClient {
   }
 
   /**
+   * Get a direct URL that can be used by other webapps. In Server Mode, this
+   * is a one-time URL with no API key or other information in it. Otherwise,
+   * it's just a normal file URL, with API key and all.
+   */
+  async getBridgeUrl(fileId: number): Promise<string> {
+    const target = `/get_files/file?file_id=${fileId}${this.apiKey ? `&Hydrus-Client-API-Access-Key=${this.apiKey}` : ""}`;
+    if (isServerMode) {
+      const bridgePath = `/bridge/${Math.random().toString(36).substring(2)}`;
+      await fetch(bridgePath, {
+        method: "POST",
+        body: JSON.stringify({ target }),
+        credentials: "include",
+      });
+      return new URL(bridgePath, document.URL).toString();
+    } else {
+      return `${this.baseUrl}${target}`;
+    }
+  }
+
+  /**
    * Get the direct URL for a thumbnail
    */
   getThumbnailUrl(fileId: number): string {

@@ -139,6 +139,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
               )}
               {activeTab === "general" && (
                 <>
+                  <PrivacySettings />
                   <MimeTypesEditor />
                   <TagColorsEditor editColor={setEditingColor} />
                 </>
@@ -188,6 +189,42 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
 };
 
 export default SettingsModal;
+
+const PrivacySettings: React.FC = () => {
+  const {
+    allowTokenPassing,
+    actions: { setAllowTokenPassing },
+  } = usePreferencesStore();
+
+  return (
+    <fieldset>
+      <legend>Privacy and Security</legend>
+      <p>
+        Some actions (e.g. the &ldquo;Open in Photopea&rdquo; action) may need
+        to pass information containing your hydrus network token to external web
+        applications, which is not secure.
+        {isServerMode ? (
+          <>
+            {" "}
+            Since you are currently using server mode, these actions will use
+            one-time bridging instead, so this option is not used.
+          </>
+        ) : undefined}
+      </p>
+      <div>
+        <label>
+          <input
+            type="checkbox"
+            checked={allowTokenPassing}
+            onChange={(e) => setAllowTokenPassing(e.currentTarget.checked)}
+          />{" "}
+          Allow actions that will pass my hydrus network token to external
+          webapps.
+        </label>
+      </div>
+    </fieldset>
+  );
+};
 
 const MimeTypesEditor: React.FC = () => {
   const {

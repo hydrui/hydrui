@@ -16,6 +16,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -46,6 +47,12 @@ type LoginRequest struct {
 // LoginResponse represents the JSON response for login
 type LoginResponse struct {
 	Token string `json:"token"`
+}
+
+// BridgeRequest represents the JSON request for building bridges
+type BridgeRequest struct {
+	// Target is the target path to build a bridge to (relative to the Hydrus API root.)
+	Target string `json:"target"`
 }
 
 func calculateFileHash(fsys fs.FS, path string) (hash string, err error) {
@@ -178,209 +185,279 @@ func New(config Config, clientData *pack.Pack) http.Handler {
 		ServerMode:   config.ServerMode,
 	}
 
-	if config.ServerMode && config.AllowBugReport {
-		// Bug report proxy handler
-		wsUpgrader := websocket.Upgrader{
-			HandshakeTimeout: 5 * time.Second,
-		}
-		wsDialer := websocket.Dialer{}
-		mux.HandleFunc("/bug-report", func(w http.ResponseWriter, r *http.Request) {
-			downstream, err := wsUpgrader.Upgrade(w, r, nil)
-			if err != nil {
-				slog.LogAttrs(r.Context(), slog.LevelDebug, "WebSocket Upgrade failed.", slog.Any("error", err))
-				return
+	if config.ServerMode {
+		if config.AllowBugReport {
+			// Bug report proxy handler
+			wsUpgrader := websocket.Upgrader{
+				HandshakeTimeout: 5 * time.Second,
 			}
-			defer func() {
-				if err := downstream.Close(); err != nil {
-					slog.LogAttrs(r.Context(), slog.LevelDebug, "Error closing downstream WebSocket connection.", slog.Any("error", err))
+			wsDialer := websocket.Dialer{}
+			mux.HandleFunc("/bug-report", func(w http.ResponseWriter, r *http.Request) {
+				downstream, err := wsUpgrader.Upgrade(w, r, nil)
+				if err != nil {
+					slog.LogAttrs(r.Context(), slog.LevelDebug, "WebSocket Upgrade failed.", slog.Any("error", err))
 					return
 				}
-			}()
-			upstream, upstreamResp, err := wsDialer.DialContext(r.Context(), "https://hydrui.dev/bug-report", http.Header{})
-			if err == websocket.ErrBadHandshake && upstreamResp != nil {
 				defer func() {
-					if err := upstreamResp.Body.Close(); err != nil {
-						slog.LogAttrs(r.Context(), slog.LevelDebug, "Error closing upstream HTTP response.", slog.Any("error", err))
+					if err := downstream.Close(); err != nil {
+						slog.LogAttrs(r.Context(), slog.LevelDebug, "Error closing downstream WebSocket connection.", slog.Any("error", err))
 						return
 					}
 				}()
-				w.WriteHeader(upstreamResp.StatusCode)
-				if _, err := io.Copy(w, upstreamResp.Body); err != nil {
-					slog.LogAttrs(r.Context(), slog.LevelDebug, "Error forwarding HTTP response.", slog.Any("error", err))
+				upstream, upstreamResp, err := wsDialer.DialContext(r.Context(), "https://hydrui.dev/bug-report", http.Header{})
+				if err == websocket.ErrBadHandshake && upstreamResp != nil {
+					defer func() {
+						if err := upstreamResp.Body.Close(); err != nil {
+							slog.LogAttrs(r.Context(), slog.LevelDebug, "Error closing upstream HTTP response.", slog.Any("error", err))
+							return
+						}
+					}()
+					w.WriteHeader(upstreamResp.StatusCode)
+					if _, err := io.Copy(w, upstreamResp.Body); err != nil {
+						slog.LogAttrs(r.Context(), slog.LevelDebug, "Error forwarding HTTP response.", slog.Any("error", err))
+					}
+					return
+				} else if err != nil {
+					slog.LogAttrs(r.Context(), slog.LevelDebug, "Error opening upstream WebSocket connection.", slog.Any("error", err))
+					return
 				}
+				defer func() {
+					if err := upstream.Close(); err != nil {
+						slog.LogAttrs(r.Context(), slog.LevelDebug, "Error closing upstream WebSocket connection.", slog.Any("error", err))
+						return
+					}
+				}()
+				for {
+					t, mr, err := downstream.NextReader()
+					if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseNoStatusReceived) {
+						err := upstream.WriteControl(websocket.CloseMessage, nil, time.Now().Add(5*time.Second))
+						if err != nil {
+							slog.LogAttrs(r.Context(), slog.LevelDebug, "Error sending close message to upstream.", slog.Any("error", err))
+							return
+						}
+						break
+					} else if err != nil {
+						slog.LogAttrs(r.Context(), slog.LevelDebug, "Error reading downstream WebSocket message.", slog.Any("error", err))
+						return
+					}
+					mw, err := upstream.NextWriter(t)
+					if err != nil {
+						slog.LogAttrs(r.Context(), slog.LevelDebug, "Error writing upstream WebSocket message.", slog.Any("error", err))
+						return
+					}
+					if _, err := io.Copy(mw, mr); err != nil {
+						slog.LogAttrs(r.Context(), slog.LevelDebug, "Error forwarding WebSocket message.", slog.Any("error", err))
+					}
+				}
+			})
+		}
+
+		proxyClient := &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: !config.HydrusSecure,
+				},
+			},
+		}
+
+		proxyRequest := func(w http.ResponseWriter, method, proxyURL string, body io.Reader, header http.Header) {
+			proxyReq, err := http.NewRequest(method, proxyURL, body)
+			if err != nil {
+				http.Error(w, "Error creating proxy request", http.StatusInternalServerError)
 				return
-			} else if err != nil {
-				slog.LogAttrs(r.Context(), slog.LevelDebug, "Error opening upstream WebSocket connection.", slog.Any("error", err))
+			}
+
+			for key, values := range header {
+				for _, value := range values {
+					proxyReq.Header.Add(key, value)
+				}
+			}
+
+			proxyReq.Header.Set("Hydrus-Client-API-Access-Key", config.HydrusAPIKey)
+
+			q := proxyReq.URL.Query()
+			q.Del("Hydrus-Client-API-Access-Key")
+			proxyReq.URL.RawQuery = q.Encode()
+			log.Printf("Proxy request: %s %s", proxyReq.Method, proxyReq.URL.String())
+
+			resp, err := proxyClient.Do(proxyReq)
+			if err != nil {
+				http.Error(w, "Error making proxy request", http.StatusBadGateway)
 				return
 			}
 			defer func() {
-				if err := upstream.Close(); err != nil {
-					slog.LogAttrs(r.Context(), slog.LevelDebug, "Error closing upstream WebSocket connection.", slog.Any("error", err))
-					return
-				}
+				_ = resp.Body.Close()
 			}()
-			for {
-				t, mr, err := downstream.NextReader()
-				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseNoStatusReceived) {
-					err := upstream.WriteControl(websocket.CloseMessage, nil, time.Now().Add(5*time.Second))
-					if err != nil {
-						slog.LogAttrs(r.Context(), slog.LevelDebug, "Error sending close message to upstream.", slog.Any("error", err))
-						return
-					}
-					break
-				} else if err != nil {
-					slog.LogAttrs(r.Context(), slog.LevelDebug, "Error reading downstream WebSocket message.", slog.Any("error", err))
+
+			for key, values := range resp.Header {
+				for _, value := range values {
+					w.Header().Add(key, value)
+				}
+			}
+
+			w.WriteHeader(resp.StatusCode)
+			_, _ = io.Copy(w, resp.Body)
+		}
+
+		// Hydrus proxy handler
+		mux.HandleFunc("/hydrus/", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Content-Type-Options", "nosniff")
+
+			sessionToken, err := r.Cookie("hydrui-session")
+			if err != nil {
+				http.Error(w, "Not logged in", http.StatusUnauthorized)
+				return
+			}
+
+			valid, err := validateToken(sessionToken.Value, []byte(config.Secret))
+			if err != nil {
+				http.Error(w, "Invalid session token", http.StatusUnauthorized)
+				return
+			}
+
+			if !valid {
+				http.Error(w, "Invalid session token", http.StatusUnauthorized)
+				return
+			}
+
+			proxyURL := config.HydrusURL + strings.TrimPrefix(r.URL.Path, "/hydrus")
+			if r.URL.RawQuery != "" || r.URL.ForceQuery {
+				proxyURL += "?" + r.URL.RawQuery
+			}
+			proxyRequest(w, r.Method, proxyURL, r.Body, r.Header)
+		})
+
+		// One-time-proxy handler. Used for hand-off to Photopea.
+		bridges := sync.Map{}
+		mux.HandleFunc("/bridge/", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Content-Type-Options", "nosniff")
+
+			switch r.Method {
+			case http.MethodOptions:
+				_, loaded := bridges.Load(r.URL.Path)
+				if !loaded {
+					http.NotFound(w, r)
 					return
 				}
-				mw, err := upstream.NextWriter(t)
+				w.Header().Set("Access-Control-Allow-Headers", "*")
+				w.Header().Set("Access-Control-Allow-Methods", "GET")
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+				w.Header().Set("Access-Control-Max-Age", "86400")
+				w.Header().Set("Content-Length", "0")
+				w.WriteHeader(http.StatusOK)
+			case http.MethodGet:
+				value, loaded := bridges.LoadAndDelete(r.URL.Path)
+				if !loaded {
+					http.NotFound(w, r)
+					return
+				}
+				path, ok := value.(string)
+				if !ok {
+					http.Error(w, "Internal error", http.StatusInternalServerError)
+					return
+				}
+				proxyURL := config.HydrusURL + path
+				if r.URL.RawQuery != "" || r.URL.ForceQuery {
+					proxyURL += "?" + r.URL.RawQuery
+				}
+				proxyRequest(w, r.Method, proxyURL, r.Body, r.Header)
+			case http.MethodPost:
+				sessionToken, err := r.Cookie("hydrui-session")
 				if err != nil {
-					slog.LogAttrs(r.Context(), slog.LevelDebug, "Error writing upstream WebSocket message.", slog.Any("error", err))
+					http.Error(w, "Not logged in", http.StatusUnauthorized)
 					return
 				}
-				if _, err := io.Copy(mw, mr); err != nil {
-					slog.LogAttrs(r.Context(), slog.LevelDebug, "Error forwarding WebSocket message.", slog.Any("error", err))
+
+				valid, err := validateToken(sessionToken.Value, []byte(config.Secret))
+				if err != nil {
+					http.Error(w, "Invalid session token", http.StatusUnauthorized)
+					return
 				}
+
+				if !valid {
+					http.Error(w, "Invalid session token", http.StatusUnauthorized)
+					return
+				}
+
+				var bridgeReq BridgeRequest
+				if err := json.NewDecoder(r.Body).Decode(&bridgeReq); err != nil {
+					http.Error(w, "Invalid request", http.StatusBadRequest)
+					return
+				}
+				bridges.Store(r.URL.Path, bridgeReq.Target)
+				w.WriteHeader(http.StatusNoContent)
+			default:
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			}
+		})
+
+		// Login handler
+		mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Content-Type-Options", "nosniff")
+			w.Header().Set("Content-Security-Policy", csp)
+
+			if r.Method != http.MethodPost {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+
+			if config.HtpasswdFile == nil {
+				http.Error(w, "Authentication not configured", http.StatusInternalServerError)
+				return
+			}
+
+			var loginReq LoginRequest
+			if err := json.NewDecoder(r.Body).Decode(&loginReq); err != nil {
+				http.Error(w, "Invalid request", http.StatusBadRequest)
+				return
+			}
+
+			authenticated, err := config.HtpasswdFile.Authenticate(loginReq.Username, loginReq.Password)
+			if err != nil {
+				log.Printf("Authentication error: %v", err)
+				http.Error(w, "Authentication error", http.StatusInternalServerError)
+				return
+			}
+
+			if !authenticated {
+				_ = subtle.ConstantTimeCompare([]byte(loginReq.Password), []byte(loginReq.Password))
+				http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+				return
+			}
+
+			token, err := generateToken(loginReq.Username, []byte(config.Secret))
+			if err != nil {
+				log.Printf("Failed to generate token: %v", err)
+				http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+				return
+			}
+
+			http.SetCookie(w, &http.Cookie{
+				Name:     "hydrui-session",
+				Value:    token,
+				Path:     "/",
+				Expires:  time.Now().Add(time.Hour * 24 * 30),
+				HttpOnly: true,
+				Secure:   config.Secure,
+				SameSite: http.SameSiteStrictMode,
+			})
+
+			w.WriteHeader(http.StatusOK)
+		})
+
+		mux.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+			http.SetCookie(w, &http.Cookie{
+				Name:     "hydrui-session",
+				Value:    "",
+				Path:     "/",
+				Expires:  time.Unix(0, 0),
+				MaxAge:   -1,
+				HttpOnly: true,
+				Secure:   config.Secure,
+				SameSite: http.SameSiteStrictMode,
+			})
 		})
 	}
-
-	proxyClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: !config.HydrusSecure,
-			},
-		},
-	}
-
-	// Hydrus proxy handler
-	mux.HandleFunc("/hydrus/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-
-		sessionToken, err := r.Cookie("hydrui-session")
-		if err != nil {
-			http.Error(w, "Not logged in", http.StatusUnauthorized)
-			return
-		}
-
-		valid, err := validateToken(sessionToken.Value, []byte(config.Secret))
-		if err != nil {
-			http.Error(w, "Invalid session token", http.StatusUnauthorized)
-			return
-		}
-
-		if !valid {
-			http.Error(w, "Invalid session token", http.StatusUnauthorized)
-			return
-		}
-
-		proxyURL := config.HydrusURL + strings.TrimPrefix(r.URL.Path, "/hydrus")
-		if r.URL.RawQuery != "" || r.URL.ForceQuery {
-			proxyURL += "?" + r.URL.RawQuery
-		}
-		proxyReq, err := http.NewRequest(r.Method, proxyURL, r.Body)
-		if err != nil {
-			http.Error(w, "Error creating proxy request", http.StatusInternalServerError)
-			return
-		}
-
-		for key, values := range r.Header {
-			for _, value := range values {
-				proxyReq.Header.Add(key, value)
-			}
-		}
-
-		proxyReq.Header.Set("Hydrus-Client-API-Access-Key", config.HydrusAPIKey)
-
-		q := proxyReq.URL.Query()
-		q.Del("Hydrus-Client-API-Access-Key")
-		proxyReq.URL.RawQuery = q.Encode()
-		log.Printf("Proxy request: %s %s", proxyReq.Method, proxyReq.URL.String())
-
-		resp, err := proxyClient.Do(proxyReq)
-		if err != nil {
-			http.Error(w, "Error making proxy request", http.StatusBadGateway)
-			return
-		}
-		defer func() {
-			_ = resp.Body.Close()
-		}()
-
-		for key, values := range resp.Header {
-			for _, value := range values {
-				w.Header().Add(key, value)
-			}
-		}
-
-		w.WriteHeader(resp.StatusCode)
-		_, _ = io.Copy(w, resp.Body)
-	})
-
-	// Login handler
-	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("Content-Security-Policy", csp)
-
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		if config.HtpasswdFile == nil {
-			http.Error(w, "Authentication not configured", http.StatusInternalServerError)
-			return
-		}
-
-		var loginReq LoginRequest
-		if err := json.NewDecoder(r.Body).Decode(&loginReq); err != nil {
-			http.Error(w, "Invalid request", http.StatusBadRequest)
-			return
-		}
-
-		authenticated, err := config.HtpasswdFile.Authenticate(loginReq.Username, loginReq.Password)
-		if err != nil {
-			log.Printf("Authentication error: %v", err)
-			http.Error(w, "Authentication error", http.StatusInternalServerError)
-			return
-		}
-
-		if !authenticated {
-			_ = subtle.ConstantTimeCompare([]byte(loginReq.Password), []byte(loginReq.Password))
-			http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-			return
-		}
-
-		token, err := generateToken(loginReq.Username, []byte(config.Secret))
-		if err != nil {
-			log.Printf("Failed to generate token: %v", err)
-			http.Error(w, "Failed to generate token", http.StatusInternalServerError)
-			return
-		}
-
-		http.SetCookie(w, &http.Cookie{
-			Name:     "hydrui-session",
-			Value:    token,
-			Path:     "/",
-			Expires:  time.Now().Add(time.Hour * 24 * 30),
-			HttpOnly: true,
-			Secure:   config.Secure,
-			SameSite: http.SameSiteStrictMode,
-		})
-
-		w.WriteHeader(http.StatusOK)
-	})
-
-	mux.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
-		http.SetCookie(w, &http.Cookie{
-			Name:     "hydrui-session",
-			Value:    "",
-			Path:     "/",
-			Expires:  time.Unix(0, 0),
-			MaxAge:   -1,
-			HttpOnly: true,
-			Secure:   config.Secure,
-			SameSite: http.SameSiteStrictMode,
-		})
-	})
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")

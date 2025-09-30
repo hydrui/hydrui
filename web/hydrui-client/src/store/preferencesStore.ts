@@ -39,6 +39,7 @@ interface PreferencesState {
   autopreviewMimeTypes: Set<string>;
   thumbnailSize: number;
   useVirtualViewport: boolean;
+  allowTokenPassing: boolean;
   actions: {
     setNamespaceColor: (namespace: string, color: string) => void;
     clearNamespaceColor: (namespace: string) => void;
@@ -50,6 +51,7 @@ interface PreferencesState {
     resetAutopreviewMimeTypes: () => void;
     setThumbnailSize: (size: number) => void;
     setVirtualViewport: (enabled: boolean) => void;
+    setAllowTokenPassing: (enabled: boolean) => void;
   };
 }
 
@@ -74,6 +76,9 @@ export const usePreferencesStore = create<PreferencesState>()(
 
       // Use virtualized viewport for rendering thumbnails
       useVirtualViewport: true,
+
+      // Allow passing tokens to external client-side apps
+      allowTokenPassing: false,
 
       actions: {
         setNamespaceColor: (namespace: string, color: string) => {
@@ -180,6 +185,12 @@ export const usePreferencesStore = create<PreferencesState>()(
         setVirtualViewport: (enabled: boolean) => {
           set({
             useVirtualViewport: enabled,
+          });
+        },
+
+        setAllowTokenPassing: (enabled: boolean) => {
+          set({
+            allowTokenPassing: enabled,
           });
         },
       },
