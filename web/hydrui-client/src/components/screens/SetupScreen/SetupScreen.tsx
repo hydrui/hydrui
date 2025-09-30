@@ -115,7 +115,20 @@ const SetupScreen: React.FC = () => {
             </p>
           </div>
 
-          {error && <div className="setup-error">{error}</div>}
+          {error && (
+            <div className="setup-error">
+              <p>{error}</p>
+              <p>
+                <small>
+                  Check the{" "}
+                  <a href="https://hydrui.dev/en/docs/basic-usage/getting-started/">
+                    Getting Started
+                  </a>{" "}
+                  documentation if you need help.
+                </small>
+              </p>
+            </div>
+          )}
 
           <div className="setup-form-buttons">
             <PushButton
