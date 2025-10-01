@@ -210,6 +210,7 @@ export const useModelMetaStore = create<ModelMeta>()(
             }
           }
         }
+        return persistedState;
       },
     },
   ),
