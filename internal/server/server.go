@@ -169,8 +169,8 @@ func New(config Config, clientData *pack.Pack) http.Handler {
 	} else {
 		// In pure client mode, the client may need to connect to arbitrary origins.
 		csp += "connect-src *;"
-		csp += "img-src *;"
-		csp += "media-src *;"
+		csp += "img-src * data: blob:;"
+		csp += "media-src * data: blob:;"
 	}
 	csp += "frame-ancestors 'none';"
 	csp += "base-uri 'self';"
