@@ -1,7 +1,7 @@
 FROM docker.io/library/node:alpine AS npmbuild
 COPY . /work
 WORKDIR /work
-RUN npm ci && npm run generate:pack
+RUN npm ci && VITE_HYDRUI_VERSION=$(cat VERSION) npm run generate:pack
 
 FROM docker.io/library/golang:1-alpine AS gobuild
 COPY . /work
