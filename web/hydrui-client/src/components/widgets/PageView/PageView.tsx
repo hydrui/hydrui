@@ -21,6 +21,7 @@ import React, {
 } from "react";
 
 import { FileMetadata } from "@/api/types";
+import BatchAutoTagModal from "@/components/modals/BatchAutoTagModal/BatchAutoTagModal";
 import EditNotesModal from "@/components/modals/EditNotesModal/EditNotesModal";
 import EditTagsModal from "@/components/modals/EditTagsModal/EditTagsModal";
 import EditUrlsModal from "@/components/modals/EditUrlsModal/EditUrlsModal";
@@ -94,8 +95,12 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
   const [showEditNotesModal, setShowEditNotesModal] = useState(false);
   const [showImportUrlsModal, setShowImportUrlsModal] = useState(false);
   const [showTokenPassingModal, setShowTokenPassingModal] = useState(false);
+  const [showBatchAutotagModal, setShowBatchAutotagModal] = useState(false);
   const [tagEditFiles, setTagEditFiles] = useState<FileMetadata[]>([]);
   const [urlEditFiles, setUrlEditFiles] = useState<FileMetadata[]>([]);
+  const [batchAutotagFiles, setBatchAutotagFiles] = useState<FileMetadata[]>(
+    [],
+  );
   const [editNotesFile, setEditNotesFile] = useState<FileMetadata | null>(null);
   const inModal =
     modalIndex !== -1 ||
@@ -103,7 +108,8 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
     showEditUrlsModal ||
     showEditNotesModal ||
     showImportUrlsModal ||
-    showTokenPassingModal;
+    showTokenPassingModal ||
+    showBatchAutotagModal;
   const [renderView, setRenderView] = useState({
     firstIndex: 0,
     lastIndex: files.length,
@@ -715,6 +721,14 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
               );
             },
           },
+          {
+            id: "batch-autotag",
+            label: "Batch Autotag...",
+            onClick: () => {
+              setBatchAutotagFiles(selectedFileMetadata);
+              setShowBatchAutotagModal(true);
+            },
+          },
         ],
       },
       {
@@ -1261,6 +1275,13 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
         <TokenPassingModal
           onClose={() => setShowTokenPassingModal(false)}
         ></TokenPassingModal>
+      )}
+
+      {showBatchAutotagModal && (
+        <BatchAutoTagModal
+          files={batchAutotagFiles}
+          onClose={() => setShowBatchAutotagModal(false)}
+        ></BatchAutoTagModal>
       )}
     </div>
   );
