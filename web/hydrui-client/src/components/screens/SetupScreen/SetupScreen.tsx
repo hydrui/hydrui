@@ -25,7 +25,9 @@ const SetupScreen: React.FC = () => {
       try {
         const success = await verifyAuthentication(client, apiKey, baseUrl);
         if (!success) {
-          setError("Invalid API key. Please check your key and try again.");
+          setError(
+            "Bad URL or invalid API key. Please check your key and try again.",
+          );
           return;
         }
         setCredentials(apiKey, baseUrl);
