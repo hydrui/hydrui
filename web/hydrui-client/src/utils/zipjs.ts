@@ -1,3 +1,13 @@
+import { configure } from "@zip.js/zip.js";
+import wasmURI from "@zip.js/zip.js/dist/zip-module.wasm?url";
+import workerURI from "@zip.js/zip.js/dist/zip-web-worker.js?url";
+
+configure({
+  useWebWorkers: true,
+  workerURI,
+  wasmURI,
+});
+
 export * from "@zip.js/zip.js";
 
 // The entrypoint for zip.js is @zip.js/zip.js/index.

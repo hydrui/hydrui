@@ -34,7 +34,7 @@
     "typescript-eslint": "^8"
   },
   "dependencies": {
-    "@zip.js/zip.js": "^2.8.2",
+    "@zip.js/zip.js": "^2.8.4",
     "onnxruntime-web": "^1.23.0"
   }
 }
