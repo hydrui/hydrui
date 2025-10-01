@@ -32,6 +32,8 @@ export interface TagModelMeta {
   modelPath?: string;
   // Tag CSV path in OPFS, if the tags are cached
   tagsPath?: string;
+  // Metadata JSON path in OPFS, if the model uses metadata.json (Camie Tagger v2)
+  metadataPath?: string;
 }
 
 interface ModelMeta {
@@ -85,6 +87,7 @@ export const useModelMetaStore = create<ModelMeta>()(
           await deleteSavedTagModelFiles(model);
           delete model.modelPath;
           delete model.tagsPath;
+          delete model.metadataPath;
           set((state) => ({
             ...state,
             tagModels: {
@@ -146,7 +149,11 @@ export const useModelMetaStore = create<ModelMeta>()(
         },
         async loadTagModel(name: string): Promise<Session> {
           let model = get().tagModels[name];
-          if (!model.modelPath || !model.tagsPath || !model.info) {
+          if (
+            !model.modelPath ||
+            (!model.tagsPath && !model.metadataPath) ||
+            !model.info
+          ) {
             model = await get().actions.downloadTagModel(name);
           }
           if (!model) {

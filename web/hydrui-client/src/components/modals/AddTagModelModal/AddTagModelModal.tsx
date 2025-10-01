@@ -71,7 +71,7 @@ const AddTagModelModal: React.FC<AddTagModelModalProps> = ({ onClose }) => {
                 <input
                   ref={inputRef}
                   type="text"
-                  placeholder="Enter URL to info.json file..."
+                  placeholder="Enter URL to info.json or metadata.json file..."
                   className="add-tag-model-modal-url-input"
                   disabled={isLoading}
                   onKeyDown={handleInputKeyDown}
