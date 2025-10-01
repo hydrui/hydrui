@@ -386,14 +386,21 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
       try {
         const result = await processImage(session, autotagThreshold, image);
         const existingTags = new Set<string>();
+        let hasRating = false;
         if (activeServiceKey && tagCountsByService[activeServiceKey]) {
           for (const tag of tagCountsByService[activeServiceKey]) {
+            if (tag.value.startsWith("rating:")) {
+              hasRating = true;
+            }
             if (tag.count === tag.total) {
               existingTags.add(tag.value);
             }
           }
         }
         for (const tag of result.tagResults) {
+          if (tag.name.startsWith("rating:") && hasRating) {
+            continue;
+          }
           if (!existingTags.has(tag.name)) {
             handleAddTag(tag.name);
           } else {

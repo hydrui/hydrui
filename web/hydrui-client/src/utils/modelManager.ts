@@ -66,7 +66,6 @@ export interface Session {
 }
 
 export interface Results {
-  ratings: Record<string, number>;
   tagResults: { name: string; confidence: number }[];
 }
 
@@ -343,25 +342,28 @@ function processResultsWD(
   confidences: Float32Array,
   threshold: number,
 ): Results {
-  const ratings: Record<string, number> = {};
   const tagResults: { name: string; confidence: number }[] = [];
   const numRatings = session.modelInfo.numberofratings;
+  let rating: { name: string; confidence: number } | undefined;
   for (let i = 0; i < numRatings && i < session.tagsData.length; i++) {
-    const tag = session.tagsData[i];
-    ratings[tag.name] = confidences[i];
+    const name = processWDTagName(session.tagsData[i]);
+    const confidence = confidences[i];
+    if (confidence > threshold && (!rating || rating.confidence < confidence)) {
+      rating = { name, confidence };
+    }
+  }
+  if (rating) {
+    tagResults.push(rating);
   }
   for (let i = numRatings; i < session.tagsData.length; i++) {
-    const tag = session.tagsData[i];
+    const name = processWDTagName(session.tagsData[i]);
     const confidence = confidences[i];
     if (confidence > threshold) {
-      tagResults.push({
-        name: processWDTagName(tag),
-        confidence: confidence,
-      });
+      tagResults.push({ name, confidence });
     }
   }
   tagResults.sort((a, b) => b.confidence - a.confidence);
-  return { ratings, tagResults };
+  return { tagResults };
 }
 
 function getCamieTagNamespace(category: string): string {
@@ -383,7 +385,7 @@ function processResultsCamie(
   threshold: number,
 ): Results {
   const tagResults: { name: string; confidence: number }[] = [];
-  const ratings: Record<string, number> = {};
+  let rating: { name: string; confidence: number } | undefined;
   if (!session.metadata) {
     throw new Error("Camie Tagger metadata not found");
   }
@@ -404,14 +406,19 @@ function processResultsCamie(
       const namespace = getCamieTagNamespace(category);
       const name = joinTagNamespace(rewriteUnderscoreTags(tagName), namespace);
       if (category === "rating") {
-        ratings[tagName] = confidence;
+        if (!rating || confidence > rating.confidence) {
+          rating = { name, confidence };
+        }
       } else {
         tagResults.push({ name, confidence });
       }
     }
   }
+  if (rating) {
+    tagResults.push(rating);
+  }
   tagResults.sort((a, b) => b.confidence - a.confidence);
-  return { ratings, tagResults };
+  return { tagResults };
 }
 
 function processResults(
