@@ -1,7 +1,12 @@
 import { type Entry, type FileEntry } from "@zip.js/zip.js";
 import { type InferenceSession } from "onnxruntime-web";
 
-import { TagModelInfo, TagModelMeta } from "@/store/modelMetaStore";
+import {
+  CamieTaggerModelMeta,
+  TagModelMeta,
+  WDTaggerModelInfo,
+  WDTaggerModelMeta,
+} from "@/store/modelMetaStore";
 
 interface CamieMetadata {
   model_info: {
@@ -57,13 +62,22 @@ interface CamieMetadata {
   };
 }
 
-export interface Session {
-  modelInfo: TagModelInfo;
+interface SessionCommon {
   modelSession: InferenceSession;
-  tagsData: Record<string, string>[];
-  modelType: "wd-tagger" | "camie-tagger";
-  metadata?: CamieMetadata;
 }
+
+interface WDTaggerSession extends SessionCommon {
+  modelType: "wd";
+  modelInfo: WDTaggerModelInfo;
+  tagsData: Record<string, string>[];
+}
+
+interface CamieTaggerSession extends SessionCommon {
+  modelType: "camie";
+  metadata: CamieMetadata;
+}
+
+export type Session = WDTaggerSession | CamieTaggerSession;
 
 export interface Results {
   tagResults: { name: string; confidence: number }[];
@@ -123,25 +137,11 @@ async function getCacheKey(name: string): Promise<string> {
 
 export async function fetchModelInfo(url: string): Promise<TagModelMeta> {
   const infoResponse = await fetch(url);
-  const info = await infoResponse.json();
-  if (info?.model_info?.architecture) {
+  const info: WDTaggerModelInfo | CamieMetadata = await infoResponse.json();
+  if ("model_info" in info && info?.model_info?.architecture) {
     // Camie Tagger v2 metadata.json
-    const metadataName = url.substring(url.lastIndexOf("/") + 1);
-    const modelfile = metadataName.endsWith("-metadata.json")
-      ? metadataName.substring(
-          0,
-          metadataName.length - "-metadata.json".length,
-        ) + ".onnx"
-      : "model.onnx";
-    const info: TagModelInfo = {
-      modelname: "Camie Tagger v2",
-      modelfile,
-      tagsfile: "",
-      numberofratings: 0,
-      source: "",
-      ratingsflag: 0,
-    };
-    const cacheKey = await getCacheKey(info.modelname);
+    const modelName = "Camie Tagger v2"; // TODO
+    const cacheKey = await getCacheKey(modelName);
     const metadataPath = `tagModels-${cacheKey}-metadata.json`;
     try {
       const opfsRoot = await navigator.storage.getDirectory();
@@ -156,19 +156,12 @@ export async function fetchModelInfo(url: string): Promise<TagModelMeta> {
         `Failed to save metadata to ${metadataPath}: ${writeError}`,
       );
     }
-    return {
-      name: info.modelname,
-      info,
-      url,
-      metadataPath,
-    };
-  } else {
+    return { name: "Camie Tagger v2", type: "camie", url, metadataPath };
+  } else if ("modelname" in info) {
     // WD Tagger v2+ info.json
-    return {
-      name: info.modelname,
-      info,
-      url,
-    };
+    return { name: info.modelname, type: "wd", info, url };
+  } else {
+    throw new Error("Unrecognized model info format.");
   }
 }
 
@@ -286,12 +279,12 @@ async function preprocessImageCamie(image: HTMLImageElement, targetSize = 512) {
 async function preprocessImage(
   image: HTMLImageElement,
   targetSize = 448,
-  modelType: "wd-tagger" | "camie-tagger",
+  modelType: "wd" | "camie",
 ) {
   switch (modelType) {
-    case "wd-tagger":
+    case "wd":
       return preprocessImageWD(image, targetSize);
-    case "camie-tagger":
+    case "camie":
       return preprocessImageCamie(image, targetSize);
   }
 }
@@ -338,7 +331,7 @@ function sigmoid(x: number): number {
 }
 
 function processResultsWD(
-  session: Session,
+  session: WDTaggerSession,
   confidences: Float32Array,
   threshold: number,
 ): Results {
@@ -380,7 +373,7 @@ function getCamieTagNamespace(category: string): string {
 }
 
 function processResultsCamie(
-  session: Session,
+  session: CamieTaggerSession,
   logits: Float32Array,
   threshold: number,
 ): Results {
@@ -404,12 +397,20 @@ function processResultsCamie(
       }
       const category = tag_to_category[tagName] || "general";
       const namespace = getCamieTagNamespace(category);
-      const name = joinTagNamespace(rewriteUnderscoreTags(tagName), namespace);
       if (category === "rating") {
+        const name = joinTagNamespace(
+          rewriteUnderscoreTags(tagName.replace(/^rating_/, "")),
+          namespace,
+        );
         if (!rating || confidence > rating.confidence) {
+          console.log(tagName, name, namespace);
           rating = { name, confidence };
         }
       } else {
+        const name = joinTagNamespace(
+          rewriteUnderscoreTags(tagName),
+          namespace,
+        );
         tagResults.push({ name, confidence });
       }
     }
@@ -427,9 +428,9 @@ function processResults(
   threshold: number,
 ): Results {
   switch (session.modelType) {
-    case "wd-tagger":
+    case "wd":
       return processResultsWD(session, confidences, threshold);
-    case "camie-tagger":
+    case "camie":
       return processResultsCamie(session, confidences, threshold);
   }
 }
@@ -440,7 +441,7 @@ export async function processImage(
   image: HTMLImageElement,
 ): Promise<Results> {
   // Determine model type and target size
-  const targetSize = session.modelType === "camie-tagger" ? 512 : 448;
+  const targetSize = session.modelType === "camie" ? 512 : 448;
   const inputTensor = await preprocessImage(
     image,
     targetSize,
@@ -452,7 +453,7 @@ export async function processImage(
   const results = await session.modelSession.run(feeds);
   let confidences: Float32Array;
   if (
-    session.modelType === "camie-tagger" &&
+    session.modelType === "camie" &&
     session.modelSession.outputNames.length >= 2
   ) {
     // Camie Tagger v2 has refined predictions in the second tensor output
@@ -468,32 +469,17 @@ export async function processImage(
   return processResults(session, confidences, threshold);
 }
 
-export async function loadModel(meta: TagModelMeta): Promise<Session> {
-  if (!meta.modelPath || (!meta.tagsPath && !meta.metadataPath) || !meta.info) {
+async function loadModelWD(meta: WDTaggerModelMeta): Promise<Session> {
+  if (!meta.modelPath || !meta.tagsPath || !meta.info) {
     throw new Error("Model data is not cached.");
-  }
-  if (!navigator.storage || !navigator.storage.getDirectory) {
-    throw new Error("Origin Private File System is not available!");
   }
   const { InferenceSession } = await import("onnxruntime-web");
   const opfsRoot = await navigator.storage.getDirectory();
   const model = await opfsRoot.getFileHandle(meta.modelPath);
   const modelData = await model.getFile();
-  let modelType: "wd-tagger" | "camie-tagger";
   let tagsData: Record<string, string>[] = [];
-  let metadata: CamieMetadata | undefined = undefined;
-  if (meta.metadataPath) {
-    modelType = "camie-tagger";
-    const metadataFile = await opfsRoot.getFileHandle(meta.metadataPath);
-    const metadataText = await (await metadataFile.getFile()).text();
-    metadata = JSON.parse(metadataText);
-  } else if (meta.tagsPath) {
-    modelType = "wd-tagger";
-    const tags = await opfsRoot.getFileHandle(meta.tagsPath);
-    tagsData = parseCsv(await (await tags.getFile()).text());
-  } else {
-    throw new Error("Inconsistent state");
-  }
+  const tags = await opfsRoot.getFileHandle(meta.tagsPath);
+  tagsData = parseCsv(await (await tags.getFile()).text());
   const modelSession = await InferenceSession.create(
     await modelData.arrayBuffer(),
   );
@@ -501,12 +487,46 @@ export async function loadModel(meta: TagModelMeta): Promise<Session> {
     modelInfo: meta.info,
     modelSession,
     tagsData,
-    modelType,
+    modelType: "wd",
+  };
+}
+
+async function loadModelCamie(meta: CamieTaggerModelMeta): Promise<Session> {
+  if (!meta.modelPath || !meta.metadataPath) {
+    throw new Error("Model data is not cached.");
+  }
+  const { InferenceSession } = await import("onnxruntime-web");
+  const opfsRoot = await navigator.storage.getDirectory();
+  const model = await opfsRoot.getFileHandle(meta.modelPath);
+  const modelData = await model.getFile();
+  const metadataFile = await opfsRoot.getFileHandle(meta.metadataPath);
+  const metadataText = await (await metadataFile.getFile()).text();
+  const metadata: CamieMetadata = JSON.parse(metadataText);
+  const modelSession = await InferenceSession.create(
+    await modelData.arrayBuffer(),
+  );
+  return {
+    modelSession,
+    modelType: "camie",
     metadata,
   };
 }
 
-export async function fetchModelFiles(meta: TagModelMeta) {
+export async function loadModel(meta: TagModelMeta): Promise<Session> {
+  if (!navigator.storage || !navigator.storage.getDirectory) {
+    throw new Error("Origin Private File System is not available!");
+  }
+  switch (meta.type) {
+    case "wd":
+      return loadModelWD(meta);
+    case "camie":
+      return loadModelCamie(meta);
+  }
+}
+
+export async function fetchModelFiles(
+  meta: TagModelMeta,
+): Promise<TagModelMeta> {
   if (!meta.url) {
     throw new Error("Model entry does not have a URL!");
   }
@@ -514,41 +534,53 @@ export async function fetchModelFiles(meta: TagModelMeta) {
     throw new Error("Origin Private File System is not available!");
   }
   const opfsRoot = await navigator.storage.getDirectory();
-  const fetchedMeta = await fetchModelInfo(meta.url);
-  if (!fetchedMeta.info) {
-    throw new Error("Inconsistent state");
+  meta = await fetchModelInfo(meta.url);
+  const cacheKey = await getCacheKey(meta.name);
+  if (!meta.url) {
+    throw new Error("Inconsistent state: URL missing in fetched model");
   }
-  const info = fetchedMeta.info;
-  const cacheKey = await getCacheKey(info.modelname);
-
-  if (!fetchedMeta.metadataPath) {
-    // Only need to grab the tags CSV file for WD Tagger; metadata.json contains
-    // the tag info for Camie Tagger.
-    const cachedTagsName = `tagModels-${cacheKey}-tags.csv`;
-    const tagsUrl = relativeUrl(meta.url, info.tagsfile);
-    const tagsResponse = await fetch(tagsUrl);
-    try {
-      const fileHandle = await opfsRoot.getFileHandle(cachedTagsName, {
-        create: true,
-      });
-      const writable = await fileHandle.createWritable();
-      await writable.write(await tagsResponse.blob());
-      await writable.close();
-    } catch (writeError) {
-      throw new Error(
-        `Failed to save tags to ${cachedTagsName}: ${writeError}`,
-      );
+  let modelFile = "model.onnx";
+  switch (meta.type) {
+    case "wd": {
+      if (!meta.info) {
+        throw new Error(
+          "Inconsistent state: info.json missing in fetched model",
+        );
+      }
+      modelFile = meta.info.modelfile;
+      // Fetch selected_tags.csv for WD Tagger v2+ models.
+      const cachedTagsName = `tagModels-${cacheKey}-tags.csv`;
+      const tagsUrl = relativeUrl(meta.url, meta.info.tagsfile);
+      const tagsResponse = await fetch(tagsUrl);
+      try {
+        const fileHandle = await opfsRoot.getFileHandle(cachedTagsName, {
+          create: true,
+        });
+        const writable = await fileHandle.createWritable();
+        await writable.write(await tagsResponse.blob());
+        await writable.close();
+      } catch (writeError) {
+        throw new Error(
+          `Failed to save tags to ${cachedTagsName}: ${writeError}`,
+        );
+      }
+      meta.tagsPath = cachedTagsName;
+      break;
     }
-    meta.tagsPath = cachedTagsName;
-  } else {
-    meta.metadataPath = fetchedMeta.metadataPath;
+    case "camie": {
+      // Just need to calculate model filename for Camie.
+      const metadataName = meta.url.substring(meta.url.lastIndexOf("/") + 1);
+      modelFile = metadataName.endsWith("-metadata.json")
+        ? metadataName.substring(
+            0,
+            metadataName.length - "-metadata.json".length,
+          ) + ".onnx"
+        : "model.onnx";
+    }
   }
-
+  // Fetch the actual ONNX model weights
   const cachedModelName = `tagModels-${cacheKey}-model.ort`;
-  const modelUrl = relativeUrl(
-    meta.url,
-    info.modelfile.replace(".onnx", ".ort"),
-  );
+  const modelUrl = relativeUrl(meta.url, modelFile.replace(".onnx", ".ort"));
   const modelResponse = await fetch(modelUrl);
   try {
     const fileHandle = await opfsRoot.getFileHandle(cachedModelName, {
@@ -561,7 +593,7 @@ export async function fetchModelFiles(meta: TagModelMeta) {
     console.warn(`Failed to save model to ${cachedModelName}: ${writeError}`);
   }
   meta.modelPath = cachedModelName;
-  meta.info = info;
+  return meta;
 }
 
 export async function deleteSavedFiles(meta: TagModelMeta) {
@@ -576,19 +608,25 @@ export async function deleteSavedFiles(meta: TagModelMeta) {
       console.warn(`Error deleting ${meta.modelPath}: ${error}`);
     }
   }
-  if (meta.tagsPath) {
-    try {
-      await opfsRoot.removeEntry(meta.tagsPath);
-    } catch (error) {
-      console.warn(`Error deleting ${meta.tagsPath}: ${error}`);
-    }
-  }
-  if (meta.metadataPath) {
-    try {
-      await opfsRoot.removeEntry(meta.metadataPath);
-    } catch (error) {
-      console.warn(`Error deleting ${meta.metadataPath}: ${error}`);
-    }
+  switch (meta.type) {
+    case "wd":
+      if (meta.tagsPath) {
+        try {
+          await opfsRoot.removeEntry(meta.tagsPath);
+        } catch (error) {
+          console.warn(`Error deleting ${meta.tagsPath}: ${error}`);
+        }
+      }
+      break;
+    case "camie":
+      if (meta.metadataPath) {
+        try {
+          await opfsRoot.removeEntry(meta.metadataPath);
+        } catch (error) {
+          console.warn(`Error deleting ${meta.metadataPath}: ${error}`);
+        }
+      }
+      break;
   }
 }
 
@@ -610,7 +648,7 @@ export async function setupZippedTagModel(zip: Blob): Promise<TagModelMeta> {
     fileMap.set(entry.filename, entry);
   }
 
-  let info: TagModelInfo;
+  let info: WDTaggerModelInfo;
   let cacheKey: string;
   let modelEntry: Entry | undefined;
   let tagsEntry: Entry | undefined;
@@ -621,24 +659,16 @@ export async function setupZippedTagModel(zip: Blob): Promise<TagModelMeta> {
   if (camieMetadataEntry) {
     const metadataData = await camieMetadataEntry.arrayBuffer();
     const metadataName = camieMetadataEntry.filename;
-    const modelfile = metadataName.endsWith("-metadata.json")
+    const modelName = "Camie Tagger v2"; // TODO
+    const modelFile = metadataName.endsWith("-metadata.json")
       ? metadataName.substring(
           0,
           metadataName.length - "-metadata.json".length,
         ) + ".onnx"
       : "model.onnx";
-    info = {
-      modelname: "Camie Tagger v2",
-      modelfile,
-      tagsfile: "",
-      numberofratings: 0,
-      source: "",
-      ratingsflag: 0,
-    };
-    cacheKey = await getCacheKey(info.modelname);
+    cacheKey = await getCacheKey(modelName);
     modelEntry =
-      fileMap.get(info.modelfile) ||
-      fileMap.get(info.modelfile.replace(".onnx", ".ort"));
+      fileMap.get(modelFile) || fileMap.get(modelFile.replace(".onnx", ".ort"));
     if (!modelEntry || modelEntry.directory) {
       throw new Error(
         "Could not find model file in zipped Camie Tagger model.",
@@ -671,8 +701,8 @@ export async function setupZippedTagModel(zip: Blob): Promise<TagModelMeta> {
       );
     }
     return {
-      name: info.modelname,
-      info,
+      name: modelName,
+      type: "camie",
       modelPath: cachedModelName,
       metadataPath: cachedMetadataName,
     };
@@ -682,7 +712,7 @@ export async function setupZippedTagModel(zip: Blob): Promise<TagModelMeta> {
       throw new Error("Could not find info.json in zipped model.");
     }
     const infoData = await infoEntry.arrayBuffer();
-    info = JSON.parse(new TextDecoder().decode(infoData)) as TagModelInfo;
+    info = JSON.parse(new TextDecoder().decode(infoData)) as WDTaggerModelInfo;
     cacheKey = await getCacheKey(info.modelname);
     modelEntry =
       fileMap.get(info.modelfile) ||
@@ -724,6 +754,7 @@ export async function setupZippedTagModel(zip: Blob): Promise<TagModelMeta> {
     }
     return {
       name: info.modelname,
+      type: "wd",
       info,
       modelPath: cachedModelName,
       tagsPath: cachedTagsName,

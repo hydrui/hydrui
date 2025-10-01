@@ -12,7 +12,7 @@ import {
 
 import { jsonStorage } from "./storage";
 
-export interface TagModelInfo {
+export interface WDTaggerModelInfo {
   modelname: string;
   source: string;
   modelfile: string;
@@ -21,20 +21,32 @@ export interface TagModelInfo {
   numberofratings: number;
 }
 
-export interface TagModelMeta {
+export interface CommonTagModelMeta {
   // Name of the model.
   name: string;
-  // URL of the info.json file, if the model is from the internet.
+  // URL of the info.json or metadata.json file, if the model is from the internet.
   url?: string;
+}
+
+export interface WDTaggerModelMeta extends CommonTagModelMeta {
+  type: "wd";
   // Contents of the info.json file, if it has been loaded before
-  info?: TagModelInfo;
-  // Model path in OPFS, if the model is cached
-  modelPath?: string;
+  info?: WDTaggerModelInfo;
   // Tag CSV path in OPFS, if the tags are cached
   tagsPath?: string;
-  // Metadata JSON path in OPFS, if the model uses metadata.json (Camie Tagger v2)
-  metadataPath?: string;
+  // Model path in OPFS, if the model is cached
+  modelPath?: string;
 }
+
+export interface CamieTaggerModelMeta extends CommonTagModelMeta {
+  type: "camie";
+  // Metadata JSON path in OPFS, if the model is cached
+  metadataPath?: string;
+  // Model path in OPFS, if the metadata is cached
+  modelPath?: string;
+}
+
+export type TagModelMeta = WDTaggerModelMeta | CamieTaggerModelMeta;
 
 interface ModelMeta {
   tagModels: Record<string, TagModelMeta>;
@@ -57,10 +69,20 @@ const INITIAL_STATE: Omit<ModelMeta, "actions"> = {
     "WD ViT Tagger v3": {
       name: "WD ViT Tagger v3",
       url: "https://models.hydrui.dev/wd-vit-tagger-v3/info.json",
+      type: "wd",
     },
   },
   tagModelNames: ["WD ViT Tagger v3"],
 };
+
+export function isModelCached(meta: TagModelMeta) {
+  switch (meta.type) {
+    case "wd":
+      return meta.info && meta.tagsPath && meta.modelPath;
+    case "camie":
+      return meta.metadataPath && meta.modelPath;
+  }
+}
 
 export const useModelMetaStoreActions = () =>
   useModelMetaStore((state) => state.actions);
@@ -86,8 +108,8 @@ export const useModelMetaStore = create<ModelMeta>()(
           }
           await deleteSavedTagModelFiles(model);
           delete model.modelPath;
-          delete model.tagsPath;
-          delete model.metadataPath;
+          if (model.type === "wd") delete model.tagsPath;
+          if (model.type === "camie") delete model.metadataPath;
           set((state) => ({
             ...state,
             tagModels: {
@@ -101,15 +123,15 @@ export const useModelMetaStore = create<ModelMeta>()(
           if (!model) {
             throw new Error(`Model ${name} not found.`);
           }
-          await fetchModelFiles(model);
+          const newModel = await fetchModelFiles(model);
           set((state) => ({
             ...state,
             tagModels: {
               ...state.tagModels,
-              [name]: model,
+              [name]: newModel,
             },
           }));
-          return model;
+          return newModel;
         },
         addTagModel(meta: TagModelMeta): void {
           set((state) => ({
@@ -149,11 +171,7 @@ export const useModelMetaStore = create<ModelMeta>()(
         },
         async loadTagModel(name: string): Promise<Session> {
           let model = get().tagModels[name];
-          if (
-            !model.modelPath ||
-            (!model.tagsPath && !model.metadataPath) ||
-            !model.info
-          ) {
+          if (!isModelCached(model)) {
             model = await get().actions.downloadTagModel(name);
           }
           if (!model) {
@@ -165,12 +183,34 @@ export const useModelMetaStore = create<ModelMeta>()(
     }),
     {
       name: "hydrui-model-meta",
+      version: 1,
       storage: jsonStorage,
       // Only persist specific keys
       partialize: ({ tagModels, tagModelNames }) => ({
         tagModels,
         tagModelNames,
       }),
+      migrate: (persistedState: unknown, version: number) => {
+        if (version === 0) {
+          // v0 did not contain the type field.
+          // Populate it based on whether or not metadataPath is set.
+          const stateV0 = persistedState as {
+            tagModels?: Record<
+              string,
+              { metadataPath?: string; type?: string }
+            >;
+          };
+          if (stateV0.tagModels) {
+            for (const meta of Object.values(stateV0.tagModels)) {
+              if (meta.metadataPath) {
+                meta.type = "camie";
+              } else {
+                meta.type = "wd";
+              }
+            }
+          }
+        }
+      },
     },
   ),
 );
