@@ -263,7 +263,7 @@ const TabRow: React.FC<TabRowProps> = ({ tabs }) => {
         id={`panel-${currentIndex}`}
         aria-labelledby={activePageKey || undefined}
       >
-        {currentIndex === -1 ? (
+        {currentIndex === -1 || !tabs[currentIndex] ? (
           <div className="tab-empty-message">No page selected</div>
         ) : tabs[currentIndex].tabs.length > 0 ? (
           <TabRow tabs={tabs[currentIndex].tabs} />
