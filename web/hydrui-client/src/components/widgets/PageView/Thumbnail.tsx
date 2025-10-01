@@ -33,6 +33,11 @@ export const Thumbnail: React.FC<ThumbnailProps> = React.memo(
               setIsLoading(false);
               setHasError(true);
             }}
+            ref={(img) => {
+              if (img && img.complete) {
+                setIsLoading(false);
+              }
+            }}
           />
 
           {/* Loading overlay */}
