@@ -190,7 +190,6 @@ const BatchAutoTagModal: React.FC<BatchAutoTagModalProps> = ({
       removeToast(toast);
       // Ensure resources get released.
       session.modelSession.release();
-      session.tagsData = [];
     }
   };
 

@@ -415,7 +415,6 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
       } finally {
         // Ensure resources get released.
         session.modelSession.release();
-        session.tagsData = [];
       }
     } catch (e) {
       addToast(`Error processing autotag request: ${e}`, "error", 10000);
