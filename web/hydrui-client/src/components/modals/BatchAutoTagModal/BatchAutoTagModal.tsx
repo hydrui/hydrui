@@ -124,7 +124,7 @@ const BatchAutoTagModal: React.FC<BatchAutoTagModalProps> = ({
         if (cancelled) {
           break;
         }
-        updateToastProgress(toast, i++ / files.length);
+        updateToastProgress(toast, (i++ * 100) / files.length);
         const imageData = await (
           await fetch(client.getFileUrl(file.file_id), {
             signal: abortController?.signal,
