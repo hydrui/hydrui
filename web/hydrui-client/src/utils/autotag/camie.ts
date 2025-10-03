@@ -98,10 +98,11 @@ export async function parseModelInfoCamie(
 }
 
 export async function preprocessImageCamie(
+  session: CamieTaggerSession,
   image: ImageBitmap,
-  targetSize = 512,
 ) {
   const { Tensor } = await import("onnxruntime-web");
+  const targetSize = session.targetSize;
   const padR = 124;
   const padG = 116;
   const padB = 104;

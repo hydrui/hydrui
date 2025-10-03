@@ -18,16 +18,12 @@ import {
 
 export type Session = WDTaggerSession | CamieTaggerSession;
 
-async function preprocessImage(
-  image: ImageBitmap,
-  targetSize = 448,
-  modelType: "wd" | "camie",
-) {
-  switch (modelType) {
+async function preprocessImage(session: Session, image: ImageBitmap) {
+  switch (session.modelType) {
     case "wd":
-      return preprocessImageWD(image, targetSize);
+      return preprocessImageWD(session, image);
     case "camie":
-      return preprocessImageCamie(image, targetSize);
+      return preprocessImageCamie(session, image);
   }
 }
 
@@ -49,26 +45,32 @@ export async function processImage(
   threshold: number,
   image: ImageBitmap,
 ): Promise<Results> {
-  const inputTensor = await preprocessImage(
-    image,
-    session.targetSize,
-    session.modelType,
-  );
+  const inputTensor = await preprocessImage(session, image);
   const feeds: InferenceSession.FeedsType = {
     [session.modelSession.inputNames[0]]: inputTensor,
   };
   const results = await session.modelSession.run(feeds);
-  let confidences: Float32Array;
-  if (
-    session.modelType === "camie" &&
-    session.modelSession.outputNames.length >= 2
-  ) {
-    // Camie Tagger v2 has refined predictions in the second tensor output
-    const refinedOutput = results[session.modelSession.outputNames[1]];
-    confidences = refinedOutput.data as Float32Array;
-  } else {
-    const output = results[session.modelSession.outputNames[0]];
-    confidences = output.data as Float32Array;
+  let confidences: Float32Array | undefined;
+  // Look for output by name
+  for (const output of session.modelSession.outputMetadata) {
+    switch (output.name) {
+      case "refined_predictions": // Camie v2
+      case "predictions_sigmoid": // SmilingWolf
+      case "prediction": // PixAI
+        confidences = results[output.name].data as Float32Array;
+        break;
+    }
+  }
+  if (!confidences) {
+    // Failing that, look for output by type
+    // Choose the last float32 output.
+    for (const output of session.modelSession.outputMetadata) {
+      if (!output.isTensor) continue;
+      if (output.type != "float32") {
+        continue;
+      }
+      confidences = results[output.name].data as Float32Array;
+    }
   }
   if (!(confidences instanceof Float32Array)) {
     throw new Error(`Expected Float32Array for tensor output!`);

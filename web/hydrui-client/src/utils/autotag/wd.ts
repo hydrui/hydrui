@@ -34,16 +34,56 @@ export interface WDTaggerSession extends SessionCommon {
 
 function parseCsv(text: string): Record<string, string>[] {
   const lines = text.trim().split("\n");
-  const headers = lines[0].split(",");
   const data: Record<string, string>[] = [];
+
+  function parseCsvLine(line: string): string[] {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    let i = 0;
+    while (i < line.length) {
+      const char = line[i];
+      if (inQuotes) {
+        if (char === '"') {
+          if (i + 1 < line.length && line[i + 1] === '"') {
+            current += '"';
+            i += 2;
+          } else {
+            inQuotes = false;
+            i++;
+          }
+        } else {
+          current += char;
+          i++;
+        }
+      } else {
+        if (char === '"') {
+          inQuotes = true;
+          i++;
+        } else if (char === ",") {
+          result.push(current);
+          current = "";
+          i++;
+        } else {
+          current += char;
+          i++;
+        }
+      }
+    }
+    result.push(current);
+    return result;
+  }
+
+  const headers = parseCsvLine(lines[0]);
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(",");
+    const values = parseCsvLine(lines[i]);
     const row: Record<string, string> = {};
     headers.forEach((header, index) => {
-      row[header] = values[index];
+      row[header] = values[index] || "";
     });
     data.push(row);
   }
+
   return data;
 }
 
@@ -66,8 +106,12 @@ export async function parseModelInfoWD(
   return { name: info.modelname, type: "wd", info, url };
 }
 
-export async function preprocessImageWD(image: ImageBitmap, targetSize = 448) {
+export async function preprocessImageWD(
+  session: WDTaggerSession,
+  image: ImageBitmap,
+) {
   const { Tensor } = await import("onnxruntime-web");
+  const targetSize = session.targetSize;
   const canvas = createCanvas(image.width, image.height);
   const ctx = getCanvasContext2D(canvas);
   ctx.fillStyle = "white";
@@ -93,17 +137,52 @@ export async function preprocessImageWD(image: ImageBitmap, targetSize = 448) {
   finalCtx.drawImage(squareCanvas, 0, 0, targetSize, targetSize);
   imageData = finalCtx.getImageData(0, 0, targetSize, targetSize);
   const data = imageData.data;
-  const tensor = new Float32Array(1 * targetSize * targetSize * 3);
-  for (let y = 0; y < targetSize; y++) {
-    for (let x = 0; x < targetSize; x++) {
-      const pixelIndex = (y * targetSize + x) * 4;
-      const tensorBaseIndex = (y * targetSize + x) * 3;
-      tensor[tensorBaseIndex] = data[pixelIndex + 2];
-      tensor[tensorBaseIndex + 1] = data[pixelIndex + 1];
-      tensor[tensorBaseIndex + 2] = data[pixelIndex];
+  if (
+    session.modelSession.inputMetadata[0].isTensor &&
+    session.modelSession.inputMetadata[0].shape[1] === 3
+  ) {
+    // Some of the ONNX models using this architecture seem to lack nodes that
+    // preprocess the inputs, and the telltale sign is the tensor shape being
+    // [3, 448, 448] instead of [448, 448, 3].
+    const tensor = new Float32Array(1 * targetSize * targetSize * 3);
+    // cl_tagger wants RGB, PixAI wants BGR. This is ugly, but let's just try
+    // to detect the cl_tagger model specifically.
+    const clTaggerFlipBGR = session.modelSession.inputNames[0] === "input0";
+    for (let y = 0; y < targetSize; y++) {
+      for (let x = 0; x < targetSize; x++) {
+        const pixelIndex = (y * targetSize + x) * 4;
+        const tensorBaseIndex = y * targetSize + x;
+        if (clTaggerFlipBGR) {
+          tensor[0 * targetSize * targetSize + tensorBaseIndex] =
+            (data[pixelIndex + 2] - 127.5) / 127.5;
+          tensor[1 * targetSize * targetSize + tensorBaseIndex] =
+            (data[pixelIndex + 1] - 127.5) / 127.5;
+          tensor[2 * targetSize * targetSize + tensorBaseIndex] =
+            (data[pixelIndex] - 127.5) / 127.5;
+        } else {
+          tensor[0 * targetSize * targetSize + tensorBaseIndex] =
+            (data[pixelIndex] - 127.5) / 127.5;
+          tensor[1 * targetSize * targetSize + tensorBaseIndex] =
+            (data[pixelIndex + 1] - 127.5) / 127.5;
+          tensor[2 * targetSize * targetSize + tensorBaseIndex] =
+            (data[pixelIndex + 2] - 127.5) / 127.5;
+        }
+      }
     }
+    return new Tensor("float32", tensor, [1, 3, targetSize, targetSize]);
+  } else {
+    const tensor = new Float32Array(1 * targetSize * targetSize * 3);
+    for (let y = 0; y < targetSize; y++) {
+      for (let x = 0; x < targetSize; x++) {
+        const pixelIndex = (y * targetSize + x) * 4;
+        const tensorBaseIndex = (y * targetSize + x) * 3;
+        tensor[tensorBaseIndex] = data[pixelIndex + 2];
+        tensor[tensorBaseIndex + 1] = data[pixelIndex + 1];
+        tensor[tensorBaseIndex + 2] = data[pixelIndex];
+      }
+    }
+    return new Tensor("float32", tensor, [1, targetSize, targetSize, 3]);
   }
-  return new Tensor("float32", tensor, [1, targetSize, targetSize, 3]);
 }
 
 function getWDTaggerTagNamespace(tagData: Record<string, string>): string {
@@ -131,6 +210,21 @@ function processWDTagName(tagData: Record<string, string>): string {
   return joinTagNamespace(name, namespace);
 }
 
+function processWDTagData(tagData: Record<string, string>): string[] {
+  const tags = [];
+  tags.push(processWDTagName(tagData));
+  if (tagData.ips) {
+    const ips: unknown = JSON.parse(tagData.ips);
+    if (!Array.isArray(ips)) {
+      return tags;
+    }
+    for (const ip of ips) {
+      tags.push(joinTagNamespace(rewriteUnderscoreTags(String(ip)), "series"));
+    }
+  }
+  return tags;
+}
+
 export function processResultsWD(
   session: WDTaggerSession,
   confidences: Float32Array,
@@ -150,10 +244,12 @@ export function processResultsWD(
     tagResults.push(rating);
   }
   for (let i = numRatings; i < session.tagsData.length; i++) {
-    const name = processWDTagName(session.tagsData[i]);
+    const tags = processWDTagData(session.tagsData[i]);
     const confidence = confidences[i];
     if (confidence > threshold) {
-      tagResults.push({ name, confidence });
+      for (const name of tags) {
+        tagResults.push({ name, confidence });
+      }
     }
   }
   tagResults.sort((a, b) => b.confidence - a.confidence);
