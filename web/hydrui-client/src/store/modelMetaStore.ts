@@ -2,24 +2,18 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import {
-  Session,
-  deleteSavedFiles as deleteSavedTagModelFiles,
+  deleteSavedFiles,
   fetchModelFiles,
   fetchModelInfo,
-  loadModel,
   setupZippedTagModel,
-} from "@/utils/modelManager";
+} from "@/utils/autotag/management";
+import { type WDTaggerModelInfo } from "@/utils/autotag/wd";
+import {
+  type AutotagWorker,
+  createAutotagWorker,
+} from "@/utils/autotag/worker";
 
 import { jsonStorage } from "./storage";
-
-export interface WDTaggerModelInfo {
-  modelname: string;
-  source: string;
-  modelfile: string;
-  tagsfile: string;
-  ratingsflag: number;
-  numberofratings: number;
-}
 
 export interface CommonTagModelMeta {
   // Name of the model.
@@ -106,7 +100,7 @@ export const useModelMetaStore = create<ModelMeta>()(
           if (!model) {
             return;
           }
-          await deleteSavedTagModelFiles(model);
+          await deleteSavedFiles(model);
           delete model.modelPath;
           if (model.type === "wd") delete model.tagsPath;
           if (model.type === "camie") delete model.metadataPath;
@@ -151,7 +145,7 @@ export const useModelMetaStore = create<ModelMeta>()(
           if (!model) {
             return;
           }
-          await deleteSavedTagModelFiles(model);
+          await deleteSavedFiles(model);
           set((state) => {
             const newTagModels = { ...state.tagModels };
             delete newTagModels[name];
@@ -165,19 +159,21 @@ export const useModelMetaStore = create<ModelMeta>()(
         async resetTagModels(): Promise<void> {
           const state = get();
           for (const model of Object.values(state.tagModels)) {
-            await deleteSavedTagModelFiles(model);
+            await deleteSavedFiles(model);
           }
           set({ ...INITIAL_STATE });
         },
-        async loadTagModel(name: string): Promise<Session> {
+        async loadTagModel(name: string): Promise<AutotagWorker> {
           let model = get().tagModels[name];
-          if (!isModelCached(model)) {
-            model = await get().actions.downloadTagModel(name);
-          }
           if (!model) {
             throw new Error(`Model ${name} not found`);
           }
-          return loadModel(model);
+          if (!isModelCached(model)) {
+            model = await get().actions.downloadTagModel(name);
+          }
+          const worker = await createAutotagWorker();
+          await worker.loadModel(model);
+          return worker;
         },
       },
     }),

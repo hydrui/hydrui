@@ -17,7 +17,6 @@ import { usePageActions } from "@/store/pageStore";
 import { useServices } from "@/store/servicesStore";
 import { useToastActions } from "@/store/toastStore";
 import { useUIStateStore } from "@/store/uiStateStore";
-import { processImage } from "@/utils/modelManager";
 import { isServerMode } from "@/utils/serverMode";
 
 import "./index.css";
@@ -371,20 +370,13 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
       const imageData = await (
         await fetch(client.getFileUrl(file.file_id))
       ).blob();
-      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const image = new Image();
-        image.addEventListener("load", () => {
-          resolve(image);
-        });
-        image.addEventListener("error", (e) => {
-          reject(e.error);
-        });
-        image.src = URL.createObjectURL(imageData);
-      });
-      const session = await loadTagModel(autotagModel);
+      const worker = await loadTagModel(autotagModel);
       let existing = 0;
       try {
-        const result = await processImage(session, autotagThreshold, image);
+        const result = await worker.processImage(
+          autotagThreshold,
+          await createImageBitmap(imageData),
+        );
         const existingTags = new Set<string>();
         let hasRating = false;
         if (activeServiceKey && tagCountsByService[activeServiceKey]) {
@@ -414,7 +406,7 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
         );
       } finally {
         // Ensure resources get released.
-        session.modelSession.release();
+        worker.release();
       }
     } catch (e) {
       addToast(`Error processing autotag request: ${e}`, "error", 10000);

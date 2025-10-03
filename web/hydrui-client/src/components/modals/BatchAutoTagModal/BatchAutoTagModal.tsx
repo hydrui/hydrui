@@ -13,7 +13,7 @@ import { usePageActions } from "@/store/pageStore";
 import { useServices } from "@/store/servicesStore";
 import { useToastActions } from "@/store/toastStore";
 import { useUIStateStore } from "@/store/uiStateStore";
-import { Session, processImage } from "@/utils/modelManager";
+import { type AutotagWorker } from "@/utils/autotag/worker";
 import { isServerMode } from "@/utils/serverMode";
 
 import "./index.css";
@@ -107,9 +107,9 @@ const BatchAutoTagModal: React.FC<BatchAutoTagModalProps> = ({
         abortController?.abort();
       },
     );
-    let session: Session;
+    let worker: AutotagWorker;
     try {
-      session = await loadTagModel(autotagModel);
+      worker = await loadTagModel(autotagModel);
     } catch (e) {
       removeToast(toast);
       addToast(`Error loading autotag model: ${e}.`, "error", 10000);
@@ -130,17 +130,10 @@ const BatchAutoTagModal: React.FC<BatchAutoTagModalProps> = ({
             signal: abortController?.signal,
           })
         ).blob();
-        const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-          const image = new Image();
-          image.addEventListener("load", () => {
-            resolve(image);
-          });
-          image.addEventListener("error", (e) => {
-            reject(e.error);
-          });
-          image.src = URL.createObjectURL(imageData);
-        });
-        const result = await processImage(session, autotagThreshold, image);
+        const result = await worker.processImage(
+          autotagThreshold,
+          await createImageBitmap(imageData),
+        );
         const existingTags = new Set<string>();
         let hasRating = false;
         const serviceTags =
@@ -189,7 +182,7 @@ const BatchAutoTagModal: React.FC<BatchAutoTagModalProps> = ({
     } finally {
       removeToast(toast);
       // Ensure resources get released.
-      session.modelSession.release();
+      worker.release();
     }
   };
 
