@@ -54,7 +54,7 @@ interface ModelMeta {
     addTagModel: (meta: TagModelMeta) => void;
     uninstallTagModel: (name: string) => Promise<void>;
     resetTagModels: () => Promise<void>;
-    loadTagModel: (name: string) => Promise<Session>;
+    loadTagModel: (name: string) => Promise<AutotagWorker>;
   };
 }
 
