@@ -18,16 +18,7 @@ const IncDecRating: React.FC<IncDecRatingProps> = ({
 }) => {
   const handleClick = (increment: boolean) => {
     if (readOnly || !onChange || isLoading) return;
-
-    if (value === null) {
-      onChange(increment ? 1 : -1);
-    } else if (increment && value < 1) {
-      onChange(value + 1);
-    } else if (!increment && value > -1) {
-      onChange(value - 1);
-    } else {
-      onChange(null);
-    }
+    onChange((value ?? 0) + (increment ? 1 : -1));
   };
 
   const getValueClass = () => {
