@@ -55,7 +55,7 @@ func NewManager(ctx context.Context, log *slog.Logger, clientData *pack.Pack) *M
 			group.Go(func() error {
 				err := internalServer.Shutdown(shutdownCtx)
 				if err != nil && err != http.ErrServerClosed {
-					log.LogAttrs(ctx, slog.LevelError, "Failed to shutdown HTTPS server.", slog.Any("error", err))
+					log.LogAttrs(ctx, slog.LevelError, "Failed to shutdown internal server.", slog.Any("error", err))
 				}
 				return err
 			})
