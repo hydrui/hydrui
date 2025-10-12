@@ -490,7 +490,7 @@ func New(config Config, clientData *pack.Pack) *Server {
 					http.Error(w, "Error receiving hydrus error response", http.StatusBadGateway)
 					return
 				}
-				http.Error(w, "Hydrus API returned failure: "+string(errorResponse.Error), http.StatusInternalServerError)
+				http.Error(w, "Hydrus API returned failure: "+errorResponse.Error, http.StatusInternalServerError)
 				return
 			}
 		}
