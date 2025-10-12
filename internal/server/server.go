@@ -121,8 +121,10 @@ func validateToken(token string, key []byte) (bool, error) {
 type Config struct {
 	Listen         string
 	ListenTLS      string
+	ListenInternal string
 	Socket         string
 	SocketTLS      string
+	SocketInternal string
 	TLSCertFile    string
 	TLSKeyFile     string
 	Secret         string
@@ -136,8 +138,14 @@ type Config struct {
 	ACME           *autocert.Manager
 }
 
-func New(config Config, clientData *pack.Pack) http.Handler {
-	mux := http.NewServeMux()
+type Server struct {
+	External http.Handler
+	Internal http.Handler
+}
+
+func New(config Config, clientData *pack.Pack) *Server {
+	externalMux := http.NewServeMux()
+	internalMux := http.NewServeMux()
 
 	jsPath, cssPath, err := findAssetFiles(clientData)
 	if err != nil {
@@ -185,6 +193,14 @@ func New(config Config, clientData *pack.Pack) http.Handler {
 		ServerMode:   config.ServerMode,
 	}
 
+	proxyClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: !config.HydrusSecure,
+			},
+		},
+	}
+
 	if config.ServerMode {
 		if config.AllowBugReport {
 			// Bug report proxy handler
@@ -192,7 +208,7 @@ func New(config Config, clientData *pack.Pack) http.Handler {
 				HandshakeTimeout: 5 * time.Second,
 			}
 			wsDialer := websocket.Dialer{}
-			mux.HandleFunc("/bug-report", func(w http.ResponseWriter, r *http.Request) {
+			externalMux.HandleFunc("/bug-report", func(w http.ResponseWriter, r *http.Request) {
 				downstream, err := wsUpgrader.Upgrade(w, r, nil)
 				if err != nil {
 					slog.LogAttrs(r.Context(), slog.LevelDebug, "WebSocket Upgrade failed.", slog.Any("error", err))
@@ -252,14 +268,6 @@ func New(config Config, clientData *pack.Pack) http.Handler {
 			})
 		}
 
-		proxyClient := &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: !config.HydrusSecure,
-				},
-			},
-		}
-
 		proxyRequest := func(w http.ResponseWriter, method, proxyURL string, body io.Reader, header http.Header) {
 			proxyReq, err := http.NewRequest(method, proxyURL, body)
 			if err != nil {
@@ -300,7 +308,7 @@ func New(config Config, clientData *pack.Pack) http.Handler {
 		}
 
 		// Hydrus proxy handler
-		mux.HandleFunc("/hydrus/", func(w http.ResponseWriter, r *http.Request) {
+		externalMux.HandleFunc("/hydrus/", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("X-Content-Type-Options", "nosniff")
 
 			sessionToken, err := r.Cookie("hydrui-session")
@@ -329,7 +337,7 @@ func New(config Config, clientData *pack.Pack) http.Handler {
 
 		// One-time-proxy handler. Used for hand-off to Photopea.
 		bridges := sync.Map{}
-		mux.HandleFunc("/bridge/", func(w http.ResponseWriter, r *http.Request) {
+		externalMux.HandleFunc("/bridge/", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("X-Content-Type-Options", "nosniff")
 
 			switch r.Method {
@@ -392,7 +400,7 @@ func New(config Config, clientData *pack.Pack) http.Handler {
 		})
 
 		// Login handler
-		mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		externalMux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("X-Content-Type-Options", "nosniff")
 			w.Header().Set("Content-Security-Policy", csp)
 
@@ -445,7 +453,7 @@ func New(config Config, clientData *pack.Pack) http.Handler {
 			w.WriteHeader(http.StatusOK)
 		})
 
-		mux.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+		externalMux.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
 			http.SetCookie(w, &http.Cookie{
 				Name:     "hydrui-session",
 				Value:    "",
@@ -459,7 +467,38 @@ func New(config Config, clientData *pack.Pack) http.Handler {
 		})
 	}
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	internalMux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query()
+		if query.Has("check_hydrus") && config.ServerMode {
+			hydrusCheckReq, err := http.NewRequest(http.MethodGet, config.HydrusURL+"/verify_access_key", nil)
+			if err != nil {
+				http.Error(w, "Error creating hydrus request", http.StatusInternalServerError)
+				return
+			}
+			hydrusCheckReq.Header.Set("Hydrus-Client-API-Access-Key", config.HydrusAPIKey)
+			resp, err := proxyClient.Do(hydrusCheckReq)
+			if err != nil {
+				http.Error(w, "Error making hydrus request", http.StatusBadGateway)
+				return
+			}
+			if resp.StatusCode >= 400 {
+				var errorResponse struct {
+					Error string `json:"error"`
+				}
+				err := json.NewDecoder(resp.Body).Decode(&errorResponse)
+				if err != nil {
+					http.Error(w, "Error receiving hydrus error response", http.StatusBadGateway)
+					return
+				}
+				http.Error(w, "Hydrus API returned failure: "+errorResponse.Error, http.StatusInternalServerError)
+				return
+			}
+		}
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte("OK"))
+	})
+
+	externalMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Content-Security-Policy", csp)
@@ -476,5 +515,8 @@ func New(config Config, clientData *pack.Pack) http.Handler {
 		clientData.ServeHTTP(w, r)
 	})
 
-	return mux
+	return &Server{
+		Internal: internalMux,
+		External: externalMux,
+	}
 }

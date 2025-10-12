@@ -33,7 +33,7 @@ func main() {
 		Secure:         true,
 		ServerMode:     false,
 		AllowBugReport: false,
-	}, webdata.Client)
+	}, webdata.Client).External
 	server := &http.Server{
 		Addr: *listen,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

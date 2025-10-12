@@ -25,8 +25,9 @@ func NewManager(ctx context.Context, log *slog.Logger, clientData *pack.Pack) *M
 		commandCh: make(chan commandMessage),
 	}
 	var (
-		httpServer  *http.Server
-		httpsServer *http.Server
+		httpServer     *http.Server
+		httpsServer    *http.Server
+		internalServer *http.Server
 	)
 	shutdownServer := func() error {
 		shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -50,18 +51,29 @@ func NewManager(ctx context.Context, log *slog.Logger, clientData *pack.Pack) *M
 				return err
 			})
 		}
+		if internalServer != nil {
+			group.Go(func() error {
+				err := internalServer.Shutdown(shutdownCtx)
+				if err != nil && err != http.ErrServerClosed {
+					log.LogAttrs(ctx, slog.LevelError, "Failed to shutdown internal server.", slog.Any("error", err))
+				}
+				return err
+			})
+		}
 		if err := group.Wait(); err != nil {
 			log.LogAttrs(ctx, slog.LevelError, "Error during server shutdown.", slog.Any("error", err))
 			return err
 		}
 		httpServer = nil
 		httpsServer = nil
+		internalServer = nil
 		return nil
 	}
 	startServer := func(config Config) {
-		handler := New(config, clientData)
+		server := New(config, clientData)
 		newHttpServer := &http.Server{}
 		newHttpsServer := &http.Server{}
+		newInternalServer := &http.Server{}
 		startedMessage := StatusStarted{}
 
 		// Configure listeners
@@ -80,6 +92,17 @@ func NewManager(ctx context.Context, log *slog.Logger, clientData *pack.Pack) *M
 		}
 		if httpsListener != nil {
 			startedMessage.AddressTLS = httpsListener.Addr()
+		}
+		var internalListener net.Listener
+		if config.ListenInternal != "" {
+			internalListener, err = newListener(config.ListenInternal, config.SocketInternal)
+			if err != nil {
+				s.statusCh <- StatusError{Error: fmt.Errorf("error listening for internal connections: %w", err)}
+				return
+			}
+			if internalListener != nil {
+				startedMessage.AddressInternal = internalListener.Addr()
+			}
 		}
 		if httpListener == nil && httpsListener == nil {
 			s.statusCh <- StatusError{Error: errors.New("no listeners configured")}
@@ -106,14 +129,15 @@ func NewManager(ctx context.Context, log *slog.Logger, clientData *pack.Pack) *M
 		)
 
 		// Configure handlers
-		newHttpsServer.Handler = handler
+		newHttpsServer.Handler = server.External
 		if config.ACME != nil {
 			newHttpServer.Handler = config.ACME.HTTPHandler(httpsRedirector)
 		} else if httpsListener != nil {
 			newHttpServer.Handler = httpsRedirector
 		} else {
-			newHttpServer.Handler = handler
+			newHttpServer.Handler = server.External
 		}
+		newInternalServer.Handler = server.Internal
 
 		// Save the new servers before sending any events.
 		if httpListener != nil {
@@ -125,6 +149,11 @@ func NewManager(ctx context.Context, log *slog.Logger, clientData *pack.Pack) *M
 			httpsServer = newHttpsServer
 		} else {
 			httpsServer = nil
+		}
+		if internalListener != nil {
+			internalServer = newInternalServer
+		} else {
+			internalServer = nil
 		}
 
 		// Broadcast status, before starting the server to ensure the order of events is logical.
@@ -140,6 +169,13 @@ func NewManager(ctx context.Context, log *slog.Logger, clientData *pack.Pack) *M
 		if httpsListener != nil {
 			go func() {
 				if err := newHttpsServer.Serve(httpListener); err != nil && err != http.ErrServerClosed {
+					s.statusCh <- StatusError{Error: fmt.Errorf("error in HTTP server: %w", err)}
+				}
+			}()
+		}
+		if internalListener != nil {
+			go func() {
+				if err := newInternalServer.Serve(internalListener); err != nil && err != http.ErrServerClosed {
 					s.statusCh <- StatusError{Error: fmt.Errorf("error in HTTP server: %w", err)}
 				}
 			}()
@@ -186,8 +222,9 @@ type StatusMessage interface {
 }
 
 type StatusStarted struct {
-	Address    net.Addr
-	AddressTLS net.Addr
+	Address         net.Addr
+	AddressTLS      net.Addr
+	AddressInternal net.Addr
 }
 
 func (StatusStarted) isStatusMessage() {}
