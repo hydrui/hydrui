@@ -145,3 +145,32 @@ When using server mode, it is possible to query for the hydrus client status by 
 $ curl http://localhost:5050/healthz\?check_hydrus
 Hydrus API returned failure: Did not find an entry for that access key!
 ```
+
+## Options reference
+
+| CLI Flag               | Env Var                   | Default       | Usage
+| ---------------------- | ------------------------- | ------------- | -----
+| `-listen`              | `HYDRUI_LISTEN`           | `":8080"`     | Listen address for HTTP (default ":8080")
+| `-listen-tls`          | `HYDRUI_LISTEN_TLS`       | &mdash;       | Listen address for HTTPS (TLS)
+| `-listen-internal`     | `HYDRUI_LISTEN_INTERNAL`  | &mdash;       | Internal listen address (metrics/healthcheck/etc.)
+| `-socket`              | `HYDRUI_SOCKET`           | &mdash;       | Listen on UNIX domain socket for HTTP
+| `-socket-tls`          | `HYDRUI_SOCKET_TLS`       | &mdash;       | Listen on UNIX domain socket for HTTPS (TLS)
+| `-socket-internal`     | `HYDRUI_SOCKET_INTERNAL`  | &mdash;       | Internal UNIX domain socket (metrics/healthcheck/etc.)
+| `-tls-cert-file`       | `HYDRUI_TLS_CERT_FILE`    | &mdash;       | TLS certificate file to use for TLS port (full chain, PEM-formatted)
+| `-tls-key-file`        | `HYDRUI_TLS_KEY_FILE`     | &mdash;       | TLS private key file to use for TLS port (PEM-formatted)
+| `-secret`              | `HYDRUI_SECRET`           | &mdash;       | String containing secret key for JWT token
+| `-secret-file`         | &mdash;                   | &mdash;       | Path to file containing secret key for JWT token
+| `-hydrus-url`          | `HYDRUI_HYDRUS_URL`       | &mdash;       | Hydrus URL
+| `-secure`              | `HYDRUI_HYDRUS_SECURE`    | `true`        | Use secure cookies
+| `-hydrus-api-key`      | `HYDRUI_HYDRUS_API_KEY`   | &mdash;       | String containing Hydrus API key
+| `-hydrus-api-key-file` | &mdash;                   | &mdash;       | Path to file containing Hydrus API key
+| `-htpasswd`            | `HYDRUI_HTPASSWD`         | &mdash;       | Path to htpasswd file for authentication
+| `-acme`                | `HYDRUI_ACME`             | &mdash;       | Enable ACME, acquire TLS certificate. A certificate will be acquired using an HTTP-01 challenge. Requires a publicly-accessible domain connected to the Hydrui server.
+| `-acme-email`          | `HYDRUI_ACME_EMAIL`       | &mdash;       | E-mail address to use for ACME account.
+| `-acme-url`            | `HYDRUI_ACME_URL`         | &mdash;       | URL to use for ACME endpoint (default "https://acme-v02.api.letsencrypt.org/directory")
+| `-acme-dir`            | `HYDRUI_ACME_DIR`         | &mdash;       | Directory to store ACME credentials.
+| `-acme-host-match`     | `HYDRUI_ACME_HOST_MATCH`  | &mdash;       | RE2-compatible regular expression pattern to match allowed hosts for ACME certs.
+| `-hydrus-secure`       | `HYDRUI_SECURE`           | &mdash;       | Enable validating the TLS certificate of the Hydrus server
+| `-server-mode`         | `HYDRUI_SERVER_MODE`      | &mdash;       | Enable or disable server mode; server mode proxies the Hydrus API and provides a login page
+| `-allow-bug-report`    | `HYDRUI_ALLOW_BUG_REPORT` | &mdash;       | Allow user to submit bug reports to the Hydrui Mothership (default true)
+| `-nogui`               | `HYDRUI_NOGUI`            | &mdash;       | Disable the GUI, if GUI support is available

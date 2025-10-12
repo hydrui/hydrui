@@ -175,6 +175,34 @@ h6 {
   line-height: 14px;
 }
 
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+
+  thead {
+    background-color: var(--color-bg-secondary);
+    border-bottom: 2px solid var(--color-border-primary);
+  }
+
+  th {
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: bold;
+    color: var(--color-text-primary);
+  }
+
+  td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--color-border-primary);
+    color: var(--color-text-primary);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+}
+
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -432,6 +460,7 @@ table.options-table {
   td {
     padding-bottom: 1em;
     width: 100%;
+    border-bottom: none;
   }
 }
 
