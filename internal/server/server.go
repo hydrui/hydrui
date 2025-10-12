@@ -495,7 +495,7 @@ func New(config Config, clientData *pack.Pack) *Server {
 			}
 		}
 		w.WriteHeader(200)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	})
 
 	externalMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
