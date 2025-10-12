@@ -22,8 +22,10 @@ import (
 type Values struct {
 	Listen         string
 	ListenTLS      string
+	ListenInternal string
 	Socket         string
 	SocketTLS      string
+	SocketInternal string
 	TLSCertFile    string
 	TLSKeyFile     string
 	Secret         string
@@ -64,8 +66,10 @@ func (v *Values) ParseFlags(args []string) error {
 	set := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	set.StringVar(&v.Listen, "listen", v.Listen, "Listen address")
 	set.StringVar(&v.ListenTLS, "listen-tls", v.ListenTLS, "Listen address (TLS)")
+	set.StringVar(&v.ListenInternal, "listen-internal", v.ListenInternal, "Internal listen address (metrics/healthcheck/etc.)")
 	set.StringVar(&v.Socket, "socket", v.Socket, "Listen on UNIX domain socket")
 	set.StringVar(&v.SocketTLS, "socket-tls", v.SocketTLS, "Listen on UNIX domain socket (TLS)")
+	set.StringVar(&v.SocketInternal, "socket-internal", v.SocketTLS, "Listen on UNIX domain socket (metrics/healthcheck/etc.)")
 	set.StringVar(&v.TLSCertFile, "tls-cert-file", v.TLSCertFile, "TLS certificate file to use for TLS port (full chain, PEM-formatted)")
 	set.StringVar(&v.TLSKeyFile, "tls-key-file", v.TLSKeyFile, "TLS private key file to use for TLS port (PEM-formatted)")
 	SecretVar(set, &v.Secret, "secret", v.Secret, "secret key for JWT token")
