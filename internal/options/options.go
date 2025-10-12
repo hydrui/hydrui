@@ -64,12 +64,12 @@ func (v *Values) ParseFlags(args []string) error {
 		args[i] = expandEnv(args[i])
 	}
 	set := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	set.StringVar(&v.Listen, "listen", v.Listen, "Listen address")
-	set.StringVar(&v.ListenTLS, "listen-tls", v.ListenTLS, "Listen address (TLS)")
+	set.StringVar(&v.Listen, "listen", v.Listen, "Listen address for HTTP")
+	set.StringVar(&v.ListenTLS, "listen-tls", v.ListenTLS, "Listen address for HTTPS (TLS)")
 	set.StringVar(&v.ListenInternal, "listen-internal", v.ListenInternal, "Internal listen address (metrics/healthcheck/etc.)")
-	set.StringVar(&v.Socket, "socket", v.Socket, "Listen on UNIX domain socket")
-	set.StringVar(&v.SocketTLS, "socket-tls", v.SocketTLS, "Listen on UNIX domain socket (TLS)")
-	set.StringVar(&v.SocketInternal, "socket-internal", v.SocketInternal, "Listen on UNIX domain socket (metrics/healthcheck/etc.)")
+	set.StringVar(&v.Socket, "socket", v.Socket, "Listen on UNIX domain socket for HTTP")
+	set.StringVar(&v.SocketTLS, "socket-tls", v.SocketTLS, "Listen on UNIX domain socket for HTTPS (TLS)")
+	set.StringVar(&v.SocketInternal, "socket-internal", v.SocketInternal, "Internal UNIX domain socket (metrics/healthcheck/etc.)")
 	set.StringVar(&v.TLSCertFile, "tls-cert-file", v.TLSCertFile, "TLS certificate file to use for TLS port (full chain, PEM-formatted)")
 	set.StringVar(&v.TLSKeyFile, "tls-key-file", v.TLSKeyFile, "TLS private key file to use for TLS port (PEM-formatted)")
 	SecretVar(set, &v.Secret, "secret", v.Secret, "secret key for JWT token")
@@ -89,10 +89,56 @@ func (v *Values) ParseFlags(args []string) error {
 	return set.Parse(args[1:])
 }
 
+func stringEnv(p *string, name string) {
+	if v := os.Getenv(name); v != "" {
+		*p = v
+	}
+}
+
+func boolEnv(p *bool, name string) {
+	if v := os.Getenv(name); v != "" {
+		v = strings.ToLower(v)
+		switch v {
+		case "1", "true", "yes":
+			*p = true
+		case "0", "false", "no":
+			*p = false
+		default:
+			slog.Warn("Ignoring invalid value for boolean env " + name + ": " + v)
+		}
+	}
+}
+
+func (v *Values) ParseEnv() {
+	stringEnv(&v.Listen, "HYDRUI_LISTEN")
+	stringEnv(&v.ListenTLS, "HYDRUI_LISTEN_TLS")
+	stringEnv(&v.ListenInternal, "HYDRUI_LISTEN_INTERNAL")
+	stringEnv(&v.Socket, "HYDRUI_SOCKET")
+	stringEnv(&v.SocketTLS, "HYDRUI_SOCKET_TLS")
+	stringEnv(&v.SocketInternal, "HYDRUI_SOCKET_INTERNAL")
+	stringEnv(&v.TLSCertFile, "HYDRUI_TLS_CERT_FILE")
+	stringEnv(&v.TLSKeyFile, "HYDRUI_TLS_KEY_FILE")
+	stringEnv(&v.Secret, "HYDRUI_SECRET")
+	stringEnv(&v.HydrusURL, "HYDRUI_HYDRUS_URL")
+	boolEnv(&v.HydrusSecure, "HYDRUI_HYDRUS_SECURE")
+	stringEnv(&v.HydrusAPIKey, "HYDRUI_HYDRUS_API_KEY")
+	stringEnv(&v.HtpasswdFile, "HYDRUI_HTPASSWD")
+	boolEnv(&v.UseACME, "HYDRUI_ACME")
+	stringEnv(&v.ACMEEmail, "HYDRUI_ACME_EMAIL")
+	stringEnv(&v.ACMEURL, "HYDRUI_ACME_URL")
+	stringEnv(&v.ACMEDir, "HYDRUI_ACME_DIR")
+	stringEnv(&v.ACMEHostRegex, "HYDRUI_ACME_HOST_MATCH")
+	boolEnv(&v.Secure, "HYDRUI_SECURE")
+	boolEnv(&v.ServerMode, "HYDRUI_SERVER_MODE")
+	boolEnv(&v.AllowBugReport, "HYDRUI_ALLOW_BUG_REPORT")
+	boolEnv(&v.NoGUI, "HYDRUI_NOGUI")
+}
+
 func (v *Values) ServerConfig(ctx context.Context, log *slog.Logger) (server.Config, error) {
 	result := server.Config{
 		Listen:         v.Listen,
 		ListenTLS:      v.ListenTLS,
+		ListenInternal: v.ListenInternal,
 		Socket:         v.Socket,
 		SocketTLS:      v.SocketTLS,
 		TLSCertFile:    v.TLSCertFile,

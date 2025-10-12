@@ -39,6 +39,7 @@ var serviceManager *server.Manager
 func startUI(ctx context.Context) bool {
 	// Parse options early to determine if we should bail due to -nogui
 	uiOpts = options.NewDefault()
+	uiOpts.ParseEnv()
 	if err := uiOpts.ParseFlags(os.Args); err != nil {
 		slog.LogAttrs(ctx, slog.LevelError, "Error parsing command line flags.", slog.Any("error", err))
 		return true
@@ -62,6 +63,8 @@ func startUI(ctx context.Context) bool {
 			uiLog.LogAttrs(ctx, slog.LevelWarn, "Failed to load user configuration file.", slog.Any("error", err))
 		}
 	}
+	// Environment variables still take precedence over the config.
+	uiOpts.ParseEnv()
 	if err := uiOpts.ParseFlags(os.Args); err != nil {
 		slog.LogAttrs(ctx, slog.LevelError, "Error parsing command line flags.", slog.Any("error", err))
 		return true

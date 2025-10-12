@@ -14,6 +14,7 @@ import (
 
 func startCLI(ctx context.Context, log *slog.Logger) {
 	opts := options.NewDefault()
+	opts.ParseEnv()
 	err := opts.ParseFlags(os.Args)
 	if err != nil {
 		log.LogAttrs(ctx, slog.LevelError, "Invalid command line arguments.", slog.Any("error", err))
