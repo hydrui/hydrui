@@ -84,7 +84,7 @@ export const useSearchStore = create<SearchState>()(
           set({ searchStatus: "loading", searchError: null });
 
           try {
-            const response = await client.searchFiles(searchTags);
+            const response = await client.searchFiles({ tags: searchTags });
             set({ searchResults: response.file_ids, searchStatus: "loaded" });
           } catch (error) {
             console.error("Search failed:", error);

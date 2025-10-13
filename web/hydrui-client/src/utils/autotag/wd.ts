@@ -186,7 +186,7 @@ export async function preprocessImageWD(
 }
 
 function getWDTaggerTagNamespace(tagData: Record<string, string>): string {
-  switch (Number(tagData.category)) {
+  switch (Number(tagData["category"])) {
     case 1:
       return "creator";
     case 3:
@@ -206,15 +206,15 @@ function getWDTaggerTagNamespace(tagData: Record<string, string>): string {
 
 function processWDTagName(tagData: Record<string, string>): string {
   const namespace = getWDTaggerTagNamespace(tagData);
-  const name = rewriteUnderscoreTags(tagData.name);
+  const name = rewriteUnderscoreTags(tagData["name"]);
   return joinTagNamespace(name, namespace);
 }
 
 function processWDTagData(tagData: Record<string, string>): string[] {
   const tags = [];
   tags.push(processWDTagName(tagData));
-  if (tagData.ips) {
-    const ips: unknown = JSON.parse(tagData.ips);
+  if (tagData["ips"]) {
+    const ips: unknown = JSON.parse(tagData["ips"]);
     if (!Array.isArray(ips)) {
       return tags;
     }

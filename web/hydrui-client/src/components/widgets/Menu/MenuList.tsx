@@ -187,6 +187,8 @@ const MenuList: React.FC<MenuListProps> = ({
       menu?.addEventListener("keydown", handleKeyDown);
       return () => menu?.removeEventListener("keydown", handleKeyDown);
     }
+
+    return;
   }, [
     items,
     hoveredItem,
