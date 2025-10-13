@@ -50,7 +50,8 @@ const BrokenImageModal: React.FC<BrokenImageModalProps> = ({
       url,
       serverMode: isServerMode,
     });
-  }, [url, addToast, removeToast, updateToastProgress]);
+    onClose();
+  }, [url, addToast, removeToast, updateToastProgress, onClose]);
 
   useShortcut({
     Escape: onClose,
