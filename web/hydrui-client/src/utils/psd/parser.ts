@@ -472,16 +472,16 @@ export class PSDParser {
 
       switch (channel.id) {
         case PSDChannelID.RED:
-          channels.red = channel;
+          channels["red"] = channel;
           break;
         case PSDChannelID.GREEN:
-          channels.green = channel;
+          channels["green"] = channel;
           break;
         case PSDChannelID.BLUE:
-          channels.blue = channel;
+          channels["blue"] = channel;
           break;
         case PSDChannelID.ALPHA:
-          channels.alpha = channel;
+          channels["alpha"] = channel;
           break;
         case PSDChannelID.MASK:
           if (layer.mask) {
@@ -492,7 +492,7 @@ export class PSDParser {
           break;
         case 0:
           // For grayscale, use the first channel
-          channels.gray = channel;
+          channels["gray"] = channel;
           break;
       }
     }
@@ -509,29 +509,29 @@ export class PSDParser {
 
         switch (colorMode) {
           case PSDColorMode.RGB: {
-            if (channels.red?.data) {
-              pixelData[pixelPos] = channels.red.data[pos];
+            if (channels["red"]?.data) {
+              pixelData[pixelPos] = channels["red"].data[pos];
             }
-            if (channels.green?.data) {
-              pixelData[pixelPos + 1] = channels.green.data[pos];
+            if (channels["green"]?.data) {
+              pixelData[pixelPos + 1] = channels["green"].data[pos];
             }
-            if (channels.blue?.data) {
-              pixelData[pixelPos + 2] = channels.blue.data[pos];
+            if (channels["blue"]?.data) {
+              pixelData[pixelPos + 2] = channels["blue"].data[pos];
             }
-            if (channels.alpha?.data) {
-              pixelData[pixelPos + 3] = channels.alpha.data[pos];
+            if (channels["alpha"]?.data) {
+              pixelData[pixelPos + 3] = channels["alpha"].data[pos];
             }
             break;
           }
 
           case PSDColorMode.GRAYSCALE: {
-            if (channels.gray?.data) {
-              const grayValue = channels.gray.data[pos];
+            if (channels["gray"]?.data) {
+              const grayValue = channels["gray"].data[pos];
               pixelData[pixelPos] = grayValue;
               pixelData[pixelPos + 1] = grayValue;
               pixelData[pixelPos + 2] = grayValue;
-              if (channels.alpha?.data) {
-                pixelData[pixelPos + 3] = channels.alpha.data[pos];
+              if (channels["alpha"]?.data) {
+                pixelData[pixelPos + 3] = channels["alpha"].data[pos];
               }
             }
             break;

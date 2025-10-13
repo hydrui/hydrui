@@ -52,7 +52,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ onClose }) => {
                 <div className="about-modal-section">
                   <h3 className="about-modal-section-title">Version</h3>
                   <p className="about-modal-section-text">
-                    {import.meta.env.VITE_HYDRUI_VERSION}
+                    {import.meta.env["VITE_HYDRUI_VERSION"]}
                   </p>
                 </div>
 

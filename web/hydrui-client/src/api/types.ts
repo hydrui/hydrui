@@ -68,10 +68,48 @@ export interface FileMetadata {
   };
 }
 
+export interface FileDomainParam {
+  file_service_key?: string;
+  file_service_keys?: string[];
+  deleted_file_service_key?: string;
+  deleted_file_service_keys?: string[];
+}
+
+export interface FilesParam {
+  file_id?: number;
+  file_ids?: number[];
+  hash?: string;
+  hashes?: string[];
+}
+
+// Search params
+export interface SearchFilesParams extends FileDomainParam {
+  tags: string[];
+  tag_service_key?: string;
+  include_current_tags?: boolean;
+  include_pending_tags?: boolean;
+  file_sort_type?: number;
+  file_sort_asc?: boolean;
+  return_file_ids?: boolean;
+  return_hashes?: boolean;
+}
+
 // Search response
 export interface SearchFilesResponse extends ApiResponse {
   file_ids: number[];
   hashes?: string[];
+}
+
+// File metadata params
+export interface FileMetadataParams extends FilesParam {
+  create_new_file_ids?: boolean;
+  only_return_identifiers?: boolean;
+  only_return_basic_information?: boolean;
+  detailed_url_information?: boolean;
+  include_blurhash?: boolean;
+  include_milliseconds?: boolean;
+  include_notes?: boolean;
+  include_services_object?: boolean;
 }
 
 // File metadata response
@@ -99,6 +137,11 @@ export interface Page {
 
 export interface PageResponse extends ApiResponse {
   pages: Page;
+}
+
+export interface PageInfoParams {
+  page_key: string;
+  simple?: boolean;
 }
 
 // Page info response - this would contain information about files in a page
@@ -130,6 +173,18 @@ export interface AddFilesRequest {
   file_ids?: number[];
   hashes?: string[];
   page_key: string;
+}
+
+// Refresh page request
+export interface RefreshPageRequest {
+  page_key: string;
+}
+
+// Tag search params
+export interface TagsSearchParams extends FileDomainParam {
+  search?: string;
+  tag_service_key?: string;
+  tag_display_type?: string;
 }
 
 // Tag types
@@ -248,8 +303,7 @@ export interface HydrusApiClient {
 
   // Search
   searchFiles: (
-    tags: string[],
-    fileServiceKey?: string,
+    params: SearchFilesParams,
     signal?: AbortSignal,
   ) => Promise<SearchFilesResponse>;
   getFileMetadata: (

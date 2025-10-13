@@ -61,41 +61,41 @@ export default function SWFViewer({ fileUrl, autoPlay }: SWFViewerProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let player: PlayerElement;
-    if (containerRef.current && ruffle) {
-      player = ruffle.createPlayer();
-      containerRef.current.appendChild(player);
-      player.ruffle().load(fileUrl);
-
-      if (autoPlay) {
-        player.ruffle().resume();
-      }
-
-      player.addEventListener("loadedmetadata", (event) => {
-        if (event.currentTarget) {
-          const player = event.currentTarget as PlayerElement;
-          player.style.width = `${player.metadata.width}px`;
-          player.style.height = `${player.metadata.height}px`;
-          player.style.maxWidth = "100%";
-          player.style.maxHeight = "100%";
-        }
-      });
-
-      player.addEventListener("error", (event) => {
-        setError(event.error.message);
-      });
-
-      return () => {
-        player.style.display = "none";
-        // Ruffle suffers from race conditions when the player is added and removed quickly.
-        // A small delay makes it much less likely to happen, especially in strict mode,
-        // since strict mode will mount the component multiple times.
-        setTimeout(() => {
-          player.ruffle().suspend();
-          player.remove();
-        }, 100);
-      };
+    if (!containerRef.current || !ruffle) {
+      return;
     }
+    const player = ruffle.createPlayer();
+    containerRef.current.appendChild(player);
+    player.ruffle().load(fileUrl);
+
+    if (autoPlay) {
+      player.ruffle().resume();
+    }
+
+    player.addEventListener("loadedmetadata", (event) => {
+      if (event.currentTarget) {
+        const player = event.currentTarget as PlayerElement;
+        player.style.width = `${player.metadata.width}px`;
+        player.style.height = `${player.metadata.height}px`;
+        player.style.maxWidth = "100%";
+        player.style.maxHeight = "100%";
+      }
+    });
+
+    player.addEventListener("error", (event) => {
+      setError(event.error.message);
+    });
+
+    return () => {
+      player.style.display = "none";
+      // Ruffle suffers from race conditions when the player is added and removed quickly.
+      // A small delay makes it much less likely to happen, especially in strict mode,
+      // since strict mode will mount the component multiple times.
+      setTimeout(() => {
+        player.ruffle().suspend();
+        player.remove();
+      }, 100);
+    };
   }, [autoPlay, fileUrl]);
 
   return (

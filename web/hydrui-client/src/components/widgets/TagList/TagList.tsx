@@ -184,8 +184,7 @@ const TagList: React.FC = () => {
         },
       );
       const results = await client.searchFiles(
-        tags,
-        undefined,
+        { tags },
         abortController?.signal,
       );
       removeToast(toast);

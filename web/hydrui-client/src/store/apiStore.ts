@@ -8,7 +8,7 @@ import { isServerMode } from "@/utils/serverMode";
 
 // Create client instance based on environment
 export const client =
-  typeof process !== "undefined" && process.env.NODE_ENV === "test"
+  typeof process !== "undefined" && process.env["NODE_ENV"] === "test"
     ? new MockHydrusClient()
     : new HydrusClient();
 

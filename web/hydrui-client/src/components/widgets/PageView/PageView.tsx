@@ -155,8 +155,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
       },
     );
     const results = await client.searchFiles(
-      [query],
-      undefined,
+      { tags: [query] },
       abortController?.signal,
     );
     removeToast(toast);
@@ -1072,14 +1071,15 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
   }, [isDragging]);
 
   useEffect(() => {
-    if (isDragging) {
-      window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
-      return () => {
-        window.removeEventListener("mousemove", handleMouseMove);
-        window.removeEventListener("mouseup", handleMouseUp);
-      };
+    if (!isDragging) {
+      return;
     }
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   const isLoading =
