@@ -30,7 +30,15 @@ const BrokenImageModal: React.FC<BrokenImageModalProps> = ({
         type: "module",
       },
     );
-    const progressToast = addToast("Sending report...", "info");
+    const progressToast = addToast(
+      "Sending report...",
+      "info",
+      undefined,
+      () => {
+        worker.terminate();
+        removeToast(progressToast);
+      },
+    );
     worker.addEventListener("message", (event) => {
       const response = event.data as WorkerResponse;
       if (response.type === "reportBrokenImage") {
@@ -41,6 +49,7 @@ const BrokenImageModal: React.FC<BrokenImageModalProps> = ({
           removeToast(progressToast);
           addToast(`Failed to submit report: ${response.error}`, "error", 5000);
         }
+        worker.terminate();
       } else if (response.type === "reportBrokenImageProgress") {
         updateToastProgress(progressToast, response.progress * 100);
       }
