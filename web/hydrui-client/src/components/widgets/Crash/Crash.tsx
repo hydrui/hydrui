@@ -6,7 +6,7 @@ import "./index.css";
 interface CrashProps {
   error?: Error | undefined;
   errorInfo?: React.ErrorInfo | undefined;
-  resetErrorBoundary?: () => void | undefined;
+  resetErrorBoundary?: (() => void) | undefined;
   componentName?: string | undefined;
 }
 
