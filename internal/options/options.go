@@ -232,6 +232,10 @@ func (v *Values) ServerConfig(ctx context.Context, log *slog.Logger) (server.Con
 			log.LogAttrs(ctx, slog.LevelWarn, "Htpasswd file is not used in client-only mode.")
 		}
 
+		if !v.NoAuth {
+			log.LogAttrs(ctx, slog.LevelWarn, "No auth mode is not used in client-only mode.")
+		}
+
 		if v.Secret != "" {
 			log.LogAttrs(ctx, slog.LevelWarn, "Secret file is not used in client-only mode.")
 		}
