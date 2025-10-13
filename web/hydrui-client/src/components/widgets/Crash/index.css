@@ -1,0 +1,140 @@
+.crash-container {
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+  background-color: var(--color-gray-800);
+  border: 1px solid var(--color-red-900);
+  flex-grow: 1;
+  height: calc(100% - 2px);
+  max-height: 100%;
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+.crash-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 24rem;
+  height: max-content;
+}
+
+.crash-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 1rem;
+  background-color: var(--color-red-900);
+  border-radius: 50%;
+}
+
+.crash-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--color-red-400);
+}
+
+.crash-title {
+  margin-bottom: 0.5rem;
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-white);
+}
+
+.crash-message {
+  margin-bottom: 1rem;
+  font-size: var(--text-sm);
+  color: var(--color-gray-300);
+  line-height: 1.5;
+}
+
+.crash-message a:link {
+  text-decoration: underline;
+}
+
+.crash-error-details {
+  width: 100%;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background-color: var(--color-gray-900);
+  border: 1px solid var(--color-gray-700);
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+
+.crash-error-name {
+  margin-bottom: 0.25rem;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.crash-error-message {
+  font-size: var(--text-xs);
+  color: var(--color-gray-400);
+  word-break: break-word;
+}
+
+.crash-stack-details {
+  width: 100%;
+  margin-bottom: 1rem;
+  background-color: var(--color-gray-900);
+  border: 1px solid var(--color-gray-700);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.crash-stack-summary {
+  padding: 0.75rem 1rem;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  background-color: var(--color-gray-800);
+  cursor: pointer;
+  transition: background-color var(--default-transition-duration)
+    var(--default-transition-timing-function);
+}
+
+.crash-stack-summary:hover {
+  background-color: var(--color-gray-700);
+}
+
+.crash-stack-trace {
+  margin: 0;
+  padding: 1rem;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: var(--text-xs);
+  color: var(--color-gray-400);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: auto;
+}
+
+.crash-retry-button {
+  padding: 0.5rem 1rem;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-white);
+  background-color: var(--color-blue-600);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--default-transition-duration)
+    var(--default-transition-timing-function);
+}
+
+.crash-retry-button:hover {
+  background-color: var(--color-blue-500);
+}
+
+.crash-retry-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-blue-400);
+}
+
+.crash-retry-button:active {
+  background-color: var(--color-blue-700);
+}

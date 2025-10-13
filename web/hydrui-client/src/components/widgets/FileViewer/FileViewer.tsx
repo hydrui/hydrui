@@ -1,9 +1,11 @@
 import React, { Suspense, lazy, useCallback, useEffect, useState } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 
 import { FileMetadata } from "@/api/types";
 import { client } from "@/store/apiStore";
 import { usePreferencesStore } from "@/store/preferencesStore";
 
+import Crash from "../Crash/Crash";
 import ImageViewer from "./ImageViewer";
 import VideoViewer from "./VideoViewer";
 import "./index.css";
@@ -29,7 +31,7 @@ interface FileViewerProps {
   navigateRight?: () => void;
 }
 
-const FileViewer: React.FC<FileViewerProps> = ({
+const FileViewerImpl: React.FC<FileViewerProps> = ({
   fileId,
   fileData,
   autoActivate = true,
@@ -176,5 +178,19 @@ const MediaPlaceholder: React.FC<MediaPlaceholderProps> = ({
     </div>
   );
 };
+
+function FileViewer(props: FileViewerProps) {
+  const [errorInfo, setErrorInfo] = useState<React.ErrorInfo>();
+  return (
+    <ErrorBoundary
+      fallbackRender={(props) => (
+        <Crash componentName="FileViewer" errorInfo={errorInfo} {...props} />
+      )}
+      onError={(_, errorInfo) => setErrorInfo(errorInfo)}
+    >
+      <FileViewerImpl {...props} />
+    </ErrorBoundary>
+  );
+}
 
 export default FileViewer;

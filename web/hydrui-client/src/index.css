@@ -362,3 +362,7 @@ body {
   inherits: false;
   initial-value: 0 0 #0000;
 }
+
+#root .crash-container {
+  height: calc(100vh - 2px);
+}
