@@ -20,8 +20,7 @@ export function decompressRLERows(
   let outputOffset = 0;
 
   // Process each row
-  for (let row = 0; row < height; row++) {
-    const rowLength = rowLengths[row];
+  for (const rowLength of rowLengths) {
     const rowData = input.subarray(inputOffset, inputOffset + rowLength);
 
     // Decompress this row
@@ -64,7 +63,7 @@ export function decompressRLE(
     if (header > 128) {
       // Repeat next byte (-header + 1) times
       const repeatCount = 257 - header;
-      const value = input[inputIndex++];
+      const value = input[inputIndex++]!;
 
       for (let i = 0; i < repeatCount; i++) {
         output[outputIndex++] = value;
@@ -74,7 +73,7 @@ export function decompressRLE(
       const copyCount = header + 1;
 
       for (let i = 0; i < copyCount; i++) {
-        output[outputIndex++] = input[inputIndex++];
+        output[outputIndex++] = input[inputIndex++]!;
       }
     }
   }

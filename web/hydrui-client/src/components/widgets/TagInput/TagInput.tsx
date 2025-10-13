@@ -81,7 +81,10 @@ const TagInput: React.FC<TagInputProps> = ({
       setSelectedSuggestionIndex((prev) => (prev > -1 ? prev - 1 : -1));
     } else if (e.key === "Tab" && suggestions.length > 0) {
       e.preventDefault();
-      if (selectedSuggestionIndex >= 0) {
+      if (
+        selectedSuggestionIndex >= 0 &&
+        suggestions[selectedSuggestionIndex]
+      ) {
         const selectedTag = suggestions[selectedSuggestionIndex].value;
         addTag(selectedTag);
       }
@@ -90,7 +93,8 @@ const TagInput: React.FC<TagInputProps> = ({
       if (
         suggestions.length > 0 &&
         showSuggestions &&
-        selectedSuggestionIndex >= 0
+        selectedSuggestionIndex >= 0 &&
+        suggestions[selectedSuggestionIndex]
       ) {
         const selectedTag = suggestions[selectedSuggestionIndex].value;
         addTag(selectedTag);

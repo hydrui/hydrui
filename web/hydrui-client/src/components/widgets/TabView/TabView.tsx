@@ -46,6 +46,9 @@ const TabRow: React.FC<TabRowProps> = ({ tabs }) => {
   }, [tabs, currentIndex, activePageKey]);
 
   const setTab = async (index: number) => {
+    if (!tabs[index]) {
+      return;
+    }
     // Don't bother doing anything if we're already in a sub tab of this one.
     if (
       activePageKey &&
@@ -144,7 +147,7 @@ const TabRow: React.FC<TabRowProps> = ({ tabs }) => {
         event.preventDefault();
         if (index > 0) {
           const prevTab = tabs[index - 1];
-          if (prevTab.key)
+          if (prevTab?.key)
             document
               .querySelector<HTMLElement>(`[data-tab-key="${prevTab.key}"]`)
               ?.focus();
@@ -155,7 +158,7 @@ const TabRow: React.FC<TabRowProps> = ({ tabs }) => {
         event.preventDefault();
         if (index < tabs.length - 1) {
           const nextTab = tabs[index + 1];
-          if (nextTab.key)
+          if (nextTab?.key)
             document
               .querySelector<HTMLElement>(`[data-tab-key="${nextTab.key}"]`)
               ?.focus();

@@ -381,8 +381,8 @@ export class MockHydrusClient implements HydrusApiClient {
     }
 
     if (request.file_ids) {
-      const pageInfo = this.pageInfo[request.page_key].page_info;
-      if (pageInfo.media) {
+      const pageInfo = this.pageInfo[request.page_key]?.page_info;
+      if (pageInfo?.media) {
         pageInfo.media.hash_ids.push(...request.file_ids);
         pageInfo.media.num_files = pageInfo.media.hash_ids.length;
       } else {
@@ -391,8 +391,8 @@ export class MockHydrusClient implements HydrusApiClient {
     }
 
     if (request.hashes) {
-      const pageInfo = this.pageInfo[request.page_key].page_info;
-      if (pageInfo.media) {
+      const pageInfo = this.pageInfo[request.page_key]?.page_info;
+      if (pageInfo?.media) {
         pageInfo.media.hash_ids.push(
           ...request.hashes.map(
             (hash) =>
@@ -522,7 +522,7 @@ export class MockHydrusClient implements HydrusApiClient {
     const fileIndex = this.fileMetadata.metadata.findIndex(
       (f) => f.file_id === fileId,
     );
-    if (fileIndex === -1) {
+    if (fileIndex === -1 || !this.fileMetadata.metadata[fileIndex]) {
       throw new Error("File not found");
     }
 
@@ -547,7 +547,7 @@ export class MockHydrusClient implements HydrusApiClient {
       const fileIndex = this.fileMetadata.metadata.findIndex(
         (f) => f.file_id === fileId,
       );
-      if (fileIndex === -1) {
+      if (fileIndex === -1 || !this.fileMetadata.metadata[fileIndex]) {
         throw new Error("File not found");
       }
 

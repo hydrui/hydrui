@@ -320,7 +320,8 @@ export const usePageStore = create<PageState>()(
               if (
                 !activePageKey &&
                 response.pages.pages &&
-                response.pages.pages.length > 0
+                response.pages.pages.length > 0 &&
+                response.pages.pages[0]
               ) {
                 await get().actions.setPage(
                   response.pages.pages[0].page_key,
@@ -715,18 +716,26 @@ export const usePageStore = create<PageState>()(
                 break;
               }
               case "virtual": {
-                set((state) => ({
-                  virtualPages: {
-                    ...state.virtualPages,
-                    [pageKey]: {
-                      ...state.virtualPages[pageKey],
-                      fileIds: [
-                        ...(state.virtualPages[pageKey].fileIds ?? []),
-                        ...fileIds,
-                      ],
+                set((state) => {
+                  if (!state.virtualPages[pageKey]) {
+                    console.warn(
+                      `Tried to add files to invalid page: ${pageKey}`,
+                    );
+                    return {};
+                  }
+                  return {
+                    virtualPages: {
+                      ...state.virtualPages,
+                      [pageKey]: {
+                        ...state.virtualPages[pageKey],
+                        fileIds: [
+                          ...(state.virtualPages[pageKey]?.fileIds ?? []),
+                          ...fileIds,
+                        ],
+                      },
                     },
-                  },
-                }));
+                  };
+                });
                 await get().actions.updatePageContents(
                   pageKey,
                   "virtual",

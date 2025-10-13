@@ -358,7 +358,7 @@ export class HydrusClient implements HydrusApiClient {
   ): Promise<void> {
     // First get the file hash
     const response = await this.getFileMetadata([fileId]);
-    if (!response.metadata.length) {
+    if (!response.metadata[0]) {
       throw new Error("File not found");
     }
     const hash = response.metadata[0].hash;

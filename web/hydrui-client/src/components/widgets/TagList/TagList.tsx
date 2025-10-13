@@ -83,9 +83,11 @@ const TagList: React.FC = () => {
     searchTags,
   } = useSearchStore();
   const selectedFiles =
-    activePageKey && selectedFilesByPage[activePageKey]?.length > 0
+    activePageKey &&
+    selectedFilesByPage[activePageKey] &&
+    selectedFilesByPage[activePageKey].length > 0
       ? files.filter((f) =>
-          selectedFilesByPage[activePageKey].includes(f.file_id),
+          selectedFilesByPage[activePageKey]?.includes(f.file_id),
         )
       : files;
 
@@ -355,7 +357,7 @@ const TagList: React.FC = () => {
         lastActiveTagService &&
         tagServices.some((service) => service.key === lastActiveTagService)
           ? lastActiveTagService
-          : tagServices[0].key;
+          : tagServices[0]?.key;
       setActiveServiceKey(serviceToUse);
     } else {
       if (activeServiceKey) {

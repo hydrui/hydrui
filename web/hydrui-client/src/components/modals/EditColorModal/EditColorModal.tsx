@@ -4,7 +4,10 @@ import React, { useCallback, useState } from "react";
 import ColorEditor from "@/components/widgets/ColorEditor/ColorEditor";
 import PushButton from "@/components/widgets/PushButton/PushButton";
 import { useShortcut } from "@/hooks/useShortcut";
-import { usePreferencesStore } from "@/store/preferencesStore";
+import {
+  DEFAULT_NAMESPACED_COLOR,
+  usePreferencesStore,
+} from "@/store/preferencesStore";
 
 import "./index.css";
 
@@ -37,7 +40,7 @@ const EditColorModal: React.FC<EditColorProps> = ({ namespace, onClose }) => {
       ? defaultNamespacedColor
       : namespace === false
         ? defaultUnnamespacedColor
-        : namespaceColors[namespace],
+        : (namespaceColors[namespace] ?? DEFAULT_NAMESPACED_COLOR),
   );
   const saveColor = useCallback(() => {
     if (namespace === true) {

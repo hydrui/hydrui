@@ -23,10 +23,10 @@ export class Mat4 {
 
   translate(x: number, y: number, z: number): Mat4 {
     const out = this.elements;
-    out[12] = out[0] * x + out[4] * y + out[8] * z + out[12];
-    out[13] = out[1] * x + out[5] * y + out[9] * z + out[13];
-    out[14] = out[2] * x + out[6] * y + out[10] * z + out[14];
-    out[15] = out[3] * x + out[7] * y + out[11] * z + out[15];
+    out[12] = out[0]! * x + out[4]! * y + out[8]! * z + out[12]!;
+    out[13] = out[1]! * x + out[5]! * y + out[9]! * z + out[13]!;
+    out[14] = out[2]! * x + out[6]! * y + out[10]! * z + out[14]!;
+    out[15] = out[3]! * x + out[7]! * y + out[11]! * z + out[15]!;
     return this;
   }
 
@@ -56,18 +56,18 @@ export class Mat4 {
       y * zt - x * s,
       z * zt + c,
     ];
-    out[0] = a[0] * b[0] + a[4] * b[1] + a[8] * b[2];
-    out[1] = a[1] * b[0] + a[5] * b[1] + a[9] * b[2];
-    out[2] = a[2] * b[0] + a[6] * b[1] + a[10] * b[2];
-    out[3] = a[3] * b[0] + a[7] * b[1] + a[11] * b[2];
-    out[4] = a[0] * b[3] + a[4] * b[4] + a[8] * b[5];
-    out[5] = a[1] * b[3] + a[5] * b[4] + a[9] * b[5];
-    out[6] = a[2] * b[3] + a[6] * b[4] + a[10] * b[5];
-    out[7] = a[3] * b[3] + a[7] * b[4] + a[11] * b[5];
-    out[8] = a[0] * b[6] + a[4] * b[7] + a[8] * b[8];
-    out[9] = a[1] * b[6] + a[5] * b[7] + a[9] * b[8];
-    out[10] = a[2] * b[6] + a[6] * b[7] + a[10] * b[8];
-    out[11] = a[3] * b[6] + a[7] * b[7] + a[11] * b[8];
+    out[0] = a[0]! * b[0]! + a[4]! * b[1]! + a[8]! * b[2]!;
+    out[1] = a[1]! * b[0]! + a[5]! * b[1]! + a[9]! * b[2]!;
+    out[2] = a[2]! * b[0]! + a[6]! * b[1]! + a[10]! * b[2]!;
+    out[3] = a[3]! * b[0]! + a[7]! * b[1]! + a[11]! * b[2]!;
+    out[4] = a[0]! * b[3]! + a[4]! * b[4]! + a[8]! * b[5]!;
+    out[5] = a[1]! * b[3]! + a[5]! * b[4]! + a[9]! * b[5]!;
+    out[6] = a[2]! * b[3]! + a[6]! * b[4]! + a[10]! * b[5]!;
+    out[7] = a[3]! * b[3]! + a[7]! * b[4]! + a[11]! * b[5]!;
+    out[8] = a[0]! * b[6]! + a[4]! * b[7]! + a[8]! * b[8]!;
+    out[9] = a[1]! * b[6]! + a[5]! * b[7]! + a[9]! * b[8]!;
+    out[10] = a[2]! * b[6]! + a[6]! * b[7]! + a[10]! * b[8]!;
+    out[11] = a[3]! * b[6]! + a[7]! * b[7]! + a[11]! * b[8]!;
     return this;
   }
 }

@@ -390,6 +390,10 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
     const touch = e.touches[0];
     const currentTime = new Date().getTime();
 
+    if (!touch) {
+      return;
+    }
+
     // Check for double tap
     if (currentTime - lastTapTime < 300 && e.touches.length === 1) {
       handleDoubleTap(touch.clientX, touch.clientY);
@@ -410,8 +414,8 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
       setPinchInfo(null);
     }
     // Two touches for pinch zooming
-    else if (e.touches.length === 2) {
-      const touch1 = e.touches[0];
+    else if (e.touches.length === 2 && e.touches[1]) {
+      const touch1 = touch;
       const touch2 = e.touches[1];
       const distance = getDistance(touch1, touch2);
 
@@ -439,7 +443,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
     e.preventDefault();
 
     // Single touch for panning or edge navigation
-    if (e.touches.length === 1 && touchInfo) {
+    if (e.touches.length === 1 && touchInfo && e.touches[0]) {
       const touch = e.touches[0];
       const deltaX = touch.clientX - touchInfo.lastX;
       const deltaY = touch.clientY - touchInfo.lastY;
@@ -502,7 +506,13 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
       });
     }
     // Two-finger pinch zoom
-    else if (e.touches.length === 2 && pinchInfo && touchInfo) {
+    else if (
+      e.touches.length === 2 &&
+      pinchInfo &&
+      touchInfo &&
+      e.touches[0] &&
+      e.touches[1]
+    ) {
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
       const currentDistance = getDistance(touch1, touch2);

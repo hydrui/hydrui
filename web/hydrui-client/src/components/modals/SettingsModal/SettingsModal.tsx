@@ -393,7 +393,7 @@ const TagColorsEditor: React.FC<{
               key={namespace}
             >
               <ColorSwatch
-                color={namespaceColors[namespace]}
+                color={namespaceColors[namespace] ?? ""}
                 onClick={() => editColor(namespace)}
               />
               <div className="settings-modal-namespace-colors-namespace">
@@ -613,14 +613,14 @@ const ModelsManager: React.FC<ModelsManagerProps> = ({
                 <div className="settings-model-row-name">
                   <CircleStackIcon width="24" height="24"></CircleStackIcon>
                   {name}
-                  {tagModels[name].url
+                  {tagModels[name]?.url
                     ? tagModels[name].modelPath
                       ? " (cached)"
                       : " (not cached)"
                     : " (local)"}
                 </div>
                 <div className="settings-model-row-right">
-                  {tagModels[name].url ? (
+                  {tagModels[name]?.url ? (
                     tagModels[name].modelPath ? (
                       <button
                         onClick={() => clearFiles(name)}

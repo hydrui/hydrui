@@ -64,7 +64,7 @@ const BatchAutoTagModal: React.FC<BatchAutoTagModalProps> = ({
         lastActiveTagService &&
         tagServices.some((service) => service.key === lastActiveTagService)
           ? lastActiveTagService
-          : tagServices[0].key;
+          : (tagServices[0]?.key ?? "");
 
       setActiveServiceKey(serviceToUse);
     }

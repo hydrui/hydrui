@@ -11,7 +11,12 @@ function hexColorToValues(hexColor: string): [number, number, number] {
   const colorParsed = hexColor.match(
     /^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/,
   );
-  if (!colorParsed) {
+  if (
+    !colorParsed ||
+    colorParsed[1] === undefined ||
+    colorParsed[2] === undefined ||
+    colorParsed[3] === undefined
+  ) {
     return [0, 0, 0];
   }
   return [

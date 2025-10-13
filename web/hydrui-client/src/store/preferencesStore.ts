@@ -14,7 +14,7 @@ const DEFAULT_TAG_COLORS: Record<string, string> = {
   system: "#996515",
 };
 
-const DEFAULT_NAMESPACED_COLOR = "#72a0c1";
+export const DEFAULT_NAMESPACED_COLOR = "#72a0c1";
 const DEFAULT_UNNAMESPACED_COLOR = "#006ffa";
 
 const DEFAULT_AUTOPREVIEW_MIME_TYPES = [

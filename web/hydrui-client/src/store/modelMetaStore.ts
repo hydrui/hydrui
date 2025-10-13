@@ -96,10 +96,11 @@ export const useModelMetaStore = create<ModelMeta>()(
           get().actions.addTagModel(await setupZippedTagModel(blob));
         },
         async clearInstalledFiles(name: string): Promise<void> {
-          const model = { ...get().tagModels[name] };
-          if (!model) {
+          const prevModel = get().tagModels[name];
+          if (!prevModel) {
             return;
           }
+          const model: TagModelMeta = { ...prevModel };
           await deleteSavedFiles(model);
           delete model.modelPath;
           if (model.type === "wd") delete model.tagsPath;
@@ -113,10 +114,11 @@ export const useModelMetaStore = create<ModelMeta>()(
           }));
         },
         async downloadTagModel(name: string): Promise<TagModelMeta> {
-          const model = { ...get().tagModels[name] };
-          if (!model) {
+          const prevModel = get().tagModels[name];
+          if (!prevModel) {
             throw new Error(`Model ${name} not found.`);
           }
+          const model = { ...prevModel };
           const newModel = await fetchModelFiles(model);
           set((state) => ({
             ...state,
