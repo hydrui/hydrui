@@ -388,6 +388,7 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
         }
         for (const tag of result.tagResults) {
           if (tag.name.startsWith("rating:") && hasRating) {
+            existing++;
             continue;
           }
           if (!existingTags.has(tag.name)) {
