@@ -19,6 +19,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 
 import { FileMetadata } from "@/api/types";
 import BatchAutoTagModal from "@/components/modals/BatchAutoTagModal/BatchAutoTagModal";
@@ -28,6 +29,7 @@ import EditUrlsModal from "@/components/modals/EditUrlsModal/EditUrlsModal";
 import FileViewerModal from "@/components/modals/FileViewerModal/FileViewerModal";
 import ImportUrlsModal from "@/components/modals/ImportUrlsModal/ImportUrlsModal";
 import TokenPassingModal from "@/components/modals/TokenPassingModal/TokenPassingModal";
+import Crash from "@/components/widgets/Crash/Crash";
 import ScrollView from "@/components/widgets/ScrollView/ScrollView";
 import { useContextMenu } from "@/hooks/useContextMenu";
 import useLongPress from "@/hooks/useLongPress";
@@ -44,8 +46,11 @@ import { SearchBar } from "./SearchBar";
 import { Thumbnail } from "./Thumbnail";
 import "./index.css";
 
-// PageView component to display files in a grid
-const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
+interface PageViewProps {
+  pageKey: string;
+}
+
+const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
   const {
     actions: {
       addVirtualPage,
@@ -1286,5 +1291,19 @@ const PageView: React.FC<{ pageKey: string }> = ({ pageKey }) => {
     </div>
   );
 };
+
+function PageView(props: React.PropsWithChildren<PageViewProps>) {
+  const [errorInfo, setErrorInfo] = useState<React.ErrorInfo>();
+  return (
+    <ErrorBoundary
+      fallbackRender={(props) => (
+        <Crash componentName="PageView" errorInfo={errorInfo} {...props} />
+      )}
+      onError={(_, errorInfo) => setErrorInfo(errorInfo)}
+    >
+      <PageViewImpl {...props} />
+    </ErrorBoundary>
+  );
+}
 
 export default PageView;
