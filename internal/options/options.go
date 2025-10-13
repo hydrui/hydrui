@@ -40,6 +40,7 @@ type Values struct {
 	ACMEHostRegex  string
 	Secure         bool
 	ServerMode     bool
+	NoAuth         bool
 	AllowBugReport bool
 	NoGUI          bool
 }
@@ -84,6 +85,7 @@ func (v *Values) ParseFlags(args []string) error {
 	set.StringVar(&v.ACMEHostRegex, "acme-host-match", v.ACMEHostRegex, "RE2-compatible regular expression pattern to match allowed hosts for ACME certs")
 	set.BoolVar(&v.Secure, "secure", v.Secure, "Use secure cookies")
 	set.BoolVar(&v.ServerMode, "server-mode", v.ServerMode, "Enable or disable server mode; server mode proxies the Hydrus API and provides a login page")
+	set.BoolVar(&v.NoAuth, "no-auth", v.NoAuth, "Disables authentication in server mode")
 	set.BoolVar(&v.AllowBugReport, "allow-bug-report", v.AllowBugReport, "Allow user to submit bug reports to the Hydrui Mothership")
 	set.BoolVar(&v.NoGUI, "nogui", v.NoGUI, "Disable the GUI, if GUI support is available")
 	return set.Parse(args[1:])
@@ -130,6 +132,7 @@ func (v *Values) ParseEnv() {
 	stringEnv(&v.ACMEHostRegex, "HYDRUI_ACME_HOST_MATCH")
 	boolEnv(&v.Secure, "HYDRUI_SECURE")
 	boolEnv(&v.ServerMode, "HYDRUI_SERVER_MODE")
+	boolEnv(&v.NoAuth, "HYDRUI_NO_AUTH")
 	boolEnv(&v.AllowBugReport, "HYDRUI_ALLOW_BUG_REPORT")
 	boolEnv(&v.NoGUI, "HYDRUI_NOGUI")
 }
@@ -148,6 +151,7 @@ func (v *Values) ServerConfig(ctx context.Context, log *slog.Logger) (server.Con
 		HydrusAPIKey:   v.HydrusAPIKey,
 		Secure:         v.Secure,
 		ServerMode:     v.ServerMode,
+		NoAuth:         v.NoAuth,
 		AllowBugReport: v.AllowBugReport,
 	}
 
@@ -184,6 +188,9 @@ func (v *Values) ServerConfig(ctx context.Context, log *slog.Logger) (server.Con
 		}
 
 		if v.HtpasswdFile != "" {
+			if v.NoAuth {
+				return server.Config{}, fmt.Errorf("only one of -htpasswd and -no-auth may be specified")
+			}
 			file, err := os.Open(v.HtpasswdFile)
 			if err != nil {
 				return server.Config{}, fmt.Errorf("failed to open htpasswd file: %w", err)
@@ -199,9 +206,11 @@ func (v *Values) ServerConfig(ctx context.Context, log *slog.Logger) (server.Con
 			}
 			log.LogAttrs(ctx, slog.LevelInfo, "Loaded users from htpasswd file", slog.Int("users", len(htpasswd.Users)))
 			result.HtpasswdFile = htpasswd
-		} else {
+		} else if !v.NoAuth {
 			log.LogAttrs(ctx, slog.LevelWarn, "No htpasswd file provided, using default credentials admin:admin.")
 			result.HtpasswdFile, _ = server.LoadHtpasswdFile(strings.NewReader("admin:$2y$10$0QGYPQwkzu63CRCpOJDOre3YLvXV8U19XnrHr/wEuFvBzVUwbiR0C"))
+		} else {
+			result.HtpasswdFile = nil
 		}
 
 		if v.AllowBugReport {
@@ -221,6 +230,10 @@ func (v *Values) ServerConfig(ctx context.Context, log *slog.Logger) (server.Con
 
 		if v.HtpasswdFile != "" {
 			log.LogAttrs(ctx, slog.LevelWarn, "Htpasswd file is not used in client-only mode.")
+		}
+
+		if !v.NoAuth {
+			log.LogAttrs(ctx, slog.LevelWarn, "No auth mode is not used in client-only mode.")
 		}
 
 		if v.Secret != "" {

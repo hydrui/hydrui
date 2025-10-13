@@ -36,6 +36,7 @@ type TemplateData struct {
 	JSIntegrity  string
 	CSSIntegrity string
 	ServerMode   bool
+	NoAuth       bool
 }
 
 // LoginRequest represents the JSON request for login
@@ -134,6 +135,7 @@ type Config struct {
 	HtpasswdFile   *HtpasswdFile
 	Secure         bool
 	ServerMode     bool
+	NoAuth         bool
 	AllowBugReport bool
 	ACME           *autocert.Manager
 }
@@ -191,6 +193,7 @@ func New(config Config, clientData *pack.Pack) *Server {
 		JSIntegrity:  jsIntegrity,
 		CSSIntegrity: cssIntegrity,
 		ServerMode:   config.ServerMode,
+		NoAuth:       config.NoAuth,
 	}
 
 	proxyClient := &http.Client{
@@ -409,28 +412,28 @@ func New(config Config, clientData *pack.Pack) *Server {
 				return
 			}
 
-			if config.HtpasswdFile == nil {
-				http.Error(w, "Authentication not configured", http.StatusInternalServerError)
-				return
-			}
-
 			var loginReq LoginRequest
 			if err := json.NewDecoder(r.Body).Decode(&loginReq); err != nil {
 				http.Error(w, "Invalid request", http.StatusBadRequest)
 				return
 			}
 
-			authenticated, err := config.HtpasswdFile.Authenticate(loginReq.Username, loginReq.Password)
-			if err != nil {
-				log.Printf("Authentication error: %v", err)
-				http.Error(w, "Authentication error", http.StatusInternalServerError)
-				return
-			}
-
-			if !authenticated {
-				_ = subtle.ConstantTimeCompare([]byte(loginReq.Password), []byte(loginReq.Password))
-				http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-				return
+			if !config.NoAuth {
+				if config.HtpasswdFile == nil {
+					http.Error(w, "Authentication not configured", http.StatusInternalServerError)
+					return
+				}
+				authenticated, err := config.HtpasswdFile.Authenticate(loginReq.Username, loginReq.Password)
+				if err != nil {
+					log.Printf("Authentication error: %v", err)
+					http.Error(w, "Authentication error", http.StatusInternalServerError)
+					return
+				}
+				if !authenticated {
+					_ = subtle.ConstantTimeCompare([]byte(loginReq.Password), []byte(loginReq.Password))
+					http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+					return
+				}
 			}
 
 			token, err := generateToken(loginReq.Username, []byte(config.Secret))

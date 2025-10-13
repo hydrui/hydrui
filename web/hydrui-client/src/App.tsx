@@ -3,10 +3,11 @@ import { ErrorBoundary } from "react-error-boundary";
 
 import LoginScreen from "@/components/screens/LoginScreen/LoginScreen";
 import MainScreen from "@/components/screens/MainScreen/MainScreen";
+import NoAuthScreen from "@/components/screens/NoAuthScreen/NoAuthScreen";
 import SetupScreen from "@/components/screens/SetupScreen/SetupScreen";
 import Crash from "@/components/widgets/Crash/Crash";
 import { useApiStore } from "@/store/apiStore";
-import { isServerMode } from "@/utils/serverMode";
+import { isServerMode, noAuth } from "@/utils/serverMode";
 
 function AppImpl() {
   const { isAuthenticated, checkingAuthentication } = useApiStore();
@@ -19,13 +20,15 @@ function AppImpl() {
     );
   }
 
-  if (!isServerMode) {
-    if (!isAuthenticated) {
+  if (!isAuthenticated) {
+    if (isServerMode) {
+      if (noAuth) {
+        return <NoAuthScreen />;
+      } else {
+        return <LoginScreen />;
+      }
+    } else {
       return <SetupScreen />;
-    }
-  } else {
-    if (!isAuthenticated) {
-      return <LoginScreen />;
     }
   }
   return <MainScreen />;
