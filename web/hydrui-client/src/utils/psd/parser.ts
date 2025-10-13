@@ -335,6 +335,9 @@ export class PSDParser {
     }
 
     const layer = this.document.layers[layerIndex];
+    if (!layer) {
+      return null;
+    }
 
     if (layer.width <= 0 || layer.height <= 0) {
       return layer;
@@ -343,8 +346,7 @@ export class PSDParser {
     try {
       const stream = await this.seekToLayerChannelData(layerIndex);
 
-      for (let i = 0; i < layer.channels.length; i++) {
-        const channel = layer.channels[i];
+      for (const channel of layer.channels) {
         const compressionMethod = await stream.readU16BE();
         const dataSizeWithoutHeader = channel.length - 2;
 
@@ -444,7 +446,12 @@ export class PSDParser {
         break;
       }
 
-      const layer = this.document.layers[this.document.layers.length - 1 - i];
+      const layerIndex = this.document.layers.length - 1 - i;
+      const layer = this.document.layers[layerIndex];
+      if (!layer) {
+        console.warn(`Missing layer ${layerIndex}?`);
+        continue;
+      }
       for (const channel of layer.channels) {
         stream.skip(channel.length);
       }
@@ -510,28 +517,28 @@ export class PSDParser {
         switch (colorMode) {
           case PSDColorMode.RGB: {
             if (channels["red"]?.data) {
-              pixelData[pixelPos] = channels["red"].data[pos];
+              pixelData[pixelPos] = channels["red"].data[pos]!;
             }
             if (channels["green"]?.data) {
-              pixelData[pixelPos + 1] = channels["green"].data[pos];
+              pixelData[pixelPos + 1] = channels["green"].data[pos]!;
             }
             if (channels["blue"]?.data) {
-              pixelData[pixelPos + 2] = channels["blue"].data[pos];
+              pixelData[pixelPos + 2] = channels["blue"].data[pos]!;
             }
             if (channels["alpha"]?.data) {
-              pixelData[pixelPos + 3] = channels["alpha"].data[pos];
+              pixelData[pixelPos + 3] = channels["alpha"].data[pos]!;
             }
             break;
           }
 
           case PSDColorMode.GRAYSCALE: {
             if (channels["gray"]?.data) {
-              const grayValue = channels["gray"].data[pos];
+              const grayValue = channels["gray"].data[pos]!;
               pixelData[pixelPos] = grayValue;
               pixelData[pixelPos + 1] = grayValue;
               pixelData[pixelPos + 2] = grayValue;
               if (channels["alpha"]?.data) {
-                pixelData[pixelPos + 3] = channels["alpha"].data[pos];
+                pixelData[pixelPos + 3] = channels["alpha"].data[pos]!;
               }
             }
             break;
@@ -569,8 +576,8 @@ export class PSDParser {
         const pixelPos = pos * 4;
 
         const maskValue = mask.invertMask
-          ? 255 - mask.maskData[pos]
-          : mask.maskData[pos];
+          ? 255 - mask.maskData[pos]!
+          : mask.maskData[pos]!;
 
         maskPixelData[pixelPos] = 255;
         maskPixelData[pixelPos + 1] = 255;

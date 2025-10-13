@@ -77,7 +77,7 @@ const EditNotesModal: React.FC<EditNotesModalProps> = ({ file, onClose }) => {
       setNotes((prev) => {
         const newNotes = [...prev];
         const noteIndex = prev.findIndex(([noteName]) => noteName === name);
-        if (noteIndex !== -1) {
+        if (noteIndex !== -1 && newNotes[noteIndex]) {
           newNotes[noteIndex][1] = text;
         } else {
           newNotes.push([name, text]);

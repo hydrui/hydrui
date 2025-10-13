@@ -32,8 +32,8 @@ interface Context {
 }
 
 function ADD64AA(v: Uint32Array, a: number, b: number) {
-  const o0 = v[a] + v[b];
-  let o1 = v[a + 1] + v[b + 1];
+  const o0 = v[a]! + v[b]!;
+  let o1 = v[a + 1]! + v[b + 1]!;
   if (o0 >= 0x100000000) {
     o1++;
   }
@@ -42,11 +42,11 @@ function ADD64AA(v: Uint32Array, a: number, b: number) {
 }
 
 function ADD64AC(v: Uint32Array, a: number, b0: number, b1: number) {
-  let o0 = v[a] + b0;
+  let o0 = v[a]! + b0;
   if (b0 < 0) {
     o0 += 0x100000000;
   }
-  let o1 = v[a + 1] + b1;
+  let o1 = v[a + 1]! + b1;
   if (o0 >= 0x100000000) {
     o1++;
   }
@@ -55,7 +55,9 @@ function ADD64AC(v: Uint32Array, a: number, b0: number, b1: number) {
 }
 
 function B2B_GET32(arr: Uint8Array, i: number) {
-  return arr[i] ^ (arr[i + 1] << 8) ^ (arr[i + 2] << 16) ^ (arr[i + 3] << 24);
+  return (
+    arr[i]! ^ (arr[i + 1]! << 8) ^ (arr[i + 2]! << 16) ^ (arr[i + 3]! << 24)
+  );
 }
 
 function B2B_G(
@@ -66,30 +68,30 @@ function B2B_G(
   ix: number,
   iy: number,
 ) {
-  const x0 = m[ix];
-  const x1 = m[ix + 1];
-  const y0 = m[iy];
-  const y1 = m[iy + 1];
+  const x0 = m[ix]!;
+  const x1 = m[ix + 1]!;
+  const y0 = m[iy]!;
+  const y1 = m[iy + 1]!;
   ADD64AA(v, a, b);
   ADD64AC(v, a, x0, x1);
-  let xor0 = v[d] ^ v[a];
-  let xor1 = v[d + 1] ^ v[a + 1];
+  let xor0 = v[d]! ^ v[a]!;
+  let xor1 = v[d + 1]! ^ v[a + 1]!;
   v[d] = xor1;
   v[d + 1] = xor0;
   ADD64AA(v, c, d);
-  xor0 = v[b] ^ v[c];
-  xor1 = v[b + 1] ^ v[c + 1];
+  xor0 = v[b]! ^ v[c]!;
+  xor1 = v[b + 1]! ^ v[c + 1]!;
   v[b] = (xor0 >>> 24) ^ (xor1 << 8);
   v[b + 1] = (xor1 >>> 24) ^ (xor0 << 8);
   ADD64AA(v, a, b);
   ADD64AC(v, a, y0, y1);
-  xor0 = v[d] ^ v[a];
-  xor1 = v[d + 1] ^ v[a + 1];
+  xor0 = v[d]! ^ v[a]!;
+  xor1 = v[d + 1]! ^ v[a + 1]!;
   v[d] = (xor0 >>> 16) ^ (xor1 << 16);
   v[d + 1] = (xor1 >>> 16) ^ (xor0 << 16);
   ADD64AA(v, c, d);
-  xor0 = v[b] ^ v[c];
-  xor1 = v[b + 1] ^ v[c + 1];
+  xor0 = v[b]! ^ v[c]!;
+  xor1 = v[b + 1]! ^ v[c + 1]!;
   v[b] = (xor1 >>> 31) ^ (xor0 << 1);
   v[b + 1] = (xor0 >>> 31) ^ (xor1 << 1);
 }
@@ -126,15 +128,15 @@ function blake2bCompress(ctx: Context, last: boolean) {
   let i = 0;
 
   for (i = 0; i < 16; i++) {
-    v[i] = ctx.h[i];
-    v[i + 16] = BLAKE2B_IV32[i];
+    v[i] = ctx.h[i]!;
+    v[i + 16] = BLAKE2B_IV32[i]!;
   }
 
-  v[24] = v[24] ^ ctx.t;
-  v[25] = v[25] ^ (ctx.t / 0x100000000);
+  v[24] = v[24]! ^ ctx.t;
+  v[25] = v[25]! ^ (ctx.t / 0x100000000);
   if (last) {
-    v[28] = ~v[28];
-    v[29] = ~v[29];
+    v[28] = ~v[28]!;
+    v[29] = ~v[29]!;
   }
 
   for (i = 0; i < 32; i++) {
@@ -142,18 +144,18 @@ function blake2bCompress(ctx: Context, last: boolean) {
   }
 
   for (i = 0; i < 12; i++) {
-    B2B_G(0, 8, 16, 24, SIGMA82[i * 16 + 0], SIGMA82[i * 16 + 1]);
-    B2B_G(2, 10, 18, 26, SIGMA82[i * 16 + 2], SIGMA82[i * 16 + 3]);
-    B2B_G(4, 12, 20, 28, SIGMA82[i * 16 + 4], SIGMA82[i * 16 + 5]);
-    B2B_G(6, 14, 22, 30, SIGMA82[i * 16 + 6], SIGMA82[i * 16 + 7]);
-    B2B_G(0, 10, 20, 30, SIGMA82[i * 16 + 8], SIGMA82[i * 16 + 9]);
-    B2B_G(2, 12, 22, 24, SIGMA82[i * 16 + 10], SIGMA82[i * 16 + 11]);
-    B2B_G(4, 14, 16, 26, SIGMA82[i * 16 + 12], SIGMA82[i * 16 + 13]);
-    B2B_G(6, 8, 18, 28, SIGMA82[i * 16 + 14], SIGMA82[i * 16 + 15]);
+    B2B_G(0, 8, 16, 24, SIGMA82[i * 16 + 0]!, SIGMA82[i * 16 + 1]!);
+    B2B_G(2, 10, 18, 26, SIGMA82[i * 16 + 2]!, SIGMA82[i * 16 + 3]!);
+    B2B_G(4, 12, 20, 28, SIGMA82[i * 16 + 4]!, SIGMA82[i * 16 + 5]!);
+    B2B_G(6, 14, 22, 30, SIGMA82[i * 16 + 6]!, SIGMA82[i * 16 + 7]!);
+    B2B_G(0, 10, 20, 30, SIGMA82[i * 16 + 8]!, SIGMA82[i * 16 + 9]!);
+    B2B_G(2, 12, 22, 24, SIGMA82[i * 16 + 10]!, SIGMA82[i * 16 + 11]!);
+    B2B_G(4, 14, 16, 26, SIGMA82[i * 16 + 12]!, SIGMA82[i * 16 + 13]!);
+    B2B_G(6, 8, 18, 28, SIGMA82[i * 16 + 14]!, SIGMA82[i * 16 + 15]!);
   }
 
   for (i = 0; i < 16; i++) {
-    ctx.h[i] = ctx.h[i] ^ v[i] ^ v[i + 16];
+    ctx.h[i] = ctx.h[i]! ^ v[i]! ^ v[i + 16]!;
   }
 }
 
@@ -196,7 +198,7 @@ function blake2bInit(
   if (salt) parameterBlock.set(salt, 32);
   if (personal) parameterBlock.set(personal, 48);
   for (let i = 0; i < 16; i++) {
-    ctx.h[i] = BLAKE2B_IV32[i] ^ B2B_GET32(parameterBlock, i * 4);
+    ctx.h[i] = BLAKE2B_IV32[i]! ^ B2B_GET32(parameterBlock, i * 4);
   }
   if (key) {
     blake2bUpdate(ctx, key);
@@ -212,7 +214,7 @@ function blake2bUpdate(ctx: Context, input: Uint8Array) {
       blake2bCompress(ctx, false);
       ctx.c = 0;
     }
-    ctx.b[ctx.c++] = input[i];
+    ctx.b[ctx.c++] = input[i]!;
   }
 }
 
@@ -224,7 +226,7 @@ function blake2bFinal(ctx: Context) {
   blake2bCompress(ctx, true);
   const out = new Uint8Array(ctx.outlen);
   for (let i = 0; i < ctx.outlen; i++) {
-    out[i] = ctx.h[i >> 2] >> (8 * (i & 3));
+    out[i] = ctx.h[i >> 2]! >> (8 * (i & 3));
   }
   return out;
 }

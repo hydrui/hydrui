@@ -46,6 +46,9 @@ export async function processImage(
   image: ImageBitmap,
 ): Promise<Results> {
   const inputTensor = await preprocessImage(session, image);
+  if (!session.modelSession.inputNames[0]) {
+    throw new Error("Model contains no inputs!");
+  }
   const feeds: InferenceSession.FeedsType = {
     [session.modelSession.inputNames[0]]: inputTensor,
   };
@@ -56,9 +59,14 @@ export async function processImage(
     switch (output.name) {
       case "refined_predictions": // Camie v2
       case "predictions_sigmoid": // SmilingWolf
-      case "prediction": // PixAI
-        confidences = results[output.name].data as Float32Array;
-        break;
+      case "prediction": {
+        // PixAI
+        const result = results[output.name];
+        if (result?.data && result.data instanceof Float32Array) {
+          confidences = result.data;
+          break;
+        }
+      }
     }
   }
   if (!confidences) {
@@ -69,11 +77,14 @@ export async function processImage(
       if (output.type != "float32") {
         continue;
       }
-      confidences = results[output.name].data as Float32Array;
+      const result = results[output.name];
+      if (result?.data && result.data instanceof Float32Array) {
+        confidences = result.data;
+      }
     }
   }
-  if (!(confidences instanceof Float32Array)) {
-    throw new Error(`Expected Float32Array for tensor output!`);
+  if (!confidences) {
+    throw new Error(`Unable to find Float32Array for tensor output!`);
   }
   return processResults(session, confidences, threshold);
 }

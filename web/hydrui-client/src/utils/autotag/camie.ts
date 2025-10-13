@@ -137,9 +137,9 @@ export async function preprocessImageCamie(
   for (let y = 0; y < targetSize; y++) {
     for (let x = 0; x < targetSize; x++) {
       const pixelIndex = (y * targetSize + x) * 4;
-      const r = data[pixelIndex] / 255.0;
-      const g = data[pixelIndex + 1] / 255.0;
-      const b = data[pixelIndex + 2] / 255.0;
+      const r = data[pixelIndex]! / 255.0;
+      const g = data[pixelIndex + 1]! / 255.0;
+      const b = data[pixelIndex + 2]! / 255.0;
       const normalizedR = (r - meanR) / stdR;
       const normalizedG = (g - meanG) / stdG;
       const normalizedB = (b - meanB) / stdB;
@@ -182,11 +182,10 @@ export function processResultsCamie(
   const { idx_to_tag, tag_to_category } =
     session.metadata.dataset_info.tag_mapping;
   const probabilities = new Float32Array(logits.length);
-  for (let i = 0; i < logits.length; i++) {
-    probabilities[i] = sigmoid(logits[i]);
+  for (const [i, logit] of logits.entries()) {
+    probabilities[i] = sigmoid(logit);
   }
-  for (let i = 0; i < probabilities.length; i++) {
-    const confidence = probabilities[i];
+  for (const [i, confidence] of probabilities.entries()) {
     if (confidence > threshold) {
       const tagName = idx_to_tag[i.toString()];
       if (!tagName) {

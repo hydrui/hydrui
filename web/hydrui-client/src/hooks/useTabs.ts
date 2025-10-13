@@ -41,7 +41,7 @@ export function useTabs(): Tab[] {
       // Virtual pages in their specified order
       ...virtualPageKeys.map((key) => ({
         key,
-        name: virtualPages[key].name,
+        name: virtualPages[key]?.name ?? "",
         type: "virtual" as const,
         closeable: true,
         tabs: [],

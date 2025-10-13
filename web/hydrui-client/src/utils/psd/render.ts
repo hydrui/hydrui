@@ -92,7 +92,7 @@ export class PSDRenderer {
     this.layerData = [];
 
     for (let i = this.document.layers.length - 1; i >= 0; i--) {
-      const layer = this.document.layers[i];
+      const layer = this.document.layers[i]!;
       const layerInfo = await this.parser.loadLayerImageData(layer.index);
 
       if (layerInfo) {
@@ -174,7 +174,7 @@ export class PSDRenderer {
     });
 
     for (let i = this.layerData.length - 1; i >= 0; i--) {
-      const layer = this.layerData[i];
+      const layer = this.layerData[i]!;
 
       onLayerRender?.((this.layerData.length - i - 1) / this.layerData.length);
 
@@ -183,8 +183,11 @@ export class PSDRenderer {
         layer.groupType === PSDSectionType.CLOSED_FOLDER
       ) {
         if (canvasStack.length > 1) {
-          const groupCanvas = canvasStack.pop()!;
+          const groupCanvas = canvasStack.pop();
           const targetCanvas = canvasStack[canvasStack.length - 1];
+          if (!groupCanvas || !targetCanvas) {
+            throw new Error("Canvas stack underflow!");
+          }
 
           if (layer.visible) {
             targetCanvas.ctx.globalAlpha = layer.opacity / 255;
@@ -219,7 +222,9 @@ export class PSDRenderer {
       }
 
       const currentTarget = canvasStack[canvasStack.length - 1];
-
+      if (!currentTarget) {
+        throw new Error("Canvas stack underflow!");
+      }
       if (!layer.visible) {
         delete currentTarget.clippingCanvas;
         continue;
@@ -346,15 +351,14 @@ export class PSDRenderer {
     width: number,
     height: number,
   ): Promise<ImageBitmap | null> {
-    return generatePSDLayerThumbnail(
-      this.getCanvas,
-      this.parser,
-      this.document.layers[layerIndex],
-      {
-        width,
-        height,
-      },
-    );
+    const layer = this.document.layers[layerIndex];
+    if (!layer) {
+      return null;
+    }
+    return generatePSDLayerThumbnail(this.getCanvas, this.parser, layer, {
+      width,
+      height,
+    });
   }
 }
 
@@ -371,15 +375,15 @@ function applyNonNativeBlendMode(
   );
 
   for (let i = 0; i < destData.data.length; i += 4) {
-    const dR = destData.data[i] / 255;
-    const dG = destData.data[i + 1] / 255;
-    const dB = destData.data[i + 2] / 255;
-    const dA = destData.data[i + 3] / 255;
+    const dR = destData.data[i]! / 255;
+    const dG = destData.data[i + 1]! / 255;
+    const dB = destData.data[i + 2]! / 255;
+    const dA = destData.data[i + 3]! / 255;
 
-    const sR = sourceData.data[i] / 255;
-    const sG = sourceData.data[i + 1] / 255;
-    const sB = sourceData.data[i + 2] / 255;
-    const sA = sourceData.data[i + 3] / 255;
+    const sR = sourceData.data[i]! / 255;
+    const sG = sourceData.data[i + 1]! / 255;
+    const sB = sourceData.data[i + 2]! / 255;
+    const sA = sourceData.data[i + 3]! / 255;
 
     if (sA === 0) continue;
 

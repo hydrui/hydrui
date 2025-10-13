@@ -36,6 +36,10 @@ function parseCsv(text: string): Record<string, string>[] {
   const lines = text.trim().split("\n");
   const data: Record<string, string>[] = [];
 
+  if (!lines[0]) {
+    return [];
+  }
+
   function parseCsvLine(line: string): string[] {
     const result: string[] = [];
     let current = "";
@@ -75,8 +79,8 @@ function parseCsv(text: string): Record<string, string>[] {
   }
 
   const headers = parseCsvLine(lines[0]);
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseCsvLine(lines[i]);
+  for (const line of lines.slice(1)) {
+    const values = parseCsvLine(line);
     const row: Record<string, string> = {};
     headers.forEach((header, index) => {
       row[header] = values[index] || "";
@@ -138,6 +142,7 @@ export async function preprocessImageWD(
   imageData = finalCtx.getImageData(0, 0, targetSize, targetSize);
   const data = imageData.data;
   if (
+    session.modelSession.inputMetadata[0] &&
     session.modelSession.inputMetadata[0].isTensor &&
     session.modelSession.inputMetadata[0].shape[1] === 3
   ) {
@@ -154,18 +159,18 @@ export async function preprocessImageWD(
         const tensorBaseIndex = y * targetSize + x;
         if (clTaggerFlipBGR) {
           tensor[0 * targetSize * targetSize + tensorBaseIndex] =
-            (data[pixelIndex + 2] - 127.5) / 127.5;
+            (data[pixelIndex + 2]! - 127.5) / 127.5;
           tensor[1 * targetSize * targetSize + tensorBaseIndex] =
-            (data[pixelIndex + 1] - 127.5) / 127.5;
+            (data[pixelIndex + 1]! - 127.5) / 127.5;
           tensor[2 * targetSize * targetSize + tensorBaseIndex] =
-            (data[pixelIndex] - 127.5) / 127.5;
+            (data[pixelIndex]! - 127.5) / 127.5;
         } else {
           tensor[0 * targetSize * targetSize + tensorBaseIndex] =
-            (data[pixelIndex] - 127.5) / 127.5;
+            (data[pixelIndex]! - 127.5) / 127.5;
           tensor[1 * targetSize * targetSize + tensorBaseIndex] =
-            (data[pixelIndex + 1] - 127.5) / 127.5;
+            (data[pixelIndex + 1]! - 127.5) / 127.5;
           tensor[2 * targetSize * targetSize + tensorBaseIndex] =
-            (data[pixelIndex + 2] - 127.5) / 127.5;
+            (data[pixelIndex + 2]! - 127.5) / 127.5;
         }
       }
     }
@@ -176,9 +181,9 @@ export async function preprocessImageWD(
       for (let x = 0; x < targetSize; x++) {
         const pixelIndex = (y * targetSize + x) * 4;
         const tensorBaseIndex = (y * targetSize + x) * 3;
-        tensor[tensorBaseIndex] = data[pixelIndex + 2];
-        tensor[tensorBaseIndex + 1] = data[pixelIndex + 1];
-        tensor[tensorBaseIndex + 2] = data[pixelIndex];
+        tensor[tensorBaseIndex] = data[pixelIndex + 2]!;
+        tensor[tensorBaseIndex + 1] = data[pixelIndex + 1]!;
+        tensor[tensorBaseIndex + 2] = data[pixelIndex]!;
       }
     }
     return new Tensor("float32", tensor, [1, targetSize, targetSize, 3]);
@@ -206,7 +211,10 @@ function getWDTaggerTagNamespace(tagData: Record<string, string>): string {
 
 function processWDTagName(tagData: Record<string, string>): string {
   const namespace = getWDTaggerTagNamespace(tagData);
-  const name = rewriteUnderscoreTags(tagData["name"]);
+  if (!tagData["name"]) {
+    console.warn(`No tag name in tag data: ${JSON.stringify(tagData)}`);
+  }
+  const name = rewriteUnderscoreTags(tagData["name"] ?? "");
   return joinTagNamespace(name, namespace);
 }
 
@@ -233,9 +241,13 @@ export function processResultsWD(
   const tagResults: { name: string; confidence: number }[] = [];
   const numRatings = session.modelInfo.numberofratings;
   let rating: { name: string; confidence: number } | undefined;
-  for (let i = 0; i < numRatings && i < session.tagsData.length; i++) {
-    const name = processWDTagName(session.tagsData[i]);
+  for (const [i, tagData] of session.tagsData.slice(0, numRatings).entries()) {
+    const name = processWDTagName(tagData);
     const confidence = confidences[i];
+    if (!confidence) {
+      console.warn(`Missing confidence for rating tag index ${i}`);
+      continue;
+    }
     if (confidence > threshold && (!rating || rating.confidence < confidence)) {
       rating = { name, confidence };
     }
@@ -243,9 +255,13 @@ export function processResultsWD(
   if (rating) {
     tagResults.push(rating);
   }
-  for (let i = numRatings; i < session.tagsData.length; i++) {
-    const tags = processWDTagData(session.tagsData[i]);
+  for (const [i, tagData] of session.tagsData.slice(numRatings).entries()) {
+    const tags = processWDTagData(tagData);
     const confidence = confidences[i];
+    if (!confidence) {
+      console.warn(`Missing confidence for general tag index ${i}`);
+      continue;
+    }
     if (confidence > threshold) {
       for (const name of tags) {
         tagResults.push({ name, confidence });

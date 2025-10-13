@@ -61,7 +61,10 @@ const MimeInput: React.FC<MimeInputProps> = ({
       setSelectedSuggestionIndex((prev) => (prev > -1 ? prev - 1 : -1));
     } else if (e.key === "Tab" && suggestions.length > 0) {
       e.preventDefault();
-      if (selectedSuggestionIndex >= 0) {
+      if (
+        selectedSuggestionIndex >= 0 &&
+        suggestions[selectedSuggestionIndex]
+      ) {
         addMimeType(suggestions[selectedSuggestionIndex]);
       }
     } else if (e.key === "Enter") {
@@ -69,7 +72,8 @@ const MimeInput: React.FC<MimeInputProps> = ({
       if (
         suggestions.length > 0 &&
         showSuggestions &&
-        selectedSuggestionIndex >= 0
+        selectedSuggestionIndex >= 0 &&
+        suggestions[selectedSuggestionIndex]
       ) {
         addMimeType(suggestions[selectedSuggestionIndex]);
       } else if (input.trim() !== "") {

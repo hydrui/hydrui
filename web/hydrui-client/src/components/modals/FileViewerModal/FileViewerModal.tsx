@@ -32,7 +32,12 @@ interface FileViewerModalProps {
 function generateFileName(file: FileMetadata): string {
   let fileName = file.file_id.toString();
 
-  const tagsByNamespace: Record<string, string[]> = {
+  const tagsByNamespace: {
+    creator: string[];
+    character: string[];
+    series: string[];
+    "": string[];
+  } = {
     creator: [],
     character: [],
     series: [],
@@ -57,7 +62,9 @@ function generateFileName(file: FileMetadata): string {
           } else {
             if (tag.indexOf(":") > -1) {
               const [, value] = tag.split(":");
-              tagsByNamespace[""].push(value);
+              if (value) {
+                tagsByNamespace[""].push(value);
+              }
             } else {
               tagsByNamespace[""].push(tag);
             }

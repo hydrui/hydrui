@@ -154,7 +154,13 @@ export function findSchemaTables(
     // 3: rootpage (page number for the root of this object)
     // 4: sql (SQL statement that created the object)
 
-    if (row.values.length < 5) continue;
+    if (
+      row.values.length < 5 ||
+      !row.values[0] ||
+      !row.values[1] ||
+      !row.values[3]
+    )
+      continue;
 
     const type = row.values[0].value;
     const name = row.values[1].value;

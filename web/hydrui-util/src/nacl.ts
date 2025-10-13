@@ -21,7 +21,7 @@ export const boxNonceLength = secretboxNonceLength;
 function gf(init?: number[]) {
   let i;
   const r = new Float64Array(16);
-  if (init) for (i = 0; i < init.length; i++) r[i] = init[i];
+  if (init) for (i = 0; i < init.length; i++) r[i] = init[i]!;
   return r;
 }
 
@@ -47,10 +47,10 @@ function L32(x: number, c: number) {
 }
 
 function ld32(x: Uint8Array, i: number) {
-  let u = x[i + 3] & 0xff;
-  u = (u << 8) | (x[i + 2] & 0xff);
-  u = (u << 8) | (x[i + 1] & 0xff);
-  return (u << 8) | (x[i + 0] & 0xff);
+  let u = x[i + 3]! & 0xff;
+  u = (u << 8) | (x[i + 2]! & 0xff);
+  u = (u << 8) | (x[i + 1]! & 0xff);
+  return (u << 8) | (x[i + 0]! & 0xff);
 }
 
 function st32(x: Uint8Array, j: number, u: number) {
@@ -62,7 +62,7 @@ function st32(x: Uint8Array, j: number, u: number) {
 
 function vn(x: Uint8Array, xi: number, y: Uint8Array, yi: number, n: number) {
   let d = 0;
-  for (let i = 0; i < n; i++) d |= x[xi + i] ^ y[yi + i];
+  for (let i = 0; i < n; i++) d |= x[xi + i]! ^ y[yi + i]!;
   return (1 & ((d - 1) >>> 8)) - 1;
 }
 
@@ -90,32 +90,32 @@ function core(
     x[11 + i] = ld32(k, 16 + 4 * i);
   }
 
-  for (i = 0; i < 16; i++) y[i] = x[i];
+  for (i = 0; i < 16; i++) y[i] = x[i]!;
 
   for (i = 0; i < 20; i++) {
     for (j = 0; j < 4; j++) {
-      for (m = 0; m < 4; m++) t[m] = x[(5 * j + 4 * m) % 16];
-      t[1] ^= L32((t[0] + t[3]) | 0, 7);
-      t[2] ^= L32((t[1] + t[0]) | 0, 9);
-      t[3] ^= L32((t[2] + t[1]) | 0, 13);
-      t[0] ^= L32((t[3] + t[2]) | 0, 18);
-      for (m = 0; m < 4; m++) w[4 * j + ((j + m) % 4)] = t[m];
+      for (m = 0; m < 4; m++) t[m] = x[(5 * j + 4 * m) % 16]!;
+      t[1]! ^= L32((t[0]! + t[3]!) | 0, 7);
+      t[2]! ^= L32((t[1]! + t[0]!) | 0, 9);
+      t[3]! ^= L32((t[2]! + t[1]!) | 0, 13);
+      t[0]! ^= L32((t[3]! + t[2]!) | 0, 18);
+      for (m = 0; m < 4; m++) w[4 * j + ((j + m) % 4)] = t[m]!;
     }
-    for (m = 0; m < 16; m++) x[m] = w[m];
+    for (m = 0; m < 16; m++) x[m] = w[m]!;
   }
 
   if (h) {
-    for (i = 0; i < 16; i++) x[i] = (x[i] + y[i]) | 0;
+    for (i = 0; i < 16; i++) x[i] = (x[i]! + y[i]!) | 0;
     for (i = 0; i < 4; i++) {
-      x[5 * i] = (x[5 * i] - ld32(c, 4 * i)) | 0;
-      x[6 + i] = (x[6 + i] - ld32(inp, 4 * i)) | 0;
+      x[5 * i] = (x[5 * i]! - ld32(c, 4 * i)) | 0;
+      x[6 + i] = (x[6 + i]! - ld32(inp, 4 * i)) | 0;
     }
     for (i = 0; i < 4; i++) {
-      st32(out, 4 * i, x[5 * i]);
-      st32(out, 16 + 4 * i, x[6 + i]);
+      st32(out, 4 * i, x[5 * i]!);
+      st32(out, 16 + 4 * i, x[6 + i]!);
     }
   } else {
-    for (i = 0; i < 16; i++) st32(out, 4 * i, (x[i] + y[i]) | 0);
+    for (i = 0; i < 16; i++) st32(out, 4 * i, (x[i]! + y[i]!) | 0);
   }
 }
 
@@ -157,13 +157,13 @@ function cryptoStreamSalsa20Xor(
   let u, i;
   if (!b) return 0;
   for (i = 0; i < 16; i++) z[i] = 0;
-  for (i = 0; i < 8; i++) z[i] = n[i];
+  for (i = 0; i < 8; i++) z[i] = n[i]!;
   while (b >= 64) {
     cryptoCoreSalsa20(x, z, k, sigma);
-    for (i = 0; i < 64; i++) c[cpos + i] = (m ? m[mpos + i] : 0) ^ x[i];
+    for (i = 0; i < 64; i++) c[cpos + i] = (m ? m[mpos + i]! : 0) ^ x[i]!;
     u = 1;
     for (i = 8; i < 16; i++) {
-      u = (u + (z[i] & 0xff)) | 0;
+      u = (u + (z[i]! & 0xff)) | 0;
       z[i] = u & 0xff;
       u >>>= 8;
     }
@@ -173,7 +173,7 @@ function cryptoStreamSalsa20Xor(
   }
   if (b > 0) {
     cryptoCoreSalsa20(x, z, k, sigma);
-    for (i = 0; i < b; i++) c[cpos + i] = (m ? m[mpos + i] : 0) ^ x[i];
+    for (i = 0; i < b; i++) c[cpos + i] = (m ? m[mpos + i]! : 0) ^ x[i]!;
   }
   return 0;
 }
@@ -218,7 +218,7 @@ function add1305(h: Uint32Array, c: Uint32Array) {
   let j,
     u = 0;
   for (j = 0; j < 17; j++) {
-    u = (u + ((h[j] + c[j]) | 0)) | 0;
+    u = (u + ((h[j]! + c[j]!) | 0)) | 0;
     h[j] = u & 255;
     u >>>= 8;
   }
@@ -243,18 +243,18 @@ function cryptoOnetimeauth(
     c = new Uint32Array(17),
     g = new Uint32Array(17);
   for (j = 0; j < 17; j++) r[j] = h[j] = 0;
-  for (j = 0; j < 16; j++) r[j] = k[j];
-  r[3] &= 15;
-  r[4] &= 252;
-  r[7] &= 15;
-  r[8] &= 252;
-  r[11] &= 15;
-  r[12] &= 252;
-  r[15] &= 15;
+  for (j = 0; j < 16; j++) r[j] = k[j]!;
+  r[3]! &= 15;
+  r[4]! &= 252;
+  r[7]! &= 15;
+  r[8]! &= 252;
+  r[11]! &= 15;
+  r[12]! &= 252;
+  r[15]! &= 15;
 
   while (n > 0) {
     for (j = 0; j < 17; j++) c[j] = 0;
-    for (j = 0; j < 16 && j < n; ++j) c[j] = m[mpos + j];
+    for (j = 0; j < 16 && j < n; ++j) c[j] = m[mpos + j]!;
     c[j] = 1;
     mpos += j;
     n -= j;
@@ -263,22 +263,22 @@ function cryptoOnetimeauth(
       x[i] = 0;
       for (j = 0; j < 17; j++)
         x[i] =
-          (x[i] + h[j] * (j <= i ? r[i - j] : (320 * r[i + 17 - j]) | 0)) |
+          (x[i]! + h[j]! * (j <= i ? r[i - j]! : (320 * r[i + 17 - j]!) | 0)) |
           0 |
           0;
     }
-    for (i = 0; i < 17; i++) h[i] = x[i];
+    for (i = 0; i < 17; i++) h[i] = x[i]!;
     u = 0;
     for (j = 0; j < 16; j++) {
-      u = (u + h[j]) | 0;
+      u = (u + h[j]!) | 0;
       h[j] = u & 255;
       u >>>= 8;
     }
-    u = (u + h[16]) | 0;
+    u = (u + h[16]!) | 0;
     h[16] = u & 3;
     u = (5 * (u >>> 2)) | 0;
     for (j = 0; j < 16; j++) {
-      u = (u + h[j]) | 0;
+      u = (u + h[j]!) | 0;
       h[j] = u & 255;
       u >>>= 8;
     }
@@ -286,15 +286,15 @@ function cryptoOnetimeauth(
     h[16] = u;
   }
 
-  for (j = 0; j < 17; j++) g[j] = h[j];
+  for (j = 0; j < 17; j++) g[j] = h[j]!;
   add1305(h, minusp);
-  const s = -(h[16] >>> 7) | 0;
-  for (j = 0; j < 17; j++) h[j] ^= s & (g[j] ^ h[j]);
+  const s = -(h[16]! >>> 7) | 0;
+  for (j = 0; j < 17; j++) h[j]! ^= s & (g[j]! ^ h[j]!);
 
-  for (j = 0; j < 16; j++) c[j] = k[j + 16];
+  for (j = 0; j < 16; j++) c[j] = k[j + 16]!;
   c[16] = 0;
   add1305(h, c);
-  for (j = 0; j < 16; j++) out[outpos + j] = h[j];
+  for (j = 0; j < 16; j++) out[outpos + j] = h[j]!;
   return 0;
 }
 
@@ -345,19 +345,19 @@ function cryptoSecretboxOpen(
 
 function car25519(o: Float64Array) {
   for (let i = 0; i < 16; i++) {
-    o[i] += 65536;
-    const c = Math.floor(o[i] / 65536);
-    o[(i + 1) * (i < 15 ? 1 : 0)] += c - 1 + 37 * (c - 1) * (i === 15 ? 1 : 0);
-    o[i] -= c * 65536;
+    o[i]! += 65536;
+    const c = Math.floor(o[i]! / 65536);
+    o[(i + 1) * (i < 15 ? 1 : 0)]! += c - 1 + 37 * (c - 1) * (i === 15 ? 1 : 0);
+    o[i]! -= c * 65536;
   }
 }
 
 function sel25519(p: Float64Array, q: Float64Array, b: number) {
   const c = ~(b - 1);
   for (let i = 0; i < 16; i++) {
-    const t = c & (p[i] ^ q[i]);
-    p[i] ^= t;
-    q[i] ^= t;
+    const t = c & (p[i]! ^ q[i]!);
+    p[i]! ^= t;
+    q[i]! ^= t;
   }
 }
 
@@ -365,38 +365,38 @@ function pack25519(o: Uint8Array, n: Float64Array) {
   let i, j, b;
   const m = gf(),
     t = gf();
-  for (i = 0; i < 16; i++) t[i] = n[i];
+  for (i = 0; i < 16; i++) t[i] = n[i]!;
   car25519(t);
   car25519(t);
   car25519(t);
   for (j = 0; j < 2; j++) {
-    m[0] = t[0] - 0xffed;
+    m[0] = t[0]! - 0xffed;
     for (i = 1; i < 15; i++) {
-      m[i] = t[i] - 0xffff - ((m[i - 1] >> 16) & 1);
-      m[i - 1] &= 0xffff;
+      m[i] = t[i]! - 0xffff - ((m[i - 1]! >> 16) & 1);
+      m[i - 1]! &= 0xffff;
     }
-    m[15] = t[15] - 0x7fff - ((m[14] >> 16) & 1);
+    m[15] = t[15]! - 0x7fff - ((m[14]! >> 16) & 1);
     b = (m[15] >> 16) & 1;
-    m[14] &= 0xffff;
+    m[14]! &= 0xffff;
     sel25519(t, m, 1 - b);
   }
   for (i = 0; i < 16; i++) {
-    o[2 * i] = t[i] & 0xff;
-    o[2 * i + 1] = t[i] >> 8;
+    o[2 * i] = t[i]! & 0xff;
+    o[2 * i + 1] = t[i]! >> 8;
   }
 }
 
 function unpack25519(o: Float64Array, n: Uint8Array) {
-  for (let i = 0; i < 16; i++) o[i] = n[2 * i] + (n[2 * i + 1] << 8);
-  o[15] &= 0x7fff;
+  for (let i = 0; i < 16; i++) o[i] = n[2 * i]! + (n[2 * i + 1]! << 8);
+  o[15]! &= 0x7fff;
 }
 
 function A(o: Float64Array, a: Float64Array, b: Float64Array) {
-  for (let i = 0; i < 16; i++) o[i] = (a[i] + b[i]) | 0;
+  for (let i = 0; i < 16; i++) o[i] = (a[i]! + b[i]!) | 0;
 }
 
 function Z(o: Float64Array, a: Float64Array, b: Float64Array) {
-  for (let i = 0; i < 16; i++) o[i] = (a[i] - b[i]) | 0;
+  for (let i = 0; i < 16; i++) o[i] = (a[i]! - b[i]!) | 0;
 }
 
 function M(o: Float64Array, a: Float64Array, b: Float64Array) {
@@ -405,13 +405,13 @@ function M(o: Float64Array, a: Float64Array, b: Float64Array) {
   for (i = 0; i < 31; i++) t[i] = 0;
   for (i = 0; i < 16; i++) {
     for (j = 0; j < 16; j++) {
-      t[i + j] += a[i] * b[j];
+      t[i + j]! += a[i]! * b[j]!;
     }
   }
   for (i = 0; i < 15; i++) {
-    t[i] += 38 * t[i + 16];
+    t[i]! += 38 * t[i + 16]!;
   }
-  for (i = 0; i < 16; i++) o[i] = t[i];
+  for (i = 0; i < 16; i++) o[i] = t[i]!;
   car25519(o);
   car25519(o);
 }
@@ -423,12 +423,12 @@ function S(o: Float64Array, a: Float64Array) {
 function inv25519(o: Float64Array, i: Float64Array) {
   const c = gf();
   let a;
-  for (a = 0; a < 16; a++) c[a] = i[a];
+  for (a = 0; a < 16; a++) c[a] = i[a]!;
   for (a = 253; a >= 0; a--) {
     S(c, c);
     if (a !== 2 && a !== 4) M(c, c, i);
   }
-  for (a = 0; a < 16; a++) o[a] = c[a];
+  for (a = 0; a < 16; a++) o[a] = c[a]!;
 }
 
 function cryptoScalarmult(q: Uint8Array, n: Uint8Array, p: Uint8Array) {
@@ -441,17 +441,17 @@ function cryptoScalarmult(q: Uint8Array, n: Uint8Array, p: Uint8Array) {
     d = gf(),
     e = gf(),
     f = gf();
-  for (i = 0; i < 31; i++) z[i] = n[i];
-  z[31] = (n[31] & 127) | 64;
-  z[0] &= 248;
+  for (i = 0; i < 31; i++) z[i] = n[i]!;
+  z[31] = (n[31]! & 127) | 64;
+  z[0]! &= 248;
   unpack25519(x, p);
   for (i = 0; i < 16; i++) {
-    b[i] = x[i];
+    b[i] = x[i]!;
     d[i] = a[i] = c[i] = 0;
   }
   a[0] = d[0] = 1;
   for (i = 254; i >= 0; --i) {
-    r = (z[i >>> 3] >>> (i & 7)) & 1;
+    r = (z[i >>> 3]! >>> (i & 7)) & 1;
     sel25519(a, b, r);
     sel25519(c, d, r);
     A(e, a, c);
@@ -476,10 +476,10 @@ function cryptoScalarmult(q: Uint8Array, n: Uint8Array, p: Uint8Array) {
     sel25519(c, d, r);
   }
   for (i = 0; i < 16; i++) {
-    x[i + 16] = a[i];
-    x[i + 32] = c[i];
-    x[i + 48] = b[i];
-    x[i + 64] = d[i];
+    x[i + 16] = a[i]!;
+    x[i + 32] = c[i]!;
+    x[i + 48] = b[i]!;
+    x[i + 64] = d[i]!;
   }
   const x32 = x.subarray(32);
   const x16 = x.subarray(16);
@@ -557,7 +557,7 @@ export function secretbox(msg: Uint8Array, nonce: Uint8Array, key: Uint8Array) {
   checkLengths(key, nonce);
   const m = new Uint8Array(secretboxZeroLength + msg.length);
   const c = new Uint8Array(m.length);
-  for (let i = 0; i < msg.length; i++) m[i + secretboxZeroLength] = msg[i];
+  for (let i = 0; i < msg.length; i++) m[i + secretboxZeroLength] = msg[i]!;
   cryptoSecretbox(c, m, m.length, nonce, key);
   return c.subarray(secretboxBoxZeroLength);
 }
@@ -570,7 +570,7 @@ export function secretboxOpen(
   checkLengths(key, nonce);
   const c = new Uint8Array(secretboxBoxZeroLength + box.length);
   const m = new Uint8Array(c.length);
-  for (let i = 0; i < box.length; i++) c[i + secretboxBoxZeroLength] = box[i];
+  for (let i = 0; i < box.length; i++) c[i + secretboxBoxZeroLength] = box[i]!;
   if (c.length < 32) return null;
   if (cryptoSecretboxOpen(m, c, c.length, nonce, key) !== 0) return null;
   return m.subarray(secretboxZeroLength);

@@ -91,7 +91,7 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
         lastActiveTagService &&
         tagServices.some((service) => service.key === lastActiveTagService)
           ? lastActiveTagService
-          : tagServices[0].key;
+          : (tagServices[0]?.key ?? "");
 
       setActiveServiceKey(serviceToUse);
     }
@@ -165,14 +165,14 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
         countsByService[change.serviceKey] = new Map();
       }
 
-      const currentCount = countsByService[change.serviceKey].get(
+      const currentCount = countsByService[change.serviceKey]?.get(
         change.tag,
       ) || {
         count: 0,
         total: files.length,
       };
 
-      countsByService[change.serviceKey].set(change.tag, {
+      countsByService[change.serviceKey]?.set(change.tag, {
         ...currentCount,
         count: change.action === ContentUpdateAction.ADD ? files.length : 0,
       });
@@ -308,9 +308,9 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
       }
 
       if (change.action === ContentUpdateAction.ADD) {
-        summary[change.serviceKey].adds.push(change.tag);
+        summary[change.serviceKey]?.adds.push(change.tag);
       } else if (change.action === ContentUpdateAction.DELETE) {
-        summary[change.serviceKey].removes.push(change.tag);
+        summary[change.serviceKey]?.removes.push(change.tag);
       }
     }
 
@@ -331,13 +331,10 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
       // Group changes by service
       const updates: TagUpdates = {};
       for (const change of pendingChanges) {
-        if (!updates[change.serviceKey]) {
-          updates[change.serviceKey] = {};
-        }
-
-        const serviceUpdates = updates[change.serviceKey];
+        const serviceUpdates = updates[change.serviceKey] || {};
         const actionUpdates = serviceUpdates[change.action] || [];
         serviceUpdates[change.action] = [...actionUpdates, change.tag];
+        updates[change.serviceKey] = serviceUpdates;
       }
 
       // Apply all changes at once

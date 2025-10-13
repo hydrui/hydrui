@@ -338,9 +338,15 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
             const identifiers = await client.getFileIdsByHashes([
               response.hash,
             ]);
-            await addFilesToPage(pageKey, pageType, [
-              identifiers.metadata[0].file_id,
-            ]);
+            if (identifiers.metadata[0] && identifiers.metadata[0].file_id) {
+              await addFilesToPage(pageKey, pageType, [
+                identifiers.metadata[0].file_id,
+              ]);
+            } else {
+              console.warn(
+                `Hydrus API did not return file id for hash ${response.hash}`,
+              );
+            }
           }
         } finally {
           removeToast(toastId);
@@ -630,7 +636,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
           const currentIndex = files.findIndex(
             (f) => f.file_id === activeFileId,
           );
-          if (currentIndex === -1) return;
+          if (currentIndex === -1 || !files[currentIndex]) return;
           setEditNotesFile(files[currentIndex]);
           setShowEditNotesModal(true);
         },
@@ -871,11 +877,13 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
     }
 
     if (nextIndex !== null && nextIndex >= 0 && nextIndex < files.length) {
-      const nextFileId = files[nextIndex].file_id;
-      setFocusedFileId(nextFileId);
-      document
-        .querySelector<HTMLElement>(`[data-file-id="${nextFileId}"]`)
-        ?.focus();
+      const nextFileId = files[nextIndex]?.file_id;
+      if (nextFileId) {
+        setFocusedFileId(nextFileId);
+        document
+          .querySelector<HTMLElement>(`[data-file-id="${nextFileId}"]`)
+          ?.focus();
+      }
     }
   };
 
@@ -987,6 +995,10 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
       const lastFileIndex = Math.min((lastRow + 1) * cols, files.length);
       for (let i = firstFileIndex; i < lastFileIndex; i++) {
         const file = files[i];
+        if (!file) {
+          console.warn(`Invalid file index: ${i} - This is probably a bug.`);
+          continue;
+        }
         const row = Math.floor(i / cols);
         const col = i % cols;
         const fileLeft =
@@ -1033,7 +1045,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
       }
 
       // Update active file
-      if (fileIds.length > 0) {
+      if (fileIds.length > 0 && fileIds[0]) {
         if (
           !activeFileByPage[pageKey] ||
           !fileIds.includes(activeFileByPage[pageKey])
@@ -1235,7 +1247,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         )}
       </ScrollView>
 
-      {modalIndex !== -1 && (
+      {modalIndex !== -1 && files[modalIndex] && (
         <FileViewerModal
           fileId={files[modalIndex].file_id}
           fileData={files[modalIndex]}

@@ -80,13 +80,21 @@ export const SearchBar: React.FC = () => {
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setSelectedSuggestionIndex((prev) => (prev > 0 ? prev - 1 : 0));
-    } else if (e.key === "Tab" && suggestions.length > 0) {
+    } else if (
+      e.key === "Tab" &&
+      suggestions.length > 0 &&
+      suggestions[selectedSuggestionIndex]
+    ) {
       e.preventDefault();
       const selectedTag = suggestions[selectedSuggestionIndex].value;
       addTag(selectedTag);
     } else if (e.key === "Enter") {
       e.preventDefault();
-      if (suggestions.length > 0 && showSuggestions) {
+      if (
+        suggestions.length > 0 &&
+        showSuggestions &&
+        suggestions[selectedSuggestionIndex]
+      ) {
         const selectedTag = suggestions[selectedSuggestionIndex].value;
         addTag(selectedTag);
       } else if (input.trim() !== "") {
@@ -101,13 +109,15 @@ export const SearchBar: React.FC = () => {
     } else if (e.key === "Backspace") {
       if (input.length === 0 && searchTags.length > 0) {
         e.preventDefault();
-        if (editingTagIndex !== null) {
+        if (editingTagIndex !== null && searchTags[editingTagIndex]) {
           removeSearchTag(searchTags[editingTagIndex]);
           setEditingTagIndex(null);
         } else {
           const index = searchTags.length - 1;
-          setEditingTagIndex(index);
-          setInput(searchTags[index]);
+          if (searchTags[index]) {
+            setEditingTagIndex(index);
+            setInput(searchTags[index]);
+          }
           if (inputRef.current) {
             inputRef.current.focus();
           }
@@ -122,10 +132,10 @@ export const SearchBar: React.FC = () => {
       // Replace the tag at editingTagIndex
       const newTags = [...searchTags];
       newTags[editingTagIndex] = tag;
-
-      removeSearchTag(searchTags[editingTagIndex]);
-      addSearchTag(tag);
-
+      if (searchTags[editingTagIndex]) {
+        removeSearchTag(searchTags[editingTagIndex]);
+        addSearchTag(tag);
+      }
       setEditingTagIndex(null);
     } else {
       addSearchTag(tag);
@@ -142,10 +152,12 @@ export const SearchBar: React.FC = () => {
 
   // Edit a tag
   const handleEditTag = (index: number) => {
-    setEditingTagIndex(index);
-    setInput(searchTags[index]);
-    if (inputRef.current) {
-      inputRef.current.focus();
+    if (searchTags[index]) {
+      setEditingTagIndex(index);
+      setInput(searchTags[index]);
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
     }
   };
 

@@ -102,10 +102,15 @@ const ImportUrlsModal: React.FC<ImportUrlModalProps> = ({
 
   const handleRemoveTag = (tag: string) => {
     if (activeServiceKey) {
-      setTagsByService((prev) => ({
-        ...prev,
-        [activeServiceKey]: prev[activeServiceKey].filter((t) => t !== tag),
-      }));
+      setTagsByService((prev) => {
+        if (!prev[activeServiceKey]) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [activeServiceKey]: prev[activeServiceKey].filter((t) => t !== tag),
+        };
+      });
     }
   };
 

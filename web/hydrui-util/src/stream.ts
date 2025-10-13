@@ -236,7 +236,7 @@ export class RemoteFile extends FileCursor implements File {
     }
 
     const blocksToFetch = this.blocksToFetch(offset, size);
-    if (blocksToFetch.length === 0) {
+    if (blocksToFetch.length === 0 || !blocksToFetch[0]) {
       return;
     }
 
@@ -246,6 +246,7 @@ export class RemoteFile extends FileCursor implements File {
     for (const block of blocksToFetch.slice(1)) {
       const lastRange = contiguousRanges[contiguousRanges.length - 1];
       if (
+        lastRange &&
         lastRange.end + 1 === block &&
         block - lastRange.start < maximumRequestChunks
       ) {

@@ -79,21 +79,21 @@ describe("useFileRatings", () => {
     // Check numerical ratings
     expect(result.current.numericalRatings).toHaveLength(1);
     const numericalRating = result.current.numericalRatings[0];
-    expect(numericalRating.value).toBe(4);
-    expect(numericalRating.minStars).toBe(1);
-    expect(numericalRating.maxStars).toBe(5);
-    expect(numericalRating.starShape).toBe("fat star");
+    expect(numericalRating?.value).toBe(4);
+    expect(numericalRating?.minStars).toBe(1);
+    expect(numericalRating?.maxStars).toBe(5);
+    expect(numericalRating?.starShape).toBe("fat star");
 
     // Check like ratings
     expect(result.current.likeRatings).toHaveLength(1);
     const likeRating = result.current.likeRatings[0];
-    expect(likeRating.value).toBe(true);
-    expect(likeRating.starShape).toBe("circle");
+    expect(likeRating?.value).toBe(true);
+    expect(likeRating?.starShape).toBe("circle");
 
     // Check inc/dec ratings
     expect(result.current.incDecRatings).toHaveLength(1);
     const incDecRating = result.current.incDecRatings[0];
-    expect(incDecRating.value).toBe(1);
+    expect(incDecRating?.value).toBe(1);
   });
 
   it("should skip ratings with unknown service keys", () => {
@@ -109,6 +109,6 @@ describe("useFileRatings", () => {
     const { result } = renderHook(() => useFileRatings(fileWithUnknownService));
 
     expect(result.current.ratings).toHaveLength(1);
-    expect(result.current.ratings[0].serviceKey).toBe("numerical-service");
+    expect(result.current.ratings[0]?.serviceKey).toBe("numerical-service");
   });
 });

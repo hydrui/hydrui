@@ -9,9 +9,7 @@ export function convertPSDLayers(psdLayers: PSDLayer[]): Layer[] {
   const result: Layer[] = [];
   const groupStack: Layer[] = [];
 
-  for (let i = 0; i < psdLayers.length; i++) {
-    const layer = psdLayers[i];
-
+  for (const [i, layer] of psdLayers.entries()) {
     if (layer.groupType === 1 || layer.groupType === 2) {
       const groupLayer: Layer = {
         id: layer.id ?? -i - 1,
@@ -25,7 +23,7 @@ export function convertPSDLayers(psdLayers: PSDLayer[]): Layer[] {
       };
 
       if (groupStack.length > 0) {
-        groupStack[groupStack.length - 1].children?.push(groupLayer);
+        groupStack[groupStack.length - 1]?.children?.push(groupLayer);
       } else {
         result.push(groupLayer);
       }
@@ -47,7 +45,7 @@ export function convertPSDLayers(psdLayers: PSDLayer[]): Layer[] {
       };
 
       if (groupStack.length > 0) {
-        groupStack[groupStack.length - 1].children?.push(genericLayer);
+        groupStack[groupStack.length - 1]?.children?.push(genericLayer);
       } else {
         result.push(genericLayer);
       }
