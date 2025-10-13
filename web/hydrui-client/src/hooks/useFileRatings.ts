@@ -11,9 +11,9 @@ export interface FileRating {
   serviceName: string;
   serviceType: ServiceType;
   value: RatingValue;
-  minStars?: number;
-  maxStars?: number;
-  starShape?: "circle" | "fat star";
+  minStars?: number | undefined;
+  maxStars?: number | undefined;
+  starShape?: "circle" | "fat star" | undefined;
 }
 
 export function useFileRatings(file: FileMetadata | null) {

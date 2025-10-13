@@ -23,7 +23,7 @@ interface LayerRenderData {
   opacity: number;
   fillOpacity: number;
   groupType: PSDSectionType;
-  mask?: PSDLayerMask;
+  mask?: PSDLayerMask | undefined;
 }
 
 function getContext2D(

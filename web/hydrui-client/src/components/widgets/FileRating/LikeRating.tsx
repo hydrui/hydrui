@@ -8,7 +8,7 @@ interface LikeRatingProps {
   value: boolean | null;
   readOnly?: boolean;
   isLoading?: boolean;
-  onChange?: (value: boolean | null) => void;
+  onChange?: ((value: boolean | null) => void) | undefined;
 }
 
 const LikeRating: React.FC<LikeRatingProps> = ({

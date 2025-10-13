@@ -7,7 +7,7 @@ interface IncDecRatingProps {
   value: number | null;
   readOnly?: boolean;
   isLoading?: boolean;
-  onChange?: (value: number | null) => void;
+  onChange?: ((value: number | null) => void) | undefined;
 }
 
 const IncDecRating: React.FC<IncDecRatingProps> = ({

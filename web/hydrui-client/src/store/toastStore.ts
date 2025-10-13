@@ -6,12 +6,12 @@ export interface Toast {
   id: string;
   message: string;
   type: ToastType;
-  duration?: number;
+  duration?: number | undefined;
   createdAt: number;
-  remainingTime?: number;
+  remainingTime?: number | undefined;
   isPaused: boolean;
-  progress?: number;
-  cancelCallback?: () => void;
+  progress?: number | undefined;
+  cancelCallback?: (() => void) | undefined;
 }
 
 interface ToastState {

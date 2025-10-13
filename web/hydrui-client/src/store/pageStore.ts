@@ -313,7 +313,7 @@ export const usePageStore = create<PageState>()(
             try {
               const response = await client.getPages();
 
-              set({ pages: response.pages.pages });
+              set({ pages: response.pages.pages ?? [] });
 
               // If we don't have an active page yet, use the first API page or the search page
               const { activePageKey } = get();
@@ -764,20 +764,26 @@ export const usePageStore = create<PageState>()(
                 const hashes = get()
                   .files.filter((file) => fileIds.includes(file.file_id))
                   .map((file) => file.hash);
-                set((state) => ({
-                  virtualPages: {
-                    ...state.virtualPages,
-                    [pageKey]: {
-                      ...state.virtualPages[pageKey],
-                      fileIds: state.virtualPages[pageKey].fileIds?.filter(
-                        (id) => !fileIds.includes(id),
-                      ),
-                      hashes: state.virtualPages[pageKey].hashes?.filter(
-                        (hash) => !hashes.includes(hash),
-                      ),
-                    },
-                  },
-                }));
+                set((state) => {
+                  const setState: Partial<PageState> = {
+                    virtualPages: { ...state.virtualPages },
+                  };
+                  const page = setState.virtualPages?.[pageKey];
+                  if (!page) {
+                    return {};
+                  }
+                  if (page.fileIds) {
+                    page.fileIds = page.fileIds.filter(
+                      (id) => !fileIds.includes(id),
+                    );
+                  }
+                  if (page.hashes) {
+                    page.hashes = page.hashes.filter(
+                      (hash) => !hashes.includes(hash),
+                    );
+                  }
+                  return setState;
+                });
                 await get().actions.updatePageContents(
                   pageKey,
                   "virtual",

@@ -21,8 +21,8 @@ interface ImageViewerProps {
   fileId: number;
   fileData: FileMetadata;
 
-  navigateLeft?: () => void;
-  navigateRight?: () => void;
+  navigateLeft?: (() => void) | undefined;
+  navigateRight?: (() => void) | undefined;
 }
 
 interface TouchInfo {

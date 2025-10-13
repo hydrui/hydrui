@@ -10,10 +10,10 @@ import "./index.css";
 interface StarRatingProps {
   value: number | null;
   maxStars: number;
-  starShape?: "circle" | "fat star";
+  starShape?: "circle" | "fat star" | undefined;
   readOnly?: boolean;
   isLoading?: boolean;
-  onChange?: (value: number | null) => void;
+  onChange?: ((value: number | null) => void) | undefined;
 }
 
 const StarRating: React.FC<StarRatingProps> = ({

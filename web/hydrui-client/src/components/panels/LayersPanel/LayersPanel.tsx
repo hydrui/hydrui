@@ -93,10 +93,10 @@ const LayersPanel: React.FC<LayersPanelProps> = ({
 
 interface LayerTreeProps {
   layers: Layer[];
-  thumbnailGenerator?: ThumbnailGenerator;
+  thumbnailGenerator?: ThumbnailGenerator | undefined;
   thumbnailSize?: number;
-  onVisibilityChange?: LayerVisibilityChangeCallback;
-  onLayerSelect?: LayerSelectionCallback;
+  onVisibilityChange?: LayerVisibilityChangeCallback | undefined;
+  onLayerSelect?: LayerSelectionCallback | undefined;
   level?: number;
 }
 
@@ -134,10 +134,10 @@ const LayerTree: React.FC<LayerTreeProps> = ({
 
 interface LayerItemProps {
   layer: Layer;
-  thumbnailGenerator?: ThumbnailGenerator;
+  thumbnailGenerator?: ThumbnailGenerator | undefined;
   thumbnailSize: number;
-  onVisibilityChange?: LayerVisibilityChangeCallback;
-  onLayerSelect?: LayerSelectionCallback;
+  onVisibilityChange?: LayerVisibilityChangeCallback | undefined;
+  onLayerSelect?: LayerSelectionCallback | undefined;
   level: number;
 }
 

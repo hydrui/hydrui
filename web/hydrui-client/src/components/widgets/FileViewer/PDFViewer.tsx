@@ -169,8 +169,8 @@ export default function PDFViewer({ fileUrl }: PDFViewerProps) {
             <Page
               key={`page_${index + 1}`}
               pageNumber={index + 1}
-              width={fitToWidth ? containerWidth : undefined}
               scale={fitToWidth ? 1 : scale}
+              {...(fitToWidth ? { width: containerWidth } : {})}
             />
           ))}
         </Document>
