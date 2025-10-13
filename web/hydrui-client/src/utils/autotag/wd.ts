@@ -244,7 +244,7 @@ export function processResultsWD(
   for (const [i, tagData] of session.tagsData.slice(0, numRatings).entries()) {
     const name = processWDTagName(tagData);
     const confidence = confidences[i];
-    if (!confidence) {
+    if (confidence === undefined) {
       console.warn(`Missing confidence for rating tag index ${i}`);
       continue;
     }
@@ -258,7 +258,7 @@ export function processResultsWD(
   for (const [i, tagData] of session.tagsData.slice(numRatings).entries()) {
     const tags = processWDTagData(tagData);
     const confidence = confidences[i + numRatings];
-    if (!confidence) {
+    if (confidence === undefined) {
       console.warn(`Missing confidence for general tag index ${i}`);
       continue;
     }
