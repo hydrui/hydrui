@@ -86,8 +86,10 @@ export class HydrusClient implements HydrusApiClient {
         "Content-Type": "application/json",
         "Hydrus-Client-API-Access-Key": this.apiKey,
       },
-      signal,
     };
+    if (signal) {
+      options.signal = signal;
+    }
 
     // Add body for POST requests
     if (method === "POST" && body) {

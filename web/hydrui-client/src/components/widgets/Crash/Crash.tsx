@@ -4,10 +4,10 @@ import React from "react";
 import "./index.css";
 
 interface CrashProps {
-  error?: Error;
-  errorInfo?: React.ErrorInfo;
-  resetErrorBoundary?: () => void;
-  componentName?: string;
+  error?: Error | undefined;
+  errorInfo?: React.ErrorInfo | undefined;
+  resetErrorBoundary?: () => void | undefined;
+  componentName?: string | undefined;
 }
 
 const Crash: React.FC<CrashProps> = ({

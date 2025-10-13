@@ -4,7 +4,7 @@ export class SQLiteDataView {
   private dataView: DataView;
   private textDecoder: TextDecoder;
   private offset: number;
-  private pageNumber?: number;
+  private pageNumber?: number | undefined;
 
   constructor(
     buffer: DataView,

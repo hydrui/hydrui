@@ -52,22 +52,22 @@ interface RemoteFileOptions {
   /**
    * The chunk size to use for fetching data. Defaults to 4096.
    */
-  chunkSize?: number;
+  chunkSize?: number | undefined;
 
   /**
    * Whether or not to use multipart fetching.
    */
-  multipart?: boolean;
+  multipart?: boolean | undefined;
 
   /**
    * Optional headers to include in HTTP requests.
    */
-  headers?: Record<string, string>;
+  headers?: Record<string, string> | undefined;
 
   /**
    * An abort signal.
    */
-  signal?: AbortSignal;
+  signal?: AbortSignal | undefined;
 }
 
 /**
@@ -163,14 +163,14 @@ export class MemoryFile extends FileCursor implements File {
 export class RemoteFile extends FileCursor implements File {
   private readonly url: string;
   private readonly chunkSize: number;
-  private readonly headers?: Record<string, string>;
+  private readonly headers?: Record<string, string> | undefined;
 
   private dataBuffer: ArrayBuffer;
   private dataView: DataView;
 
-  private currentRequest?: Promise<void>;
+  private currentRequest?: Promise<void> | undefined;
   private chunksFetched: Set<number> = new Set();
-  private abortSignal?: AbortSignal;
+  private abortSignal?: AbortSignal | undefined;
   /**
    * Creates an instance of RemoteFileStream. Prefer using the static `create` method
    * unless the file size is already known.
@@ -279,10 +279,13 @@ export class RemoteFile extends FileCursor implements File {
         // after the previous one is resolved, so that you can loop over the
         // currentRequest value repeatedly until all of them are resolved.
         lastResolve();
-        const response = await fetch(this.url, {
+        const requestInit: RequestInit = {
           headers: { ...this.headers, Range: `bytes=${firstByte}-${lastByte}` },
-          signal: this.abortSignal,
-        });
+        };
+        if (this.abortSignal) {
+          requestInit.signal = this.abortSignal;
+        }
+        const response = await fetch(this.url, requestInit);
         if (!response.ok) {
           throw new Error(
             `Failed to fetch block ${range.start}-${range.end} of ${this.url}: ${response.status} ${response.statusText}`,
@@ -345,17 +348,21 @@ export async function createRemoteFile(
   url: string,
   options: RemoteFileOptions = {},
 ): Promise<File> {
+  const headRequestInit: RequestInit = {
+    method: "HEAD",
+    headers: options.headers ?? {},
+  };
+  const rangeRequestInit: RequestInit = {
+    method: "HEAD",
+    headers: { ...(options.headers ?? {}), Range: "bytes=0-0" },
+  };
+  if (options.signal) {
+    headRequestInit.signal = options.signal;
+    rangeRequestInit.signal = options.signal;
+  }
   const [response, rangeResponse] = await Promise.all([
-    fetch(url, {
-      method: "HEAD",
-      headers: options.headers,
-      signal: options.signal,
-    }),
-    fetch(url, {
-      method: "HEAD",
-      headers: { ...(options.headers ?? {}), Range: "bytes=0-0" },
-      signal: options.signal,
-    }),
+    fetch(url, headRequestInit),
+    fetch(url, rangeRequestInit),
   ]);
 
   if (!response.ok) {
@@ -392,10 +399,13 @@ export async function createRemoteFile(
     useRangeRequests = false;
   }
   if (!useRangeRequests) {
-    const response = await fetch(url, {
+    const requestInit: RequestInit = {
       method: "GET",
-      headers: options.headers,
-    });
+    };
+    if (options.headers) {
+      requestInit.headers = options.headers;
+    }
+    const response = await fetch(url, requestInit);
     if (!response.ok) {
       throw new Error(
         `Failed to fetch file: ${response.status} ${response.statusText}`,

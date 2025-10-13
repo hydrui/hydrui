@@ -56,9 +56,9 @@ export interface PSDLayer {
   // Layer channels
   channels: PSDChannelInfo[];
   // Layer mask (optional)
-  mask?: PSDLayerMask;
+  mask?: PSDLayerMask | undefined;
   // Layer ID (optional)
-  id?: number;
+  id?: number | undefined;
   // Group type
   groupType: PSDSectionType;
 }

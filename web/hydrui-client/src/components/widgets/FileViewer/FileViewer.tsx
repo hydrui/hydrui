@@ -27,8 +27,8 @@ interface FileViewerProps {
   // Whether or not to loop videos and animations
   loop?: boolean;
 
-  navigateLeft?: () => void;
-  navigateRight?: () => void;
+  navigateLeft?: (() => void) | undefined;
+  navigateRight?: (() => void) | undefined;
 }
 
 const FileViewerImpl: React.FC<FileViewerProps> = ({

@@ -125,10 +125,12 @@ const BatchAutoTagModal: React.FC<BatchAutoTagModalProps> = ({
           break;
         }
         updateToastProgress(toast, (i++ * 100) / files.length);
+        const requestInit: RequestInit = {};
+        if (abortController) {
+          requestInit.signal = abortController.signal;
+        }
         const imageData = await (
-          await fetch(client.getFileUrl(file.file_id), {
-            signal: abortController?.signal,
-          })
+          await fetch(client.getFileUrl(file.file_id), requestInit)
         ).blob();
         const result = await worker.processImage(
           autotagThreshold,
