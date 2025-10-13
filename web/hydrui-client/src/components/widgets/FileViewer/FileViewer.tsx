@@ -179,7 +179,7 @@ const MediaPlaceholder: React.FC<MediaPlaceholderProps> = ({
   );
 };
 
-function FileViewer(props: React.PropsWithChildren<FileViewerProps>) {
+function FileViewer(props: FileViewerProps) {
   const [errorInfo, setErrorInfo] = useState<React.ErrorInfo>();
   return (
     <ErrorBoundary

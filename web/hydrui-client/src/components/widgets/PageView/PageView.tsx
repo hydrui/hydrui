@@ -1292,7 +1292,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
   );
 };
 
-function PageView(props: React.PropsWithChildren<PageViewProps>) {
+function PageView(props: PageViewProps) {
   const [errorInfo, setErrorInfo] = useState<React.ErrorInfo>();
   return (
     <ErrorBoundary
