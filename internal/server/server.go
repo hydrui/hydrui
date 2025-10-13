@@ -418,7 +418,11 @@ func New(config Config, clientData *pack.Pack) *Server {
 				return
 			}
 
-			if config.HtpasswdFile != nil {
+			if !config.NoAuth {
+				if config.HtpasswdFile == nil {
+					http.Error(w, "Authentication not configured", http.StatusInternalServerError)
+					return
+				}
 				authenticated, err := config.HtpasswdFile.Authenticate(loginReq.Username, loginReq.Password)
 				if err != nil {
 					log.Printf("Authentication error: %v", err)
