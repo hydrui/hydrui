@@ -101,8 +101,9 @@ const TagInput: React.FC<TagInputProps> = ({
       } else if (input.trim() !== "") {
         addTag(input.trim());
       }
-    } else if (e.key === "Escape") {
+    } else if (e.key === "Escape" && showSuggestions) {
       e.preventDefault();
+      e.stopPropagation();
       setShowSuggestions(false);
     }
   };
