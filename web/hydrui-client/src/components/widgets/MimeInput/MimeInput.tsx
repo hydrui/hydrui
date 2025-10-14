@@ -79,8 +79,9 @@ const MimeInput: React.FC<MimeInputProps> = ({
       } else if (input.trim() !== "") {
         addMimeType(input.trim());
       }
-    } else if (e.key === "Escape") {
+    } else if (e.key === "Escape" && showSuggestions) {
       e.preventDefault();
+      e.stopPropagation();
       setShowSuggestions(false);
     }
   };
