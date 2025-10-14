@@ -1,3 +1,5 @@
+import * as z from "zod/mini";
+
 import { isServerMode } from "@/utils/serverMode";
 
 import {
@@ -5,31 +7,50 @@ import {
   AddFilesRequest,
   AddNotesRequest,
   AddNotesResponse,
+  AddNotesResponseSchema,
+  AddTagsRequest,
   AddUrlRequest,
   AddUrlResponse,
+  AddUrlResponseSchema,
   AssociateUrlRequest,
   DeleteNotesRequest,
+  DismissPopupRequest,
   FileIdentifiersResponse,
+  FileIdentifiersResponseSchema,
   FileMetadataParams,
   FileMetadataResponse,
+  FileMetadataResponseSchema,
   HydrusApiClient,
   PageInfoParams,
   PageInfoResponse,
+  PageInfoResponseSchema,
   PageResponse,
+  PageResponseSchema,
   PopupsResponse,
+  PopupsResponseSchema,
   RefreshPageRequest,
   SearchFilesParams,
   SearchFilesResponse,
+  SearchFilesResponseSchema,
   Service,
   ServicesResponse,
+  ServicesResponseSchema,
   SetFileRelationshipsRequest,
   SetKingsRequest,
+  SetRatingRequest,
   TagUpdates,
   TagsResponse,
+  TagsResponseSchema,
   TagsSearchParams,
 } from "./types";
 
 type NoParams = Record<string, never>;
+
+interface RequestOptions<Params, Request> {
+  body?: Request | undefined;
+  params?: Params | undefined;
+  signal?: AbortSignal | undefined;
+}
 
 /**
  * Hydrus network client API
@@ -61,15 +82,86 @@ export class HydrusClient implements HydrusApiClient {
     }
   }
 
-  /**
-   * Make a request to the Hydrus API
-   */
-  private async request<Response, Request = null, Params = NoParams>(
+  private async get<
+    Params = NoParams,
+    ResponseSchema extends z.ZodMiniType = z.ZodMiniVoid,
+  >(
     endpoint: string,
+    responseSchema: ResponseSchema,
+    options: {
+      params?: Params | undefined;
+      signal?: AbortSignal | undefined;
+    } = {},
+  ): Promise<z.infer<ResponseSchema>> {
+    return this.requestWithResponseBody(
+      "GET",
+      endpoint,
+      responseSchema,
+      options,
+    );
+  }
+
+  private async post<
+    Params = NoParams,
+    Request = null,
+    ResponseSchema extends z.ZodMiniType = z.ZodMiniVoid,
+  >(
+    endpoint: string,
+    responseSchema: ResponseSchema,
+    options: RequestOptions<Params, Request> = {},
+  ): Promise<z.infer<ResponseSchema>> {
+    return this.requestWithResponseBody(
+      "POST",
+      endpoint,
+      responseSchema,
+      options,
+    );
+  }
+
+  private async postEmpty<Params = NoParams, Request = null>(
+    endpoint: string,
+    options: RequestOptions<Params, Request> = {},
+  ): Promise<void> {
+    return this.requestEmpty("POST", endpoint, options);
+  }
+
+  private async requestWithResponseBody<
+    Params = NoParams,
+    Request = null,
+    ResponseSchema extends z.ZodMiniType = z.ZodMiniVoid,
+  >(
     method: "GET" | "POST" = "GET",
-    params?: Params,
-    body?: Request,
-    signal?: AbortSignal,
+    endpoint: string,
+    responseSchema: ResponseSchema,
+    options: RequestOptions<Params, Request> = {},
+  ): Promise<z.infer<ResponseSchema>> {
+    const response = await this.requestRaw(method, endpoint, options);
+
+    // Check if response is empty
+    const contentLength = response.headers.get("Content-Length");
+    const contentType = response.headers.get("Content-Type");
+
+    if (contentLength === "0" || !contentType?.includes("application/json")) {
+      return responseSchema.parse(undefined);
+    }
+
+    // Return the response data
+    return responseSchema.parse(await response.json());
+  }
+
+  private async requestEmpty<Params = NoParams, Request = null>(
+    method: "GET" | "POST" = "GET",
+    endpoint: string,
+    options: RequestOptions<Params, Request> = {},
+  ): Promise<void> {
+    await this.requestRaw(method, endpoint, options);
+    return;
+  }
+
+  private async requestRaw<Params = NoParams, Request = null>(
+    method: "GET" | "POST" = "GET",
+    endpoint: string,
+    { body, params, signal }: RequestOptions<Params, Request> = {},
   ): Promise<Response> {
     // Prepare URL with query parameters
     let url = `${this.baseUrl}${endpoint}`;
@@ -123,16 +215,7 @@ export class HydrusClient implements HydrusApiClient {
       }
     }
 
-    // Check if response is empty
-    const contentLength = response.headers.get("Content-Length");
-    const contentType = response.headers.get("Content-Type");
-
-    if (contentLength === "0" || !contentType?.includes("application/json")) {
-      return {} as Response;
-    }
-
-    // Return the response data
-    return (await response.json()) as Response;
+    return response;
   }
 
   /**
@@ -162,13 +245,10 @@ export class HydrusClient implements HydrusApiClient {
     params: SearchFilesParams,
     signal?: AbortSignal,
   ): Promise<SearchFilesResponse> {
-    return this.request<SearchFilesResponse, null, SearchFilesParams>(
-      "/get_files/search_files",
-      "GET",
+    return this.get("/get_files/search_files", SearchFilesResponseSchema, {
       params,
-      null,
       signal,
-    );
+    });
   }
 
   /**
@@ -178,13 +258,14 @@ export class HydrusClient implements HydrusApiClient {
     fileIds: number[],
     signal?: AbortSignal,
   ): Promise<FileMetadataResponse> {
-    return this.request<FileMetadataResponse, null, FileMetadataParams>(
-      "/get_files/file_metadata",
-      "GET",
-      { file_ids: fileIds, include_notes: true },
-      null,
+    const params: FileMetadataParams = {
+      file_ids: fileIds,
+      include_notes: true,
+    };
+    return this.get("/get_files/file_metadata", FileMetadataResponseSchema, {
+      params,
       signal,
-    );
+    });
   }
 
   /**
@@ -194,13 +275,14 @@ export class HydrusClient implements HydrusApiClient {
     hashes: string[],
     signal?: AbortSignal,
   ): Promise<FileIdentifiersResponse> {
-    return this.request<FileIdentifiersResponse, null, FileMetadataParams>(
-      "/get_files/file_metadata",
-      "GET",
-      { hashes, only_return_identifiers: true },
-      null,
+    const params: FileMetadataParams = {
+      hashes,
+      only_return_identifiers: true,
+    };
+    return this.get("/get_files/file_metadata", FileIdentifiersResponseSchema, {
+      params,
       signal,
-    );
+    });
   }
 
   /**
@@ -210,13 +292,11 @@ export class HydrusClient implements HydrusApiClient {
     hashes: string[],
     signal?: AbortSignal,
   ): Promise<FileMetadataResponse> {
-    return this.request<FileMetadataResponse, null, FileMetadataParams>(
-      "/get_files/file_metadata",
-      "GET",
-      { hashes, include_notes: true },
-      null,
+    const params: FileMetadataParams = { hashes, include_notes: true };
+    return this.get("/get_files/file_metadata", FileMetadataResponseSchema, {
+      params,
       signal,
-    );
+    });
   }
 
   /**
@@ -261,82 +341,68 @@ export class HydrusClient implements HydrusApiClient {
     serviceKey?: string,
     signal?: AbortSignal,
   ): Promise<TagsResponse> {
-    return this.request<TagsResponse, null, TagsSearchParams>(
-      "/add_tags/search_tags",
-      "GET",
-      {
-        search,
-        tag_display_type: "display",
-        ...(serviceKey ? { tag_service_key: serviceKey } : {}),
-      },
-      null,
+    const params: TagsSearchParams = {
+      search,
+      tag_display_type: "display",
+      ...(serviceKey ? { tag_service_key: serviceKey } : {}),
+    };
+    return this.get("/add_tags/search_tags", TagsResponseSchema, {
+      params,
       signal,
-    );
+    });
   }
 
   /**
    * Get pages
    */
   async getPages(): Promise<PageResponse> {
-    return this.request<PageResponse>("/manage_pages/get_pages", "GET");
+    return this.get("/manage_pages/get_pages", PageResponseSchema);
   }
 
   /**
    * Get information about a specific page
    */
   async getPageInfo(pageKey: string): Promise<PageInfoResponse> {
-    return this.request<PageInfoResponse, null, PageInfoParams>(
-      "/manage_pages/get_page_info",
-      "GET",
-      { page_key: pageKey },
-    );
+    const params: PageInfoParams = { page_key: pageKey };
+    return this.get("/manage_pages/get_page_info", PageInfoResponseSchema, {
+      params,
+    });
   }
 
   /**
    * Add files to a page
    */
-  async addFiles(request: AddFilesRequest): Promise<void> {
-    return this.request<void, AddFilesRequest>(
-      "/manage_pages/add_files",
-      "POST",
-      {},
-      request,
-    );
+  async addFiles(body: AddFilesRequest): Promise<void> {
+    return this.postEmpty("/manage_pages/add_files", { body });
   }
 
   /**
    * Refresh a page
    */
   async refreshPage(pageKey: string): Promise<void> {
-    return this.request<void, RefreshPageRequest>(
-      "/manage_pages/refresh_page",
-      "POST",
-      {},
-      { page_key: pageKey },
-    );
+    const body: RefreshPageRequest = { page_key: pageKey };
+    return this.postEmpty("/manage_pages/refresh_page", {
+      body,
+    });
   }
 
   /**
    * Get current popups and jobs
    */
   async getPopups(): Promise<PopupsResponse> {
-    return this.request<PopupsResponse>("/manage_popups/get_popups", "GET");
+    return this.get("/manage_popups/get_popups", PopupsResponseSchema);
   }
 
   /**
    * Dismiss a popup
    */
   async dismissPopup(jobKey: string): Promise<void> {
-    await this.request(
-      "/manage_popups/dismiss_popup",
-      "POST",
-      {},
-      { job_status_key: jobKey },
-    );
+    const body: DismissPopupRequest = { job_status_key: jobKey };
+    await this.postEmpty("/manage_popups/dismiss_popup", { body });
   }
 
   async getServices(): Promise<ServicesResponse> {
-    return this.request<ServicesResponse>("/get_services");
+    return this.get("/get_services", ServicesResponseSchema);
   }
 
   async getService(serviceKey: string): Promise<Service> {
@@ -356,39 +422,23 @@ export class HydrusClient implements HydrusApiClient {
     serviceKey: string,
     rating: boolean | number | null,
   ): Promise<void> {
-    // First get the file hash
-    const response = await this.getFileMetadata([fileId]);
-    if (!response.metadata[0]) {
-      throw new Error("File not found");
-    }
-    const hash = response.metadata[0].hash;
-
-    // Then set the rating
-    await this.request(
-      "/edit_ratings/set_rating",
-      "POST",
-      {},
-      {
-        hash,
-        rating_service_key: serviceKey,
-        rating,
-      },
-    );
+    const body: SetRatingRequest = {
+      file_id: fileId,
+      rating_service_key: serviceKey,
+      rating,
+    };
+    await this.postEmpty("/edit_ratings/set_rating", { body });
   }
 
   /**
    * Add or remove tags from a file
    */
   async editTags(fileIds: number[], updates: TagUpdates): Promise<void> {
-    await this.request(
-      "/add_tags/add_tags",
-      "POST",
-      {},
-      {
-        file_ids: fileIds,
-        service_keys_to_actions_to_tags: updates,
-      },
-    );
+    const body: AddTagsRequest = {
+      file_ids: fileIds,
+      service_keys_to_actions_to_tags: updates,
+    };
+    await this.postEmpty("/add_tags/add_tags", { body });
   }
 
   /**
@@ -422,25 +472,15 @@ export class HydrusClient implements HydrusApiClient {
   /**
    * Import a URL into Hydrus
    */
-  async addUrl(request: AddUrlRequest): Promise<AddUrlResponse> {
-    return this.request<AddUrlResponse, AddUrlRequest>(
-      "/add_urls/add_url",
-      "POST",
-      {},
-      request,
-    );
+  async addUrl(body: AddUrlRequest): Promise<AddUrlResponse> {
+    return this.post("/add_urls/add_url", AddUrlResponseSchema, { body });
   }
 
   /**
    * Associate a URL with a file
    */
-  async associateUrl(request: AssociateUrlRequest): Promise<void> {
-    return this.request<void, AssociateUrlRequest>(
-      "/add_urls/associate_url",
-      "POST",
-      {},
-      request,
-    );
+  async associateUrl(body: AssociateUrlRequest): Promise<void> {
+    return this.postEmpty("/add_urls/associate_url", { body });
   }
 
   /**
@@ -448,15 +488,10 @@ export class HydrusClient implements HydrusApiClient {
    *
    * This endpoint allows setting duplicate status and other relationships between file pairs
    */
-  async setFileRelationships(
-    request: SetFileRelationshipsRequest,
-  ): Promise<void> {
-    return this.request<void, SetFileRelationshipsRequest>(
-      "/manage_file_relationships/set_file_relationships",
-      "POST",
-      {},
-      request,
-    );
+  async setFileRelationships(body: SetFileRelationshipsRequest): Promise<void> {
+    return this.postEmpty("/manage_file_relationships/set_file_relationships", {
+      body,
+    });
   }
 
   /**
@@ -465,29 +500,15 @@ export class HydrusClient implements HydrusApiClient {
    * If multiple files from the same group are specified, the last one in the array becomes the king
    */
   async setKings(fileIds: number[]): Promise<void> {
-    return this.request<void, SetKingsRequest>(
-      "/manage_file_relationships/set_kings",
-      "POST",
-      {},
-      { file_ids: fileIds },
-    );
+    const body: SetKingsRequest = { file_ids: fileIds };
+    return this.postEmpty("/manage_file_relationships/set_kings", { body });
   }
 
-  async addNotes(request: AddNotesRequest): Promise<AddNotesResponse> {
-    return this.request<AddNotesResponse, AddNotesRequest>(
-      "/add_notes/set_notes",
-      "POST",
-      {},
-      request,
-    );
+  async addNotes(body: AddNotesRequest): Promise<AddNotesResponse> {
+    return this.post("/add_notes/set_notes", AddNotesResponseSchema, { body });
   }
 
-  async deleteNotes(request: DeleteNotesRequest): Promise<void> {
-    return this.request<void, DeleteNotesRequest>(
-      "/add_notes/delete_notes",
-      "POST",
-      {},
-      request,
-    );
+  async deleteNotes(body: DeleteNotesRequest): Promise<void> {
+    return this.postEmpty("/add_notes/delete_notes", { body });
   }
 }

@@ -1,72 +1,104 @@
+import * as z from "zod/mini";
+
 import { FileRelationship } from "@/constants/relationships";
 
 import { ServiceType } from "../constants/services";
 
-// Common response structure
-export interface ApiResponse {
-  version: number;
-  hydrus_version: number;
+function unknownValue<T>(field: string, def: T) {
+  return (ctx: z.core.$ZodCatchCtx) => {
+    console.warn(
+      `warning: unknown value ${JSON.stringify(ctx.value)} for ${field}`,
+    );
+    return def;
+  };
 }
+// Common response structure
+export const ApiResponseSchema = z.looseObject({
+  version: z.number(),
+  hydrus_version: z.number(),
+});
+
+export type ApiResponse = z.infer<typeof ApiResponseSchema>;
 
 // Service object types
-export interface Service {
-  name: string;
-  type: ServiceType;
-  type_pretty: string;
-  service_key?: string;
-  star_shape?: "circle" | "fat star";
-  min_stars?: number;
-  max_stars?: number;
-}
+export const ServiceSchema = z.looseObject({
+  name: z.string(),
+  type: z.catch(
+    z.enum(ServiceType),
+    unknownValue("service.type", ServiceType.NULL_SERVICE),
+  ),
+  type_pretty: z.string(),
+  service_key: z.optional(z.string()),
+  star_shape: z.catch(
+    z.optional(z.enum(["circle", "fat star"])),
+    unknownValue("service.star_shape", undefined),
+  ),
+  min_stars: z.optional(z.number()),
+  max_stars: z.optional(z.number()),
+});
 
-export interface ServicesObject {
-  [service_key: string]: Service;
-}
+export type Service = z.infer<typeof ServiceSchema>;
 
-export interface ServicesResponse extends ApiResponse {
-  services: Record<string, Service>;
-}
+export const ServicesObjectSchema = z.record(z.string(), ServiceSchema);
+
+export type ServicesObject = z.infer<typeof ServicesObjectSchema>;
+
+export const ServicesResponseSchema = z.extend(ApiResponseSchema, {
+  services: z.record(z.string(), ServiceSchema),
+});
+
+export type ServicesResponse = z.infer<typeof ServicesResponseSchema>;
 
 // File identifier data
-export interface FileIdentifier {
-  file_id: number;
-  hash: string;
-}
+export const FileIdentifierSchema = z.looseObject({
+  file_id: z.number(),
+  hash: z.string(),
+});
+
+export type FileIdentifier = z.infer<typeof FileIdentifierSchema>;
 
 // File metadata types
-export interface FileMetadata {
-  file_id: number;
-  hash: string;
-  size?: number;
-  mime?: string;
-  width?: number;
-  height?: number;
-  duration?: number | null;
-  has_audio?: boolean;
-  thumbnail_width?: number;
-  thumbnail_height?: number;
-  is_inbox?: boolean;
-  is_local?: boolean;
-  is_trashed?: boolean;
-  is_deleted?: boolean;
-  known_urls?: string[];
-  tags?: {
-    [service_key: string]: {
-      storage_tags: {
-        [status: string]: string[];
-      };
-      display_tags: {
-        [status: string]: string[];
-      };
-    };
-  };
-  ratings?: {
-    [service_key: string]: boolean | number | null;
-  };
-  notes?: {
-    [name: string]: string;
-  };
-}
+export const FileMetadataSchema = z.looseObject({
+  file_id: z.number(),
+  hash: z.string(),
+  size: z.optional(z.number()),
+  mime: z.optional(z.string()),
+  width: z.optional(z.nullable(z.number())),
+  height: z.optional(z.nullable(z.number())),
+  duration: z.optional(z.nullable(z.number())),
+  has_audio: z.optional(z.boolean()),
+  thumbnail_width: z.optional(z.number()),
+  thumbnail_height: z.optional(z.number()),
+  is_inbox: z.optional(z.boolean()),
+  is_local: z.optional(z.boolean()),
+  is_trashed: z.optional(z.boolean()),
+  is_deleted: z.optional(z.boolean()),
+  known_urls: z.catch(
+    z.optional(z.array(z.string())),
+    unknownValue("known_urls", undefined),
+  ),
+  tags: z.optional(
+    z.record(
+      z.string(),
+      z.looseObject({
+        storage_tags: z.record(z.string(), z.array(z.string())),
+        display_tags: z.record(z.string(), z.array(z.string())),
+      }),
+    ),
+  ),
+  ratings: z.optional(
+    z.record(
+      z.string(),
+      z.catch(
+        z.union([z.boolean(), z.number(), z.null()]),
+        unknownValue("metadata.ratings[]", null),
+      ),
+    ),
+  ),
+  notes: z.optional(z.record(z.string(), z.string())),
+});
+
+export type FileMetadata = z.infer<typeof FileMetadataSchema>;
 
 export interface FileDomainParam {
   file_service_key?: string;
@@ -95,10 +127,12 @@ export interface SearchFilesParams extends FileDomainParam {
 }
 
 // Search response
-export interface SearchFilesResponse extends ApiResponse {
-  file_ids: number[];
-  hashes?: string[];
-}
+export const SearchFilesResponseSchema = z.extend(ApiResponseSchema, {
+  file_ids: z.array(z.number()),
+  hashes: z.optional(z.array(z.string())),
+});
+
+export type SearchFilesResponse = z.infer<typeof SearchFilesResponseSchema>;
 
 // File metadata params
 export interface FileMetadataParams extends FilesParam {
@@ -113,31 +147,55 @@ export interface FileMetadataParams extends FilesParam {
 }
 
 // File metadata response
-export interface FileMetadataResponse extends ApiResponse {
-  services: ServicesObject;
-  metadata: FileMetadata[];
-}
+export const FileMetadataResponseSchema = z.extend(ApiResponseSchema, {
+  services: ServicesObjectSchema,
+  metadata: z.array(FileMetadataSchema),
+});
+
+export type FileMetadataResponse = z.infer<typeof FileMetadataResponseSchema>;
 
 // File metadata identifier-only response
-export interface FileIdentifiersResponse extends ApiResponse {
-  services: ServicesObject;
-  metadata: FileIdentifier[];
-}
+export const FileIdentifiersResponseSchema = z.extend(ApiResponseSchema, {
+  services: ServicesObjectSchema,
+  metadata: z.array(FileIdentifierSchema),
+});
+
+export type FileIdentifiersResponse = z.infer<
+  typeof FileIdentifiersResponseSchema
+>;
 
 // Page types
-export interface Page {
-  name: string;
-  page_key: string;
-  page_state: number;
-  page_type: number;
-  is_media_page: boolean;
-  selected: boolean;
-  pages?: Page[];
-}
+export const PageSchema = z.looseObject({
+  name: z.string(),
+  page_key: z.string(),
+  page_state: z.catch(
+    z.optional(z.number()),
+    unknownValue("page.page_state", undefined),
+  ),
+  page_type: z.catch(
+    z.optional(z.number()),
+    unknownValue("page.page_type", undefined),
+  ),
+  is_media_page: z.catch(
+    z.optional(z.boolean()),
+    unknownValue("page.is_media_page", undefined),
+  ),
+  selected: z.catch(
+    z.optional(z.boolean()),
+    unknownValue("page.selected", undefined),
+  ),
+  get pages() {
+    return z.optional(z.array(PageSchema));
+  },
+});
 
-export interface PageResponse extends ApiResponse {
-  pages: Page;
-}
+export type Page = z.infer<typeof PageSchema>;
+
+export const PageResponseSchema = z.extend(ApiResponseSchema, {
+  pages: PageSchema,
+});
+
+export type PageResponse = z.infer<typeof PageResponseSchema>;
 
 export interface PageInfoParams {
   page_key: string;
@@ -145,28 +203,34 @@ export interface PageInfoParams {
 }
 
 // Page info response - this would contain information about files in a page
-export interface PageInfoResponse extends ApiResponse {
-  page_info: {
-    name: string;
-    page_key: string;
-    page_state: number;
-    page_type: number;
-    is_media_page: boolean;
-    management?: Record<string, unknown>;
-    media?: {
-      num_files: number;
-      hash_ids: number[];
-    };
-  };
-}
+export const PageInfoResponseSchema = z.extend(ApiResponseSchema, {
+  page_info: z.looseObject({
+    name: z.string(),
+    page_key: z.string(),
+    page_state: z.number(),
+    page_type: z.number(),
+    is_media_page: z.boolean(),
+    management: z.optional(z.record(z.string(), z.unknown())),
+    media: z.optional(
+      z.looseObject({
+        num_files: z.number(),
+        hash_ids: z.array(z.number()),
+      }),
+    ),
+  }),
+});
+
+export type PageInfoResponse = z.infer<typeof PageInfoResponseSchema>;
 
 // Add file response
-export interface AddFileResponse extends ApiResponse {
-  status: number;
-  hash: string;
-  note: string;
-  traceback?: string;
-}
+export const AddFileResponseSchema = z.extend(ApiResponseSchema, {
+  status: z.number(),
+  hash: z.string(),
+  note: z.string(),
+  traceback: z.optional(z.string()),
+});
+
+export type AddFileResponse = z.infer<typeof AddFileResponseSchema>;
 
 // Add files request
 export interface AddFilesRequest {
@@ -188,12 +252,16 @@ export interface TagsSearchParams extends FileDomainParam {
 }
 
 // Tag types
-export interface TagsResponse extends ApiResponse {
-  tags: {
-    value: string;
-    count: number;
-  }[];
-}
+export const TagsResponseSchema = z.extend(ApiResponseSchema, {
+  tags: z.array(
+    z.looseObject({
+      value: z.string(),
+      count: z.number(),
+    }),
+  ),
+});
+
+export type TagsResponse = z.infer<typeof TagsResponseSchema>;
 
 // URL types
 export interface AssociateUrlRequest {
@@ -205,25 +273,35 @@ export interface AssociateUrlRequest {
 }
 
 // Popup types
-export interface JobStatus {
-  key: string;
-  creation_time: number;
-  had_error: boolean;
-  is_cancellable: boolean;
-  is_cancelled: boolean;
-  is_done: boolean;
-  is_pausable: boolean;
-  is_paused: boolean;
-  nice_string: string;
-  attached_files_mergable?: boolean;
-  files?: {
-    hashes: string[];
-    label?: string;
-  };
-}
+export const JobStatusSchema = z.looseObject({
+  key: z.string(),
+  creation_time: z.catch(z.number(), unknownValue("job.creation_time", 0)),
+  had_error: z.optional(z.boolean()),
+  is_cancellable: z.optional(z.boolean()),
+  is_cancelled: z.optional(z.boolean()),
+  is_done: z.optional(z.boolean()),
+  is_pausable: z.optional(z.boolean()),
+  is_paused: z.optional(z.boolean()),
+  nice_string: z.optional(z.string()),
+  attached_files_mergable: z.optional(z.boolean()),
+  files: z.optional(
+    z.looseObject({
+      hashes: z.array(z.string()),
+      label: z.optional(z.string()),
+    }),
+  ),
+});
 
-export interface PopupsResponse extends ApiResponse {
-  job_statuses: JobStatus[];
+export type JobStatus = z.infer<typeof JobStatusSchema>;
+
+export const PopupsResponseSchema = z.extend(ApiResponseSchema, {
+  job_statuses: z.array(JobStatusSchema),
+});
+
+export type PopupsResponse = z.infer<typeof PopupsResponseSchema>;
+
+export interface DismissPopupRequest {
+  job_status_key: string;
 }
 
 // Tag update types
@@ -235,8 +313,7 @@ export interface TagUpdates {
   [serviceKey: string]: TagUpdate;
 }
 
-export interface AddTagsRequest {
-  hash: string;
+export interface AddTagsRequest extends FilesParam {
   service_keys_to_actions_to_tags: TagUpdates;
   service_keys_to_tags?: Record<string, string[]>;
 }
@@ -250,10 +327,12 @@ export interface AddUrlRequest {
   service_keys_to_additional_tags?: Record<string, string[]>;
 }
 
-export interface AddUrlResponse extends ApiResponse {
-  human_result_text: string;
-  normalised_url: string;
-}
+export const AddUrlResponseSchema = z.extend(ApiResponseSchema, {
+  human_result_text: z.string(),
+  normalised_url: z.string(),
+});
+
+export type AddUrlResponse = z.infer<typeof AddUrlResponseSchema>;
 
 export interface FileRelationshipPair {
   hash_a: string;
@@ -268,8 +347,12 @@ export interface SetFileRelationshipsRequest {
   relationships: FileRelationshipPair[];
 }
 
-export interface SetKingsRequest {
-  file_ids: number[];
+export type SetKingsRequest = FilesParam;
+
+// Ratings
+export interface SetRatingRequest extends FilesParam {
+  rating_service_key: string;
+  rating: boolean | number | null;
 }
 
 // Notes
@@ -282,9 +365,11 @@ export interface AddNotesRequest {
   conflict_resolution?: number;
 }
 
-export interface AddNotesResponse {
-  notes: Record<string, string>;
-}
+export const AddNotesResponseSchema = z.looseObject({
+  notes: z.record(z.string(), z.string()),
+});
+
+export type AddNotesResponse = z.infer<typeof AddNotesResponseSchema>;
 
 export interface DeleteNotesRequest {
   note_names: string[];

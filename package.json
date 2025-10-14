@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@zip.js/zip.js": "^2.8.4",
-    "onnxruntime-web": "^1.23.0"
+    "onnxruntime-web": "^1.23.0",
+    "zod": "^4.1.12"
   }
 }
