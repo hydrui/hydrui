@@ -236,7 +236,7 @@ export class RemoteFile extends FileCursor implements File {
     }
 
     const blocksToFetch = this.blocksToFetch(offset, size);
-    if (blocksToFetch.length === 0 || !blocksToFetch[0]) {
+    if (blocksToFetch.length === 0 || blocksToFetch[0] === undefined) {
       return;
     }
 
