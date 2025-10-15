@@ -80,6 +80,7 @@
   padding-right: 0.5rem;
   padding-top: 0.125rem;
   padding-bottom: 0.125rem;
+  height: 24px;
   font-size: var(--text-sm);
   border-radius: 0.25rem;
   line-height: 20px;

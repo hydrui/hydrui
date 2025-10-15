@@ -2,9 +2,10 @@ import { PlusIcon } from "@heroicons/react/24/solid";
 import { MinusIcon } from "@heroicons/react/24/solid";
 import React, {
   useCallback,
-  useDeferredValue,
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -19,6 +20,7 @@ import {
   usePageActions,
   usePageStore,
 } from "@/store/pageStore";
+import { usePreferencesStore } from "@/store/preferencesStore";
 import { useSearchStore } from "@/store/searchStore";
 import { useServices } from "@/store/servicesStore";
 import { useToastActions } from "@/store/toastStore";
@@ -27,10 +29,36 @@ import { useUIStateActions, useUIStateStore } from "@/store/uiStateStore";
 import TagInput from "../TagInput/TagInput";
 import "./index.css";
 
-function getTagCounts(files: FileMetadata[], useDisplay: boolean) {
+interface TagSummary {
+  value: string;
+  count: number;
+}
+
+// Defines the amount of "scroll slack" used to compute item visibility for the
+// render view. This combats scroll jank at the cost of making rendering more
+// expensive.
+const SCROLL_SLACK = 200;
+
+// Number of files to process during tag counting before yielding.
+const COUNT_YIELD_INTERVAL = 1000;
+
+// Height of a tag list entry, in pixels.
+const TAG_LIST_ENTRY_HEIGHT = 24;
+
+// Margin of a tag list entry, in pixels.
+const TAG_LIST_ENTRY_MARGIN = 4;
+
+// Height of a tag list entry with margin.
+const TAG_LIST_ENTRY_FULL_HEIGHT =
+  TAG_LIST_ENTRY_HEIGHT + TAG_LIST_ENTRY_MARGIN;
+
+async function getTagCounts(files: FileMetadata[], useDisplay: boolean) {
   const fileTagCounts = new Map<string, Set<number>>();
 
-  for (const file of files) {
+  for (const [i, file] of files.entries()) {
+    if (i % COUNT_YIELD_INTERVAL === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 1));
+    }
     if (file.tags) {
       for (const serviceObj of Object.values(file.tags)) {
         const tags = useDisplay
@@ -51,8 +79,11 @@ function getTagCounts(files: FileMetadata[], useDisplay: boolean) {
   return fileTagCounts;
 }
 
-function getTagSummary(files: FileMetadata[], useDisplay: boolean) {
-  const fileTagCounts = getTagCounts(files, useDisplay);
+async function getTagSummary(
+  files: FileMetadata[],
+  useDisplay: boolean,
+): Promise<TagSummary[]> {
+  const fileTagCounts = await getTagCounts(files, useDisplay);
   return Array.from(fileTagCounts.entries())
     .map(([value, fileIds]) => ({
       value,
@@ -82,22 +113,24 @@ const TagList: React.FC = () => {
     actions: { addSearchTag },
     searchTags,
   } = useSearchStore();
-  const selectedFiles =
-    activePageKey &&
-    selectedFilesByPage[activePageKey] &&
-    selectedFilesByPage[activePageKey].length > 0
-      ? files.filter((f) =>
-          selectedFilesByPage[activePageKey]?.includes(f.file_id),
-        )
-      : files;
+  const { useVirtualViewport } = usePreferencesStore();
+  const selectedFiles = useMemo(
+    () =>
+      activePageKey &&
+      selectedFilesByPage[activePageKey] &&
+      selectedFilesByPage[activePageKey].length > 0
+        ? files.filter((f) =>
+            selectedFilesByPage[activePageKey]?.includes(f.file_id),
+          )
+        : files,
+    [activePageKey, files, selectedFilesByPage],
+  );
 
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [quickEdit, setQuickEdit] = useState<boolean>(false);
   const useDisplayTags = !quickEdit;
 
-  const tagSummary = useMemo(() => {
-    return getTagSummary(selectedFiles, useDisplayTags);
-  }, [selectedFiles, useDisplayTags]);
+  const [tagSummary, setTagSummary] = useState<TagSummary[]>([]);
 
   const tagServices = useMemo(
     () =>
@@ -108,16 +141,103 @@ const TagList: React.FC = () => {
     [services],
   );
 
-  const deferredIsLoadingFiles = useDeferredValue(isLoadingFiles);
-  const deferredTagSummary = useDeferredValue(tagSummary);
+  useEffect(() => {
+    let stale = false;
+    getTagSummary(selectedFiles, useDisplayTags).then((summary) => {
+      if (stale) return;
+      setTagSummary(summary);
+    });
+    return () => {
+      stale = true;
+    };
+  }, [selectedFiles, useDisplayTags]);
+
+  const listRef = useRef<HTMLDivElement>(null);
+  const [renderView, setRenderView] = useState({
+    firstIndex: 0,
+    lastIndex: tagSummary.length,
+    topRows: 0,
+    bottomRows: 0,
+  });
+
+  let renderTags: typeof tagSummary;
+  if (useVirtualViewport) {
+    renderTags = tagSummary.slice(renderView.firstIndex, renderView.lastIndex);
+  } else {
+    renderTags = tagSummary;
+  }
+
+  const handleRecalculateRenderView = useCallback(
+    (rows: number) => {
+      if (!useVirtualViewport) return;
+      if (!listRef.current) return;
+      const firstIndex = Math.min(
+        rows,
+        Math.max(
+          0,
+          Math.ceil(
+            (-SCROLL_SLACK +
+              listRef.current.scrollTop -
+              TAG_LIST_ENTRY_FULL_HEIGHT) /
+              TAG_LIST_ENTRY_FULL_HEIGHT,
+          ),
+        ),
+      );
+      const lastIndex = Math.min(
+        rows,
+        Math.max(
+          0,
+          Math.floor(
+            (SCROLL_SLACK +
+              listRef.current.scrollTop +
+              listRef.current.parentElement!.clientHeight) /
+              TAG_LIST_ENTRY_FULL_HEIGHT,
+          ),
+        ),
+      );
+      const topRows = firstIndex;
+      const bottomRows = rows - lastIndex;
+      setRenderView({
+        firstIndex,
+        lastIndex,
+        topRows,
+        bottomRows,
+      });
+    },
+    [useVirtualViewport],
+  );
+
+  useLayoutEffect(() => {
+    const calculateRenderView = () => {
+      handleRecalculateRenderView(tagSummary.length);
+    };
+    calculateRenderView();
+    // ResizeObserver isn't supported in Servo yet, so let's have a fallback for now.
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(calculateRenderView);
+      if (listRef.current) {
+        resizeObserver.observe(listRef.current);
+      }
+    } else {
+      window.addEventListener("resize", calculateRenderView);
+    }
+    return () => {
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      } else {
+        window.removeEventListener("resize", calculateRenderView);
+      }
+    };
+  }, [tagSummary.length, handleRecalculateRenderView]);
 
   const handleTagClick = useCallback(
     (tag: string, event: React.MouseEvent) => {
       // Handle multi-select with Shift or Ctrl/Cmd
       if (event.shiftKey) {
         // Select range of tags
-        const tagIndex = deferredTagSummary.findIndex((t) => t.value === tag);
-        const lastSelectedTagIndex = deferredTagSummary.findIndex(
+        const tagIndex = tagSummary.findIndex((t) => t.value === tag);
+        const lastSelectedTagIndex = tagSummary.findIndex(
           (t) => t.value === selectedTags[selectedTags.length - 1],
         );
 
@@ -125,7 +245,7 @@ const TagList: React.FC = () => {
           const start = Math.min(tagIndex, lastSelectedTagIndex);
           const end = Math.max(tagIndex, lastSelectedTagIndex);
 
-          const tagsInRange = deferredTagSummary
+          const tagsInRange = tagSummary
             .slice(start, end + 1)
             .map((t) => t.value);
 
@@ -145,7 +265,7 @@ const TagList: React.FC = () => {
         setSelectedTags([tag]);
       }
     },
-    [deferredTagSummary, selectedTags, setSelectedTags],
+    [tagSummary, selectedTags, setSelectedTags],
   );
 
   // Add tag to search
@@ -391,13 +511,17 @@ const TagList: React.FC = () => {
         </div>
       ) : undefined}
 
-      {deferredIsLoadingFiles ? (
+      {isLoadingFiles ? (
         <div className="tag-list-loading">
           <div className="tag-list-spinner"></div>
         </div>
       ) : (
-        <div className="tag-list-content">
-          {deferredTagSummary.length === 0 ? (
+        <div
+          className="tag-list-content"
+          ref={listRef}
+          onScroll={() => handleRecalculateRenderView(tagSummary.length)}
+        >
+          {tagSummary.length === 0 ? (
             <div className="tag-list-empty">
               {pageType === "search" && searchTags.length === 0
                 ? "Enter tags to search"
@@ -405,7 +529,17 @@ const TagList: React.FC = () => {
             </div>
           ) : (
             <ul className="tag-list">
-              {deferredTagSummary.map((tag) => (
+              {useVirtualViewport && (
+                <li
+                  style={{
+                    visibility: "hidden",
+                    height: renderView.topRows * TAG_LIST_ENTRY_FULL_HEIGHT,
+                    margin: "0px",
+                    padding: "0px",
+                  }}
+                ></li>
+              )}
+              {renderTags.map((tag) => (
                 <TagListEntry
                   key={tag.value}
                   tag={tag.value}
@@ -419,6 +553,16 @@ const TagList: React.FC = () => {
                   quickEdit={quickEdit}
                 />
               ))}
+              {useVirtualViewport && (
+                <li
+                  style={{
+                    visibility: "hidden",
+                    height: renderView.bottomRows * TAG_LIST_ENTRY_FULL_HEIGHT,
+                    margin: "0px",
+                    padding: "0px",
+                  }}
+                ></li>
+              )}
             </ul>
           )}
         </div>
@@ -437,6 +581,7 @@ interface TagListEntryProps {
   handleAddTag: (tag: string) => void;
   handleRemoveTag: (tag: string) => void;
   quickEdit: boolean;
+  style?: React.CSSProperties | undefined;
 }
 
 const TagListEntry: React.FC<TagListEntryProps> = React.memo(
@@ -450,6 +595,7 @@ const TagListEntry: React.FC<TagListEntryProps> = React.memo(
     handleAddTag,
     handleRemoveTag,
     quickEdit,
+    style,
   }: TagListEntryProps) {
     const handleClick = useCallback(
       (e: React.MouseEvent) => {
@@ -474,6 +620,7 @@ const TagListEntry: React.FC<TagListEntryProps> = React.memo(
         className={`tag-list-entry ${selectedTags.includes(tag) ? "selected" : ""}`}
         onContextMenu={handleContextMenuClick}
         tabIndex={0}
+        style={style}
       >
         <div className="tag-name" onClick={handleClick}>
           <TagLabel tag={tag} selected={selectedTags.includes(tag)} />

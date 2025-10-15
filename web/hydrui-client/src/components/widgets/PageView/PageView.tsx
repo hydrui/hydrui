@@ -46,6 +46,11 @@ import { SearchBar } from "./SearchBar";
 import { Thumbnail } from "./Thumbnail";
 import "./index.css";
 
+// Defines the amount of "scroll slack" used to compute item visibility for the
+// render view. This combats scroll jank at the cost of making rendering more
+// expensive.
+const SCROLL_SLACK = 200;
+
 interface PageViewProps {
   pageKey: string;
 }
@@ -232,7 +237,10 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         Math.max(
           0,
           Math.ceil(
-            (gridRef.current.scrollTop - GAP_SIZE - actualItemHeight) /
+            (-SCROLL_SLACK +
+              gridRef.current.scrollTop -
+              GAP_SIZE -
+              actualItemHeight) /
               (actualItemHeight + GAP_SIZE),
           ),
         ),
@@ -242,7 +250,8 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         Math.max(
           0,
           Math.floor(
-            (gridRef.current.scrollTop +
+            (SCROLL_SLACK +
+              gridRef.current.scrollTop +
               gridRef.current.parentElement!.clientHeight -
               GAP_SIZE) /
               (actualItemHeight + GAP_SIZE),
