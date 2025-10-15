@@ -39,11 +39,24 @@ interface TagSummary {
 // expensive.
 const SCROLL_SLACK = 200;
 
+// Number of files to process during tag counting before yielding.
+const COUNT_YIELD_INTERVAL = 1000;
+
+// Height of a tag list entry, in pixels.
+const TAG_LIST_ENTRY_HEIGHT = 24;
+
+// Margin of a tag list entry, in pixels.
+const TAG_LIST_ENTRY_MARGIN = 4;
+
+// Height of a tag list entry with margin.
+const TAG_LIST_ENTRY_FULL_HEIGHT =
+  TAG_LIST_ENTRY_HEIGHT + TAG_LIST_ENTRY_MARGIN;
+
 async function getTagCounts(files: FileMetadata[], useDisplay: boolean) {
   const fileTagCounts = new Map<string, Set<number>>();
 
   for (const [i, file] of files.entries()) {
-    if (i % 1000 === 0) {
+    if (i % COUNT_YIELD_INTERVAL === 0) {
       await new Promise((resolve) => setTimeout(resolve, 1));
     }
     if (file.tags) {
@@ -158,14 +171,15 @@ const TagList: React.FC = () => {
     (rows: number) => {
       if (!useVirtualViewport) return;
       if (!listRef.current) return;
-      const actualItemHeight = 24 + 4;
       const firstIndex = Math.min(
         rows,
         Math.max(
           0,
           Math.ceil(
-            (-SCROLL_SLACK + listRef.current.scrollTop - actualItemHeight) /
-              actualItemHeight,
+            (-SCROLL_SLACK +
+              listRef.current.scrollTop -
+              TAG_LIST_ENTRY_FULL_HEIGHT) /
+              TAG_LIST_ENTRY_FULL_HEIGHT,
           ),
         ),
       );
@@ -177,7 +191,7 @@ const TagList: React.FC = () => {
             (SCROLL_SLACK +
               listRef.current.scrollTop +
               listRef.current.parentElement!.clientHeight) /
-              actualItemHeight,
+              TAG_LIST_ENTRY_FULL_HEIGHT,
           ),
         ),
       );
@@ -515,7 +529,17 @@ const TagList: React.FC = () => {
             </div>
           ) : (
             <ul className="tag-list">
-              {renderTags.map((tag, i) => (
+              {useVirtualViewport && (
+                <li
+                  style={{
+                    visibility: "hidden",
+                    height: renderView.topRows * TAG_LIST_ENTRY_FULL_HEIGHT,
+                    margin: "0px",
+                    padding: "0px",
+                  }}
+                ></li>
+              )}
+              {renderTags.map((tag) => (
                 <TagListEntry
                   key={tag.value}
                   tag={tag.value}
@@ -527,18 +551,18 @@ const TagList: React.FC = () => {
                   handleAddTag={handleAddTag}
                   handleRemoveTag={handleRemoveTag}
                   quickEdit={quickEdit}
-                  style={{
-                    marginTop:
-                      useVirtualViewport && i === 0
-                        ? renderView.topRows * (24 + 4)
-                        : 0,
-                    marginBottom:
-                      useVirtualViewport && i === renderTags.length - 1
-                        ? 4 + renderView.bottomRows * (24 + 4)
-                        : 4,
-                  }}
                 />
               ))}
+              {useVirtualViewport && (
+                <li
+                  style={{
+                    visibility: "hidden",
+                    height: renderView.bottomRows * TAG_LIST_ENTRY_FULL_HEIGHT,
+                    margin: "0px",
+                    padding: "0px",
+                  }}
+                ></li>
+              )}
             </ul>
           )}
         </div>
