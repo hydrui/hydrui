@@ -103,8 +103,9 @@ export const SearchBar: React.FC = () => {
         // If input is empty, just perform the search
         performSearch();
       }
-    } else if (e.key === "Escape") {
+    } else if (e.key === "Escape" && showSuggestions) {
       e.preventDefault();
+      e.stopPropagation();
       setShowSuggestions(false);
     } else if (e.key === "Backspace") {
       if (input.length === 0 && searchTags.length > 0) {

@@ -28,11 +28,15 @@ const globalKeydownHandler = (e: KeyboardEvent) => {
   // Unfortunately there doesn't appear to be a good way to ignore events that
   // were handled by native widget implementations, so we'll just disable global
   // shortcuts when the focused element is certain input fields.
-  if (e.target instanceof Element) {
+  if (e.target instanceof HTMLElement) {
     switch (e.target.tagName.toLowerCase()) {
       case "input":
       case "textarea":
       case "select":
+        if (e.key === "Escape" && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+          // If pressing escape inside of an input box, leave it.
+          e.target.blur();
+        }
         return;
     }
   }

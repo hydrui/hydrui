@@ -114,7 +114,9 @@ export default function PDFViewer({ fileUrl }: PDFViewerProps) {
   ) => {
     if (e.key === "Enter") {
       e.currentTarget.blur();
-    } else if (e.key === "Escape") {
+    } else if (e.key === "Escape" && isEditingScale) {
+      e.preventDefault();
+      e.stopPropagation();
       setIsEditingScale(false);
     }
   };
