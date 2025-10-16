@@ -38,18 +38,13 @@ interface MetadataLoadController {
   demandFetchMetadata: (fileIds: number[]) => Promise<FileMetadata[]>;
 }
 
-export type PartialFileMetadata = Pick<FileMetadata, "file_id">;
-
-export type MaybePartialFileMetadata = FileMetadata | PartialFileMetadata;
-
 interface PageState extends PersistedState {
   fileIds: number[];
   fileIdToIndex: Map<number, number>;
-  files: MaybePartialFileMetadata[];
-  loadedFiles: FileMetadata[];
   selectedFilesByPage: Record<string, number[]>;
   activeFileByPage: Record<string, number | null>;
   isLoadingFiles: boolean;
+  loadedFiles: FileMetadata[];
   loadedFileCount: number;
   totalFileCount: number;
   error: string | null;
@@ -128,10 +123,9 @@ export const usePageStore = create<PageState>()(
         if (fileIds.length === 0) {
           set({
             isLoadingFiles: false,
-            files: [],
-            loadedFiles: [],
             fileIds: [],
             fileIdToIndex: new Map(),
+            loadedFiles: [],
             loadedFileCount: 0,
             totalFileCount: 0,
           });
@@ -244,9 +238,8 @@ export const usePageStore = create<PageState>()(
           error: null,
           fileIds,
           fileIdToIndex,
-          files: fileIds.map((file_id) => ({ file_id })),
-          loadedFiles: [],
           isLoadingFiles: true,
+          loadedFiles: [],
           loadedFileCount,
           totalFileCount: fileIds.length,
           currentAbortController: abortController,
@@ -308,8 +301,8 @@ export const usePageStore = create<PageState>()(
             }
             set({
               isLoadingFiles: true,
-              loadedFileCount,
               loadedFiles,
+              loadedFileCount,
             });
           }
 
@@ -321,12 +314,11 @@ export const usePageStore = create<PageState>()(
             return;
           set({
             isLoadingFiles: false,
-            files: loadedFiles,
             loadedFiles: loadedFiles,
-            currentAbortController: null,
-            metadataLoadController: null,
             loadedFileCount: fileIds.length,
             totalFileCount: fileIds.length,
+            currentAbortController: null,
+            metadataLoadController: null,
           });
         } catch (error: unknown) {
           // Only update error if it wasn't due to abort
@@ -369,11 +361,10 @@ export const usePageStore = create<PageState>()(
 
         if (hashes.length === 0) {
           set({
-            isLoadingFiles: false,
-            files: [],
-            loadedFiles: [],
             fileIds: [],
             fileIdToIndex: new Map(),
+            isLoadingFiles: false,
+            loadedFiles: [],
             loadedFileCount: 0,
             totalFileCount: 0,
           });
@@ -392,11 +383,11 @@ export const usePageStore = create<PageState>()(
           abortController = new AbortController();
         }
         set({
-          isLoadingFiles: true,
           fileIds: [],
           fileIdToIndex: new Map(),
-          loadedFileCount: 0,
+          isLoadingFiles: true,
           loadedFiles: [],
+          loadedFileCount: 0,
           totalFileCount: hashes.length,
           currentAbortController: abortController,
           metadataLoadController: null,
@@ -439,15 +430,14 @@ export const usePageStore = create<PageState>()(
               fileIdToIndex.set(fileId, i);
             }
             set({
-              isLoadingFiles: false,
-              files: loadedFiles,
-              loadedFiles,
               fileIds,
               fileIdToIndex,
-              currentAbortController: null,
-              metadataLoadController: null,
+              isLoadingFiles: false,
+              loadedFiles,
               loadedFileCount: hashes.length,
               totalFileCount: hashes.length,
+              currentAbortController: null,
+              metadataLoadController: null,
             });
           }
         } catch (error: unknown) {
@@ -482,11 +472,10 @@ export const usePageStore = create<PageState>()(
         selectedPageKeys: [],
         fileIds: [],
         fileIdToIndex: new Map(),
-        files: [],
-        loadedFiles: [],
         selectedFilesByPage: {},
         activeFileByPage: {},
         isLoadingFiles: false,
+        loadedFiles: [],
         loadedFileCount: 0,
         totalFileCount: 0,
         error: null,
@@ -634,16 +623,15 @@ export const usePageStore = create<PageState>()(
               fileIdToIndex.set(file.file_id, i);
             }
             set({
-              lastRequestId: state.lastRequestId + 1,
-              isLoadingFiles: false,
               fileIds: loadedFiles.map((file) => file.file_id),
-              files: loadedFiles,
               fileIdToIndex,
+              isLoadingFiles: false,
               loadedFiles,
-              currentAbortController: null,
-              metadataLoadController: null,
               loadedFileCount: loadedFiles.length,
               totalFileCount: loadedFiles.length,
+              lastRequestId: state.lastRequestId + 1,
+              currentAbortController: null,
+              metadataLoadController: null,
             });
           },
 
@@ -667,8 +655,8 @@ export const usePageStore = create<PageState>()(
               set((state) => ({
                 fileIds: [...state.fileIds, ...newFileIds],
                 fileIdToIndex,
-                files: [...state.files, ...metadata.metadata],
                 isLoadingFiles: false,
+                loadedFiles: [...state.loadedFiles, ...metadata.metadata],
                 loadedFileCount: state.loadedFileCount + newFileIds.length,
               }));
             } catch (error) {
@@ -687,7 +675,7 @@ export const usePageStore = create<PageState>()(
             }
             set((state) => ({
               fileIds: state.fileIds.filter((id) => !fileIds.includes(id)),
-              files: state.files.filter(
+              loadedFiles: state.loadedFiles.filter(
                 (file) => !fileIds.includes(file.file_id),
               ),
               fileIdToIndex,
@@ -702,13 +690,13 @@ export const usePageStore = create<PageState>()(
             }
 
             set((state) => ({
-              activePageKey: pageKey,
-              pageType: type,
-              isLoadingFiles: true,
-              error: null,
-              files: [], // Clear files immediately to prevent stale data display
               fileIds: [],
               fileIdToIndex: new Map(),
+              activePageKey: pageKey,
+              pageType: type,
+              error: null,
+              isLoadingFiles: true,
+              loadedFiles: [],
               selectedPageKeys: state.selectedPageKeys.includes(pageKey)
                 ? state.selectedPageKeys
                 : [pageKey],
@@ -843,12 +831,6 @@ export const usePageStore = create<PageState>()(
               const response = await client.getFileMetadata(fileIds);
               if (response.metadata.length > 0) {
                 set((state) => ({
-                  files: state.files.map((file) => {
-                    const updatedFile = response.metadata.find(
-                      (m) => m.file_id === file.file_id,
-                    );
-                    return updatedFile || file;
-                  }),
                   loadedFiles: state.loadedFiles.map((file) => {
                     const updatedFile = response.metadata.find(
                       (m) => m.file_id === file.file_id,

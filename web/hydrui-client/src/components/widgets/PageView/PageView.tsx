@@ -36,7 +36,7 @@ import useLongPress from "@/hooks/useLongPress";
 import { useShortcut } from "@/hooks/useShortcut";
 import { client } from "@/store/apiStore";
 import { MenuItem, useContextMenuStore } from "@/store/contextMenuStore";
-import { MaybePartialFileMetadata, usePageStore } from "@/store/pageStore";
+import { usePageStore } from "@/store/pageStore";
 import { usePreferencesStore } from "@/store/preferencesStore";
 import { useSearchStore } from "@/store/searchStore";
 import { useToastStore } from "@/store/toastStore";
@@ -72,7 +72,6 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
     },
     selectedFilesByPage,
     activeFileByPage,
-    files,
     fileIds,
     fileIdToIndex,
     loadedFiles,
@@ -125,18 +124,15 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
     showBatchAutotagModal;
   const [renderView, setRenderView] = useState({
     firstIndex: 0,
-    lastIndex: files.length,
+    lastIndex: fileIds.length,
     topRows: 0,
     bottomRows: 0,
     viewHeight: 0,
   });
 
   const selectAllFiles = useCallback(() => {
-    const { files } = usePageStore.getState();
-    setSelectedFiles(
-      pageKey,
-      files.map((f) => f.file_id),
-    );
+    const { fileIds } = usePageStore.getState();
+    setSelectedFiles(pageKey, [...fileIds]);
   }, [pageKey, setSelectedFiles]);
 
   const findSimilarFiles = async (distance: number) => {
@@ -290,9 +286,13 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
       if (!gridRef.current) return;
       const width = gridRef.current.clientWidth - 32; // Account for container padding
       const cols = Math.floor(width / (thumbnailSize + GAP_SIZE));
-      const rows = Math.ceil(files.length / cols);
+      const rows = Math.ceil(fileIds.length / cols);
       setGridDimensions({ cols, rows });
-      handleRecalculateRenderView(files.length, { cols, rows }, thumbnailSize);
+      handleRecalculateRenderView(
+        fileIds.length,
+        { cols, rows },
+        thumbnailSize,
+      );
     };
 
     calculateDimensions();
@@ -315,7 +315,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         window.removeEventListener("resize", calculateDimensions);
       }
     };
-  }, [files.length, handleRecalculateRenderView, thumbnailSize]);
+  }, [fileIds.length, handleRecalculateRenderView, thumbnailSize]);
 
   // Reprioritize metadata loading when scrolling w/ debounce
   useEffect(() => {
@@ -510,7 +510,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
       if (currentIndex !== undefined && activeIndex !== undefined) {
         const start = Math.min(currentIndex, activeIndex);
         const end = Math.max(currentIndex, activeIndex);
-        const rangeIds = files.slice(start, end + 1).map((f) => f.file_id);
+        const rangeIds = fileIds.slice(start, end + 1);
 
         setSelectedFiles(pageKey, rangeIds);
       }
@@ -858,7 +858,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
   };
 
   const modalHasPrevious = modalIndex > 0;
-  const modalHasNext = modalIndex < files.length - 1;
+  const modalHasNext = modalIndex < fileIds.length - 1;
 
   const handleModalPrevious = () => {
     if (modalHasPrevious) {
@@ -890,7 +890,10 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
 
       case "ArrowRight":
         event.preventDefault();
-        if (currentIndex % cols < cols - 1 && currentIndex < files.length - 1) {
+        if (
+          currentIndex % cols < cols - 1 &&
+          currentIndex < fileIds.length - 1
+        ) {
           nextIndex = currentIndex + 1;
         }
         break;
@@ -904,7 +907,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
 
       case "ArrowDown":
         event.preventDefault();
-        if (currentIndex + cols < files.length) {
+        if (currentIndex + cols < fileIds.length) {
           nextIndex = currentIndex + cols;
         }
         break;
@@ -934,7 +937,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
           if (activeIndex !== undefined) {
             const start = Math.min(currentIndex, activeIndex);
             const end = Math.max(currentIndex, activeIndex);
-            const rangeIds = files.slice(start, end + 1).map((f) => f.file_id);
+            const rangeIds = fileIds.slice(start, end + 1);
             setSelectedFiles(pageKey, rangeIds);
           }
         } else {
@@ -949,8 +952,8 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         break;
     }
 
-    if (nextIndex !== null && nextIndex >= 0 && nextIndex < files.length) {
-      const nextFileId = files[nextIndex]?.file_id;
+    if (nextIndex !== null && nextIndex >= 0 && nextIndex < fileIds.length) {
+      const nextFileId = fileIds[nextIndex];
       if (nextFileId) {
         setFocusedFileId(nextFileId);
         document
@@ -1039,7 +1042,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
 
       const selectedFiles: number[] = [];
       const { cols } = gridDimensions;
-      const maxRow = Math.max(0, Math.ceil(files.length / cols) - 1);
+      const maxRow = Math.max(0, Math.ceil(fileIds.length / cols) - 1);
       const firstRow = Math.min(
         maxRow,
         Math.max(
@@ -1065,10 +1068,10 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         gridWidth - cols * thumbnailSize - (cols - 1) * GAP_SIZE;
       const horizontalGutter = extraWidth / cols / 2;
       const firstFileIndex = firstRow * cols;
-      const lastFileIndex = Math.min((lastRow + 1) * cols, files.length);
+      const lastFileIndex = Math.min((lastRow + 1) * cols, fileIds.length);
       for (let i = firstFileIndex; i < lastFileIndex; i++) {
-        const file = files[i];
-        if (!file) {
+        const fileId = fileIds[i];
+        if (!fileId) {
           console.warn(`Invalid file index: ${i} - This is probably a bug.`);
           continue;
         }
@@ -1089,40 +1092,40 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
           fileTop > selectionRect.top + selectionRect.height
         );
         if (intersects) {
-          selectedFiles.push(file.file_id);
+          selectedFiles.push(fileId);
         }
       }
 
       // Update selection
-      let fileIds = [];
+      let fileIdsToSelect = [];
       if (inverseSelection.current) {
         const selectedFileSet = new Set(selectedFiles);
-        fileIds = dragStartSelectionRef.current.filter(
+        fileIdsToSelect = dragStartSelectionRef.current.filter(
           (id) => !selectedFileSet.has(id),
         );
       } else {
-        fileIds = [
+        fileIdsToSelect = [
           ...new Set([...dragStartSelectionRef.current, ...selectedFiles]),
         ];
       }
 
       if (
-        fileIds.length !== 0 ||
+        fileIdsToSelect.length !== 0 ||
         (selectedFilesByPage[pageKey] &&
           selectedFilesByPage[pageKey].length !== 0)
       ) {
-        setSelectedFiles(pageKey, fileIds);
+        setSelectedFiles(pageKey, fileIdsToSelect);
       }
 
       // Update active file
-      if (fileIds.length > 0 && fileIds[0]) {
+      if (fileIdsToSelect.length > 0 && fileIdsToSelect[0]) {
         if (
           !activeFileByPage[pageKey] ||
-          !fileIds.includes(activeFileByPage[pageKey])
+          !fileIdsToSelect.includes(activeFileByPage[pageKey])
         ) {
-          setActiveFileId(pageKey, fileIds[0]);
+          setActiveFileId(pageKey, fileIdsToSelect[0]);
         }
-      } else if (fileIds.length === 0 && activeFileByPage[pageKey]) {
+      } else if (fileIdsToSelect.length === 0 && activeFileByPage[pageKey]) {
         if (activeFileByPage[pageKey]) {
           setActiveFileId(pageKey, null);
         }
@@ -1131,7 +1134,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
     [
       isDragging,
       dragStart,
-      files,
+      fileIds,
       pageKey,
       setSelectedFiles,
       setActiveFileId,
@@ -1167,11 +1170,11 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
   const isLoading =
     isLoadingFiles || (pageType === "search" && searchStatus === "loading");
 
-  let renderFiles: MaybePartialFileMetadata[];
+  let renderFiles: number[];
   if (useVirtualViewport) {
-    renderFiles = files.slice(renderView.firstIndex, renderView.lastIndex);
+    renderFiles = fileIds.slice(renderView.firstIndex, renderView.lastIndex);
   } else {
-    renderFiles = files;
+    renderFiles = fileIds;
   }
 
   return (
@@ -1194,12 +1197,12 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         onContextMenu={handleViewContextMenu}
         onScroll={() =>
           handleRecalculateRenderView(
-            files.length,
+            fileIds.length,
             gridDimensions,
             thumbnailSize,
           )
         }
-        loaded={files.length !== 0 && renderView.lastIndex !== 0}
+        loaded={fileIds.length !== 0 && renderView.lastIndex !== 0}
       >
         {/* Selection rectangle */}
         {isDragging && dragStart && dragEnd && (
@@ -1214,7 +1217,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
           />
         )}
 
-        {isLoading && files.length === 0 ? (
+        {isLoading && fileIds.length === 0 ? (
           // Loading state
           <div className="files-grid-loading">
             <div className="page-loading-spinner"></div>
@@ -1224,7 +1227,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
           <div className="files-grid-error">
             <div>{error}</div>
           </div>
-        ) : files.length === 0 ? (
+        ) : fileIds.length === 0 ? (
           // Empty state
           <div className="files-grid-empty">
             {pageType === "search" ? (
@@ -1271,14 +1274,14 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
           </div>
         ) : (
           // Files grid
-          renderFiles.map((file, i) => (
+          renderFiles.map((fileId, i) => (
             <div
-              key={file.file_id}
+              key={fileId}
               data-file-item
-              data-file-id={file.file_id}
+              data-file-id={fileId}
               className={`file-item ${
-                selectedFiles.includes(file.file_id)
-                  ? activeFileId === file.file_id
+                selectedFiles.includes(fileId)
+                  ? activeFileId === fileId
                     ? "file-item-active"
                     : "file-item-selected"
                   : ""
@@ -1295,23 +1298,23 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
                     ? renderView.bottomRows * (thumbnailSize + GAP_SIZE)
                     : 0,
               }}
-              onClick={(e) => handleFileClick(file.file_id, e)}
-              onDoubleClick={() => handleFileDoubleClick(file.file_id)}
-              onKeyDown={(e) => handleFileKeyDown(file.file_id, e)}
+              onClick={(e) => handleFileClick(fileId, e)}
+              onDoubleClick={() => handleFileDoubleClick(fileId)}
+              onKeyDown={(e) => handleFileKeyDown(fileId, e)}
               onMouseUp={(e) => {
                 if (e.button === 1) {
                   e.preventDefault();
-                  window.open(client.getFileUrl(file.file_id), "_blank");
+                  window.open(client.getFileUrl(fileId), "_blank");
                 }
               }}
-              onContextMenu={(e) => handleFileContextMenu(e, file.file_id)}
+              onContextMenu={(e) => handleFileContextMenu(e, fileId)}
               tabIndex={0}
               role="button"
-              aria-selected={selectedFiles.includes(file.file_id)}
-              aria-label={`File ${file.file_id}`}
+              aria-selected={selectedFiles.includes(fileId)}
+              aria-label={`File ${fileId}`}
               {...longPressHandlers}
             >
-              <Thumbnail fileId={file.file_id} className="thumbnail-wrapper" />
+              <Thumbnail fileId={fileId} className="thumbnail-wrapper" />
             </div>
           ))
         )}
