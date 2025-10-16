@@ -9,7 +9,8 @@ self.addEventListener("activate", (e) => {
     .then(() => self.clients.matchAll())
     .then((clients) => {
       clients.forEach((client) => {
-        if (client instanceof WindowClient) client.navigate(client.url);
+        if (client.type === "window" && "navigate" in client)
+          client.navigate(client.url);
       });
       return Promise.resolve();
     })
