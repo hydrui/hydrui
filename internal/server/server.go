@@ -474,7 +474,7 @@ func New(config Config, clientData *pack.Pack) *Server {
 
 		externalMux.HandleFunc("/sw.js", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/javascript")
-			w.Write(swJS)
+			_, _ = w.Write(swJS)
 		})
 	}
 

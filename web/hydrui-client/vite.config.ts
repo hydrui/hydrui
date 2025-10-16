@@ -25,7 +25,7 @@ export default defineConfig({
     }),
     VitePWA({
       registerType: "prompt",
-      injectRegister: "auto",
+      injectRegister: false,
       includeAssets: ["icon.svg", "thirdparty.html"],
       manifest: {
         name: "Hydrui",
