@@ -62,7 +62,11 @@ const AboutModal: React.FC<AboutModalProps> = ({ onClose }) => {
                 </div>
 
                 <p>
-                  <a href="/thirdparty.html" target="_blank">
+                  <a
+                    href={`${import.meta.env.BASE_URL}/thirdparty.html`}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
                     View third party licenses
                   </a>
                 </p>

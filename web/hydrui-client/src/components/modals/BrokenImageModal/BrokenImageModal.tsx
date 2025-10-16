@@ -30,24 +30,28 @@ const BrokenImageModal: React.FC<BrokenImageModalProps> = ({
         type: "module",
       },
     );
-    const progressToast = addToast(
-      "Sending report...",
-      "info",
-      undefined,
-      () => {
-        worker.terminate();
-        removeToast(progressToast);
-      },
-    );
+    const progressToast = addToast("Sending report...", "info", {
+      duration: false,
+      actions: [
+        {
+          variant: "danger",
+          label: "Cancel",
+          callback: () => {
+            worker.terminate();
+            removeToast(progressToast);
+          },
+        },
+      ],
+    });
     worker.addEventListener("message", (event) => {
       const response = event.data as WorkerResponse;
       if (response.type === "reportBrokenImage") {
         if (response.success) {
           removeToast(progressToast);
-          addToast("Report submitted! Thank you.", "success", 5000);
+          addToast("Report submitted! Thank you.", "success");
         } else {
           removeToast(progressToast);
-          addToast(`Failed to submit report: ${response.error}`, "error", 5000);
+          addToast(`Failed to submit report: ${response.error}`, "error");
         }
         worker.terminate();
       } else if (response.type === "reportBrokenImageProgress") {

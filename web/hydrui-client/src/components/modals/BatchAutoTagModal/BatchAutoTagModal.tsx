@@ -90,7 +90,7 @@ const BatchAutoTagModal: React.FC<BatchAutoTagModalProps> = ({
 
   const processAutotag = async () => {
     if (!activeServiceKey) {
-      addToast("No service key set for batch autotag.", "error", 10000);
+      addToast("No service key set for batch autotag.", "error");
       return;
     }
     let cancelled = false;
@@ -98,21 +98,25 @@ const BatchAutoTagModal: React.FC<BatchAutoTagModalProps> = ({
     if (typeof AbortController !== "undefined") {
       abortController = new AbortController();
     }
-    const toast = addToast(
-      `Processing batch autotag...`,
-      "info",
-      undefined,
-      () => {
-        cancelled = true;
-        abortController?.abort();
-      },
-    );
+    const toast = addToast(`Processing batch autotag...`, "info", {
+      duration: false,
+      actions: [
+        {
+          variant: "danger",
+          label: "Cancel",
+          callback: () => {
+            cancelled = true;
+            abortController?.abort();
+          },
+        },
+      ],
+    });
     let worker: AutotagWorker;
     try {
       worker = await loadTagModel(autotagModel);
     } catch (e) {
       removeToast(toast);
-      addToast(`Error loading autotag model: ${e}.`, "error", 10000);
+      addToast(`Error loading autotag model: ${e}.`, "error");
       return;
     }
     onClose();
@@ -177,10 +181,9 @@ const BatchAutoTagModal: React.FC<BatchAutoTagModalProps> = ({
       addToast(
         `Batch autotag finished: ${added} tags added (${existing} already set).`,
         "success",
-        10000,
       );
     } catch (e) {
-      addToast(`Error processing autotag request: ${e}`, "error", 10000);
+      addToast(`Error processing autotag request: ${e}`, "error");
     } finally {
       removeToast(toast);
       // Ensure resources get released.

@@ -27,13 +27,15 @@ const AddTagModelModal: React.FC<AddTagModelModalProps> = ({ onClose }) => {
       return;
     }
     const url = inputRef.current.value;
-    const toast = addToast("Installing tag model...", "info");
+    const toast = addToast("Installing tag model...", "info", {
+      duration: false,
+    });
     setIsLoading(true);
     try {
       await installTagModelFromUrl(url);
-      addToast("Tag model successfully installed.", "success", 5000);
+      addToast("Tag model successfully installed.", "success");
     } catch (e) {
-      addToast(`Error installing tag model: ${e}`, "error", 10000);
+      addToast(`Error installing tag model: ${e}`, "error");
     } finally {
       setIsLoading(false);
       removeToast(toast);

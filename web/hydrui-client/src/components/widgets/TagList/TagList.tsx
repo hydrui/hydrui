@@ -296,15 +296,19 @@ const TagList: React.FC = () => {
       if (typeof AbortController !== "undefined") {
         abortController = new AbortController();
       }
-      const toast = addToast(
-        "Searching for files with tags...",
-        "info",
-        undefined,
-        () => {
-          abortController?.abort();
-          removeToast(toast);
-        },
-      );
+      const toast = addToast("Searching for files with tags...", "info", {
+        duration: false,
+        actions: [
+          {
+            label: "Cancel",
+            variant: "danger",
+            callback: () => {
+              abortController?.abort();
+              removeToast(toast);
+            },
+          },
+        ],
+      });
       const results = await client.searchFiles(
         { tags },
         abortController?.signal,

@@ -114,7 +114,7 @@ export const Toast: React.FC<ToastProps> = ({
     >
       <div className="toast-content">
         <div className="toast-message">{toast.message}</div>
-        {!toast.cancelCallback ? (
+        {toast.actions.length === 0 ? (
           <button
             onClick={() => onRemove(toast.id)}
             className="toast-close-button"
@@ -124,10 +124,20 @@ export const Toast: React.FC<ToastProps> = ({
           </button>
         ) : null}
       </div>
-      {toast.cancelCallback ? (
-        <PushButton onClick={() => toast.cancelCallback?.()} variant="danger">
-          Cancel
-        </PushButton>
+
+      {/* Actions */}
+      {toast.actions.length > 0 ? (
+        <div className="toast-buttons">
+          {toast.actions.map((action) => (
+            <PushButton
+              onClick={action.callback}
+              variant={action.variant}
+              key={action.label}
+            >
+              {action.label}
+            </PushButton>
+          ))}
+        </div>
       ) : null}
 
       {/* Progress bar */}

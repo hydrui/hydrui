@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:subdir": "tsc && vite build --base /client",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -34,6 +35,7 @@
     "jsdom": "^26",
     "typescript": "^5",
     "vite": "^7",
+    "vite-plugin-pwa": "^1.1.0",
     "vite-plugin-static-copy": "^3",
     "vitest": "^3"
   },

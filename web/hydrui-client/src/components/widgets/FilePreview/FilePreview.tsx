@@ -58,7 +58,7 @@ const FilePreview: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to update rating:", error);
-      addToast("Failed to update rating", "error", 5000);
+      addToast("Failed to update rating", "error");
     } finally {
       setUpdatingServices((prev) => {
         const next = new Set(prev);

@@ -2,16 +2,24 @@ import { create } from "zustand";
 
 export type ToastType = "error" | "warning" | "info" | "success";
 
+const DEFAULT_TOAST_DURATION = 10000;
+
 export interface Toast {
   id: string;
   message: string;
   type: ToastType;
-  duration?: number | undefined;
+  duration: number | false;
   createdAt: number;
-  remainingTime?: number | undefined;
+  remainingTime: number | false;
   isPaused: boolean;
   progress?: number | undefined;
-  cancelCallback?: (() => void) | undefined;
+  actions: ToastAction[];
+}
+
+interface ToastAction {
+  label: string;
+  callback: () => void;
+  variant?: "primary" | "secondary" | "danger" | "muted";
 }
 
 interface ToastState {
@@ -20,8 +28,10 @@ interface ToastState {
     addToast: (
       message: string,
       type: ToastType,
-      duration?: number,
-      cancelCallback?: () => void,
+      options?: {
+        duration?: number | false;
+        actions?: ToastAction[];
+      },
     ) => string;
     removeToast: (id: string) => void;
     pauseToast: (id: string) => void;
@@ -36,7 +46,11 @@ export const useToastActions = () => useToastStore((state) => state.actions);
 export const useToastStore = create<ToastState>((set) => ({
   toasts: [],
   actions: {
-    addToast: (message, type, duration, cancelCallback) => {
+    addToast: (
+      message,
+      type,
+      { duration = DEFAULT_TOAST_DURATION, actions = [] } = {},
+    ) => {
       const id = Math.random().toString(36).substring(2);
       set((state) => ({
         toasts: [
@@ -46,7 +60,7 @@ export const useToastStore = create<ToastState>((set) => ({
             message,
             type,
             duration,
-            cancelCallback,
+            actions,
             createdAt: Date.now(),
             remainingTime: duration,
             isPaused: false,
