@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 
+import ToastContainer from "@/components/widgets/Toast/ToastContainer";
 import { client, useApiActions, verifyAuthentication } from "@/store/apiStore";
 
 import "./index.css";
@@ -51,6 +52,7 @@ const NoAuthScreen: React.FC = () => {
         {isLoading && <p className="no-auth-message">Creating session...</p>}
         {error && <div className="no-auth-error">{error}</div>}
       </div>
+      <ToastContainer />
     </div>
   );
 };

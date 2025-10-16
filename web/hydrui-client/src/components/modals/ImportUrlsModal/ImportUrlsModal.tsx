@@ -143,7 +143,7 @@ const ImportUrlsModal: React.FC<ImportUrlModalProps> = ({
               completed: prev.completed + 1,
             }));
           } catch (error) {
-            addToast(`Error importing ${url}: ${error}`, "error", 5000);
+            addToast(`Error importing ${url}: ${error}`, "error");
             console.error(`Failed to import URL: ${url}`, error);
             failureCount++;
           }
@@ -154,7 +154,6 @@ const ImportUrlsModal: React.FC<ImportUrlModalProps> = ({
       addToast(
         `Import finished. ${successCount} URL(s) imported, ${failureCount} failed.`,
         "success",
-        5000,
       );
 
       if (pageType === "hydrus") {

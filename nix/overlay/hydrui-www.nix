@@ -25,7 +25,7 @@ buildNpmPackage {
     pango
   ];
 
-  npmDepsHash = "sha256-MSjdxwkeUdkLUpcr3VWdmf/geisLhw9fh5RFKJDMA2A=";
+  npmDepsHash = "sha256-/tnGgnEAPke34SBTN/F0ZcSTdJPj6NpPsd8yuOwlRKQ=";
 
   buildPhase = ''
     npm run --workspaces build

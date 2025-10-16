@@ -400,14 +400,13 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
         addToast(
           `Autotag request succeeded: ${result.tagResults.length} tags found (${existing} already set).`,
           "success",
-          10000,
         );
       } finally {
         // Ensure resources get released.
         worker.release();
       }
     } catch (e) {
-      addToast(`Error processing autotag request: ${e}`, "error", 10000);
+      addToast(`Error processing autotag request: ${e}`, "error");
     } finally {
       removeToast(toast);
     }

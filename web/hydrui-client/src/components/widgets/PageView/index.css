@@ -17,6 +17,9 @@
   align-content: start;
   flex-grow: 1;
   position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .page-selection-rectangle {
@@ -99,8 +102,6 @@
   cursor: pointer;
   background-color: var(--color-gray-700);
   margin: 0 auto;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
 }
 
 .file-item:focus {
@@ -149,8 +150,6 @@
   height: 100%;
   width: 100%;
   object-fit: contain;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
 }
 
 .thumbnail-loading {

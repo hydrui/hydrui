@@ -150,15 +150,19 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
     if (typeof AbortController !== "undefined") {
       abortController = new AbortController();
     }
-    const toast = addToast(
-      "Searching for similar files...",
-      "info",
-      undefined,
-      () => {
-        abortController?.abort();
-        removeToast(toast);
-      },
-    );
+    const toast = addToast("Searching for similar files...", "info", {
+      duration: false,
+      actions: [
+        {
+          variant: "danger",
+          label: "Cancel",
+          callback: () => {
+            abortController?.abort();
+            removeToast(toast);
+          },
+        },
+      ],
+    });
     const results = await client.searchFiles(
       { tags: [query] },
       abortController?.signal,
@@ -315,15 +319,19 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         if (typeof AbortController !== "undefined") {
           abortController = new AbortController();
         }
-        const toastId = addToast(
-          `Uploading ${file.name}...`,
-          "info",
-          undefined,
-          () => {
-            abortController?.abort();
-            removeToast(toastId);
-          },
-        );
+        const toastId = addToast(`Uploading ${file.name}...`, "info", {
+          duration: false,
+          actions: [
+            {
+              variant: "danger",
+              label: "Cancel",
+              callback: () => {
+                abortController?.abort();
+                removeToast(toastId);
+              },
+            },
+          ],
+        });
         try {
           const response = await client.uploadFile(
             file,
@@ -335,7 +343,6 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
           addToast(
             `Uploaded ${file.name}${response.note ? `: ${response.note}` : ""}`,
             "success",
-            5000,
           );
           if (pageType === "hydrus") {
             await client.addFiles({
@@ -695,13 +702,9 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
                 document.body.appendChild(form);
                 submitInput.click();
                 document.body.removeChild(form);
-                addToast("Dispatched Sauce Nao request.", "success", 10000);
+                addToast("Dispatched Sauce Nao request.", "success");
               } catch (e) {
-                addToast(
-                  `Error creating Sauce Nao request: ${e}`,
-                  "error",
-                  10000,
-                );
+                addToast(`Error creating Sauce Nao request: ${e}`, "error");
               } finally {
                 removeToast(toast);
               }

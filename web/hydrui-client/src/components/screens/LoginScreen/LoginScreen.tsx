@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from "react";
 
 import PushButton from "@/components/widgets/PushButton/PushButton";
+import ToastContainer from "@/components/widgets/Toast/ToastContainer";
 import { client, useApiActions, verifyAuthentication } from "@/store/apiStore";
 
 import "./index.css";
@@ -98,6 +99,7 @@ const LoginScreen: React.FC = () => {
           </PushButton>
         </form>
       </div>
+      <ToastContainer />
     </div>
   );
 };

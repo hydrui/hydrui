@@ -467,13 +467,15 @@ const ModelsManager: React.FC<ModelsManagerProps> = ({
 
   const handleBlob = useCallback(
     async (blob: Blob) => {
-      const toast = addToast("Attempting to install tag model...", "info");
+      const toast = addToast("Attempting to install tag model...", "info", {
+        duration: false,
+      });
       setIsLoading(true);
       try {
         await installTagModelFromBlob(blob);
-        addToast("Tag model successfully installed.", "success", 5000);
+        addToast("Tag model successfully installed.", "success");
       } catch (e) {
-        addToast(`Error installing model: ${e}`, "error", 10000);
+        addToast(`Error installing model: ${e}`, "error");
       } finally {
         setIsLoading(false);
         removeToast(toast);
@@ -488,7 +490,7 @@ const ModelsManager: React.FC<ModelsManagerProps> = ({
       try {
         await clearInstalledFiles(name);
       } catch (e) {
-        addToast(`Error clearing tag model files: ${e}`, "error", 10000);
+        addToast(`Error clearing tag model files: ${e}`, "error");
       } finally {
         setIsLoading(false);
       }
@@ -498,13 +500,15 @@ const ModelsManager: React.FC<ModelsManagerProps> = ({
 
   const download = useCallback(
     async (name: string) => {
-      const toast = addToast("Downloading tag model...", "info");
+      const toast = addToast("Downloading tag model...", "info", {
+        duration: false,
+      });
       setIsLoading(true);
       try {
         await downloadTagModel(name);
-        addToast("Tag model successfully downloaded.", "success", 5000);
+        addToast("Tag model successfully downloaded.", "success");
       } catch (e) {
-        addToast(`Error downloading tag model: ${e}`, "error", 10000);
+        addToast(`Error downloading tag model: ${e}`, "error");
       } finally {
         setIsLoading(false);
         removeToast(toast);
@@ -518,7 +522,7 @@ const ModelsManager: React.FC<ModelsManagerProps> = ({
     try {
       await resetTagModels();
     } catch (e) {
-      addToast(`Error resetting all models: ${e}`, "error", 10000);
+      addToast(`Error resetting all models: ${e}`, "error");
     } finally {
       setIsLoading(false);
     }
@@ -530,7 +534,7 @@ const ModelsManager: React.FC<ModelsManagerProps> = ({
       try {
         await uninstallTagModel(name);
       } catch (e) {
-        addToast(`Error uninstalling tag model: ${e}`, "error", 10000);
+        addToast(`Error uninstalling tag model: ${e}`, "error");
       } finally {
         setIsLoading(false);
       }

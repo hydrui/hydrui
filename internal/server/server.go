@@ -29,6 +29,9 @@ import (
 //go:embed index.html.tmpl
 var indexHTML string
 
+//go:embed sw.js
+var swJS []byte
+
 type TemplateData struct {
 	CSP          string
 	JSPath       string
@@ -467,6 +470,11 @@ func New(config Config, clientData *pack.Pack) *Server {
 				Secure:   config.Secure,
 				SameSite: http.SameSiteStrictMode,
 			})
+		})
+
+		externalMux.HandleFunc("/sw.js", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/javascript")
+			_, _ = w.Write(swJS)
 		})
 	}
 

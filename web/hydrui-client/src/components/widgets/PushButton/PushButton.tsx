@@ -5,7 +5,7 @@ interface PushButtonProps {
   className?: string;
   onClick: React.MouseEventHandler<HTMLButtonElement>;
   disabled?: boolean;
-  variant?: "primary" | "secondary" | "danger" | "muted";
+  variant?: "primary" | "secondary" | "danger" | "muted" | undefined;
 }
 
 const PushButton: React.FC<PushButtonProps> = ({

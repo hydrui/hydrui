@@ -29,13 +29,13 @@ export default function useLongPress(
       if (e.pointerType === "mouse") {
         return;
       }
-      setStartLongPress(true);
       eventRef.current = e;
+      setStartLongPress(true);
     },
-    onPointerUp: (e: React.PointerEvent) => {
-      if (e.pointerType === "mouse") {
-        return;
-      }
+    onPointerUp: () => {
+      setStartLongPress(false);
+    },
+    onPointerLeave: () => {
       setStartLongPress(false);
     },
   };

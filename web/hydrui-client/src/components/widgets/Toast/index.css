@@ -74,19 +74,10 @@
   cursor: pointer;
 }
 
-.toast-cancel-button {
-  color: var(--color-gray-400);
-  background-color: color-mix(in oklab, var(--color-gray-700) 50%, transparent);
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
-  padding-top: 0.25rem;
-  padding-bottom: 0.25rem;
+.toast-buttons {
+  display: flex;
+  gap: 0.5rem;
   margin-top: 0.5rem;
-  border-radius: var(--radius-md);
-}
-
-.toast-cancel-button:hover {
-  color: var(--color-gray-300);
 }
 
 .toast-progress-container {
