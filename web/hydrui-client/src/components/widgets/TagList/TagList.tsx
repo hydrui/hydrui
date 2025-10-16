@@ -102,7 +102,7 @@ const TagList: React.FC = () => {
   const { setLastActiveTagService } = useUIStateActions();
   const [activeServiceKey, setActiveServiceKey] = useState<string | null>();
   const activePageKey = usePageStore((state) => state.activePageKey);
-  const files = usePageStore((state) => state.files);
+  const loadedFiles = usePageStore((state) => state.loadedFiles);
   const isLoadingFiles = usePageStore((state) => state.isLoadingFiles);
   const pageType = usePageStore((state) => state.pageType);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -114,17 +114,17 @@ const TagList: React.FC = () => {
     searchTags,
   } = useSearchStore();
   const { useVirtualViewport } = usePreferencesStore();
-  const selectedFiles = useMemo(
-    () =>
-      activePageKey &&
+  const selectedFiles = useMemo(() => {
+    return activePageKey &&
       selectedFilesByPage[activePageKey] &&
       selectedFilesByPage[activePageKey].length > 0
-        ? files.filter((f) =>
-            selectedFilesByPage[activePageKey]?.includes(f.file_id),
-          )
-        : files,
-    [activePageKey, files, selectedFilesByPage],
-  );
+      ? loadedFiles.filter((f) =>
+          selectedFilesByPage[activePageKey]?.includes(f.file_id),
+        )
+      : !isLoadingFiles
+        ? loadedFiles
+        : [];
+  }, [activePageKey, loadedFiles, selectedFilesByPage, isLoadingFiles]);
 
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [quickEdit, setQuickEdit] = useState<boolean>(false);
@@ -335,7 +335,7 @@ const TagList: React.FC = () => {
       }
       setSelectedFiles(
         activePageKey,
-        files
+        loadedFiles
           .filter((f) => {
             if (!f.tags) {
               return false;
@@ -361,7 +361,7 @@ const TagList: React.FC = () => {
           .map((f) => f.file_id),
       );
     },
-    [setSelectedFiles, activePageKey, files],
+    [setSelectedFiles, activePageKey, loadedFiles],
   );
 
   const handleContextMenu = useCallback(
@@ -515,7 +515,7 @@ const TagList: React.FC = () => {
         </div>
       ) : undefined}
 
-      {isLoadingFiles ? (
+      {isLoadingFiles && selectedFiles.length === 0 ? (
         <div className="tag-list-loading">
           <div className="tag-list-spinner"></div>
         </div>

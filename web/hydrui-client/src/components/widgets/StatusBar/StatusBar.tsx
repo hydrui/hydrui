@@ -10,7 +10,7 @@ import "./index.css";
 const StatusBar: React.FC = () => {
   const { searchTags, searchStatus } = useSearchStore();
   const {
-    files,
+    loadedFiles,
     isLoadingFiles: isLoading,
     pageType,
     pageName,
@@ -21,7 +21,7 @@ const StatusBar: React.FC = () => {
   } = usePageStore();
 
   // Calculate file stats
-  const fileStats = files.reduce(
+  const fileStats = loadedFiles.reduce(
     (stats, file) => {
       const totalSize = stats.totalSize + (file.size || 0);
       const mime = file.mime || "";
@@ -59,9 +59,9 @@ const StatusBar: React.FC = () => {
               </span>
             ) : searchStatus === "initial" ? (
               <span className="status-bar-text-muted">No search active</span>
-            ) : files.length > 0 ? (
+            ) : loadedFiles.length > 0 ? (
               <span>
-                {files.length} file{files.length !== 1 ? "s" : ""}
+                {loadedFiles.length} file{loadedFiles.length !== 1 ? "s" : ""}
                 {searchTags.length > 0 && (
                   <span className="status-bar-text-muted status-bar-text-indent">
                     for {searchTags.join(", ")}
@@ -97,8 +97,8 @@ const StatusBar: React.FC = () => {
                 </span>
               ) : error ? (
                 <span className="status-bar-text-error">{error}</span>
-              ) : files.length > 0 ? (
-                `${files.length} file${files.length !== 1 ? "s" : ""}`
+              ) : loadedFiles.length > 0 ? (
+                `${loadedFiles.length} file${loadedFiles.length !== 1 ? "s" : ""}`
               ) : (
                 "No files"
               )}
@@ -106,7 +106,7 @@ const StatusBar: React.FC = () => {
           )}
         </div>
 
-        {files.length > 0 &&
+        {loadedFiles.length > 0 &&
           fileStats.images + fileStats.videos + fileStats.other > 0 && (
             <div className="status-bar-file-stats">
               {fileStats.images > 0 && (

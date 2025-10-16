@@ -158,7 +158,7 @@ const ImportUrlsModal: React.FC<ImportUrlModalProps> = ({
 
       if (pageType === "hydrus") {
         setTimeout(() => {
-          updatePageContents(pageKey, pageType, false);
+          updatePageContents(pageKey, pageType);
         }, 1000);
       }
     } catch (error) {
