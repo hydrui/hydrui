@@ -28,6 +28,7 @@ export const Thumbnail: React.FC<ThumbnailProps> = React.memo(
             alt={`Thumbnail ${fileId}`}
             className="thumbnail-image"
             loading="lazy"
+            draggable="false"
             onLoad={() => setIsLoading(false)}
             onError={() => {
               setIsLoading(false);
