@@ -137,15 +137,9 @@ async function main() {
     __dirname,
     "../../../internal/webdata/client.pack",
   );
-  const siteDistPath = resolve(__dirname, "../../hydrui-site/dist");
-  const sitePackPath = resolve(
-    __dirname,
-    "../../../internal/webdata/site.pack",
-  );
 
   try {
     await pack(clientDistPath, clientPackPath);
-    await pack(siteDistPath, sitePackPath);
   } catch (error) {
     console.error("Error creating archives:", error);
     process.exit(1);
