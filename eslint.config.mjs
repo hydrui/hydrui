@@ -6,7 +6,7 @@ import { globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  globalIgnores(["**/dist/", "**/.direnv/"]),
+  globalIgnores(["**/dist/", "**/.direnv/", "internal/server/sw.js"]),
   eslint.configs.recommended,
   tseslint.configs.recommended,
   react.configs.flat.recommended,
