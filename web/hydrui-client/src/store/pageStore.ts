@@ -133,7 +133,6 @@ export const usePageStore = create<PageState>()(
         }
 
         const fileIdChunks: number[][] = [];
-        const loadedFiles: FileMetadata[] = [];
         const fileIdToChunk = new Map<number, number[]>();
         const fileIdToIndex = new Map<number, number>();
         const chunkToPromise = new Map<
@@ -211,7 +210,7 @@ export const usePageStore = create<PageState>()(
                 `File ID not in page: ${fileId}. This is likely a bug.`,
               );
             }
-            const loadedFile = loadedFiles[index];
+            const loadedFile = get().loadedFiles[index];
             if (!loadedFile) {
               throw new Error(
                 `File ID unexpectedly unrealized: ${fileId}. This is likely a bug.`,
@@ -289,20 +288,22 @@ export const usePageStore = create<PageState>()(
 
             // Update progress
             loadedFileCount += response.metadata.length;
-            for (const file of response.metadata) {
-              const index = fileIdToIndex.get(file.file_id);
-              if (index === undefined) {
-                console.warn(
-                  `Hydrus returned unexpected file ID ${file.file_id}`,
-                );
-                continue;
+            set((state) => {
+              const loadedFiles = state.loadedFiles;
+              for (const file of response.metadata) {
+                const index = fileIdToIndex.get(file.file_id);
+                if (index === undefined) {
+                  console.warn(
+                    `Hydrus returned unexpected file ID ${file.file_id}`,
+                  );
+                  continue;
+                }
+                loadedFiles[index] = file;
               }
-              loadedFiles[index] = file;
-            }
-            set({
-              isLoadingFiles: true,
-              loadedFiles,
-              loadedFileCount,
+              return {
+                loadedFiles,
+                loadedFileCount,
+              };
             });
           }
 
@@ -314,9 +315,6 @@ export const usePageStore = create<PageState>()(
             return;
           set({
             isLoadingFiles: false,
-            loadedFiles: loadedFiles,
-            loadedFileCount: fileIds.length,
-            totalFileCount: fileIds.length,
             currentAbortController: null,
             metadataLoadController: null,
           });
