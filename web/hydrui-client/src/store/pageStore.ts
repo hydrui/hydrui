@@ -639,6 +639,7 @@ export const usePageStore = create<PageState>()(
 
           cancelCurrentPageLoad: () => {
             const state = get();
+            useSearchStore.getState().cancelSearch?.();
             if (state.currentAbortController) {
               state.currentAbortController.abort();
             }
