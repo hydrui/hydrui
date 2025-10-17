@@ -37,6 +37,7 @@ interface PersistedState {
 interface MetadataLoadController {
   reprioritize: (fileIds: number[]) => void;
   demandFetchMetadata: (fileIds: number[]) => Promise<FileMetadata[]>;
+  wakeup: () => void;
 }
 
 interface PageState extends PersistedState {
@@ -45,6 +46,8 @@ interface PageState extends PersistedState {
   selectedFilesByPage: Record<string, number[]>;
   activeFileByPage: Record<string, number | null>;
   isLoadingFiles: boolean;
+  isLoadingPaused: boolean;
+  isLoadingAwake: boolean;
   loadedFiles: FileMetadata[];
   loadedFileCount: number;
   totalFileCount: number;
@@ -86,6 +89,7 @@ interface PageState extends PersistedState {
       pageKey: string,
       updates: Partial<VirtualPage>,
     ) => Promise<void>;
+    setIsLoadingPaused: (isLoadingPaused: boolean) => void;
   };
 }
 
@@ -109,6 +113,20 @@ export const usePageStore = create<PageState>()(
         }
       };
 
+      const pauseWait = (wakeupRef: { value: () => void }) => {
+        if (!get().isLoadingPaused) {
+          wakeupRef.value = () => {};
+          return Promise.resolve();
+        }
+        set({ isLoadingAwake: false });
+        return new Promise<void>((resolve) => {
+          wakeupRef.value = () => {
+            set({ isLoadingAwake: true });
+            resolve();
+          };
+        });
+      };
+
       // Helper function to update state with file IDs
       const updateWithFileIds = async (
         fileIds: number[],
@@ -121,9 +139,15 @@ export const usePageStore = create<PageState>()(
         // Only update if we're on the same page.
         if (state.activePageKey !== pageKey) return;
 
+        // Abort any existing request
+        if (state.currentAbortController) {
+          state.currentAbortController.abort();
+        }
+
         if (fileIds.length === 0) {
           set({
             isLoadingFiles: false,
+            isLoadingAwake: false,
             fileIds: [],
             fileIdToIndex: new Map(),
             loadedFiles: [],
@@ -133,6 +157,8 @@ export const usePageStore = create<PageState>()(
           return;
         }
 
+        const wakeupRef = { value: () => {} };
+        const demandSet = new Set<number[]>();
         const fileIdChunks: number[][] = [];
         const fileIdToChunk = new Map<number, number[]>();
         const fileIdToIndex = new Map<number, number>();
@@ -175,6 +201,9 @@ export const usePageStore = create<PageState>()(
             // Only add chunks that are not already loaded!
             (chunk) => fileIdChunks.indexOf(chunk) !== -1,
           );
+          for (const chunk of chunkList) {
+            demandSet.add(chunk);
+          }
           fileIdChunks.splice(
             0,
             fileIdChunks.length,
@@ -183,6 +212,7 @@ export const usePageStore = create<PageState>()(
               ...fileIdChunks.filter((chunk) => !chunks.has(chunk)),
             ],
           );
+          wakeupRef.value();
         };
         const getChunksForFileIDs = (fileIds: number[]) => {
           const chunks = new Set<number[]>();
@@ -247,11 +277,6 @@ export const usePageStore = create<PageState>()(
           });
         };
 
-        // Abort any existing request
-        if (state.currentAbortController) {
-          state.currentAbortController.abort();
-        }
-
         // AbortController isn't supported in Servo yet. It's not critical, so just ignore it.
         // An on-going page load can still be cancelled, just not as quickly.
         let abortController: AbortController | null = null;
@@ -264,6 +289,7 @@ export const usePageStore = create<PageState>()(
           fileIds,
           fileIdToIndex,
           isLoadingFiles: true,
+          isLoadingAwake: true,
           loadedFiles: [],
           loadedFileCount,
           totalFileCount: fileIds.length,
@@ -278,6 +304,9 @@ export const usePageStore = create<PageState>()(
               reprioritizeChunks(chunks);
               await waitForChunks(chunks);
               return getRealizedFiles(fileIds);
+            },
+            wakeup: () => {
+              wakeupRef.value();
             },
           },
         });
@@ -311,6 +340,7 @@ export const usePageStore = create<PageState>()(
             // Resolve promise
             resolve();
             chunkToPromise.delete(chunk);
+            demandSet.delete(chunk);
 
             // Update progress
             loadedFileCount += response.metadata.length;
@@ -334,6 +364,11 @@ export const usePageStore = create<PageState>()(
                 loadedFileCount,
               };
             });
+
+            // Yield if paused, if there is no demand set, if there are still chunks left
+            if (demandSet.size === 0 && fileIdChunks.length > 0) {
+              await pauseWait(wakeupRef);
+            }
           }
 
           // Only update if we're still on the same page and this is the most recent request
@@ -344,6 +379,7 @@ export const usePageStore = create<PageState>()(
             return;
           set({
             isLoadingFiles: false,
+            isLoadingAwake: false,
             currentAbortController: null,
             metadataLoadController: null,
           });
@@ -365,6 +401,7 @@ export const usePageStore = create<PageState>()(
             set({
               error: "Failed to load file data",
               isLoadingFiles: false,
+              isLoadingAwake: false,
               currentAbortController: null,
               metadataLoadController: null,
             });
@@ -388,6 +425,8 @@ export const usePageStore = create<PageState>()(
         selectedFilesByPage: {},
         activeFileByPage: {},
         isLoadingFiles: false,
+        isLoadingPaused: false,
+        isLoadingAwake: false,
         loadedFiles: [],
         loadedFileCount: 0,
         totalFileCount: 0,
@@ -453,6 +492,7 @@ export const usePageStore = create<PageState>()(
                   const fileIds = useSearchStore.getState().searchResults;
                   set({
                     isLoadingFiles: fileIds.length > 0,
+                    isLoadingAwake: fileIds.length > 0,
                   });
                   await updateWithFileIds(fileIds, pageKey, requestId);
                   break;
@@ -482,6 +522,7 @@ export const usePageStore = create<PageState>()(
                 set({
                   error: "Failed to load page data",
                   isLoadingFiles: false,
+                  isLoadingAwake: false,
                 });
               }
             }
@@ -492,6 +533,7 @@ export const usePageStore = create<PageState>()(
               case "hydrus": {
                 set({
                   isLoadingFiles: true,
+                  isLoadingAwake: true,
                 });
                 await client.refreshPage(pageKey);
 
@@ -530,6 +572,7 @@ export const usePageStore = create<PageState>()(
               fileIds: loadedFiles.map((file) => file.file_id),
               fileIdToIndex,
               isLoadingFiles: false,
+              isLoadingAwake: false,
               loadedFiles,
               loadedFileCount: loadedFiles.length,
               totalFileCount: loadedFiles.length,
@@ -560,6 +603,7 @@ export const usePageStore = create<PageState>()(
                 fileIds: [...state.fileIds, ...newFileIds],
                 fileIdToIndex,
                 isLoadingFiles: false,
+                isLoadingAwake: false,
                 loadedFiles: [...state.loadedFiles, ...metadata.metadata],
                 loadedFileCount: state.loadedFileCount + newFileIds.length,
               }));
@@ -568,6 +612,7 @@ export const usePageStore = create<PageState>()(
               set({
                 error: "Failed to load new file metadata",
                 isLoadingFiles: false,
+                isLoadingAwake: false,
               });
             }
           },
@@ -615,6 +660,7 @@ export const usePageStore = create<PageState>()(
               pageType: type,
               error: null,
               isLoadingFiles: true,
+              isLoadingAwake: true,
               loadedFiles: [],
               selectedPageKeys: state.selectedPageKeys.includes(pageKey)
                 ? state.selectedPageKeys
@@ -632,6 +678,7 @@ export const usePageStore = create<PageState>()(
               set({
                 error: "Failed to load page data",
                 isLoadingFiles: false,
+                isLoadingAwake: false,
               });
             }
           },
@@ -883,6 +930,10 @@ export const usePageStore = create<PageState>()(
                 break;
               }
             }
+          },
+
+          setIsLoadingPaused: (isLoadingPaused: boolean) => {
+            set({ isLoadingPaused });
           },
         },
       };

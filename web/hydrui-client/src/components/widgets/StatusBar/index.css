@@ -69,3 +69,21 @@
 .status-bar-file-stat {
   margin-right: 0.5rem;
 }
+
+.status-bar-pause-button {
+  color: var(--color-gray-300);
+  margin-right: 0.25rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-bar-pause-button:hover {
+  color: var(--color-gray-100);
+}
+
+.status-bar-pause-icon {
+  height: 1rem;
+  width: 1rem;
+}

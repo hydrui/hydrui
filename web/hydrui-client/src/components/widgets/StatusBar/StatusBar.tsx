@@ -1,4 +1,4 @@
-import { XMarkIcon } from "@heroicons/react/24/solid";
+import { PauseIcon, PlayIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import React from "react";
 
 import { usePageStore } from "@/store/pageStore";
@@ -12,13 +12,21 @@ const StatusBar: React.FC = () => {
   const {
     loadedFiles,
     isLoadingFiles,
+    isLoadingPaused,
+    isLoadingAwake,
+    metadataLoadController,
     pageType,
     pageName,
     error,
     loadedFileCount,
     totalFileCount,
-    actions: { cancelCurrentPageLoad },
+    actions: { cancelCurrentPageLoad, setIsLoadingPaused },
   } = usePageStore();
+
+  const handlePauseToggle = () => {
+    setIsLoadingPaused(!isLoadingPaused);
+    metadataLoadController?.wakeup();
+  };
 
   // Calculate file stats
   const fileStats = loadedFiles.reduce(
@@ -40,14 +48,31 @@ const StatusBar: React.FC = () => {
   return (
     <div className="status-bar">
       <div className="status-bar-info">
+        {isLoadingFiles && (
+          <button
+            onClick={handlePauseToggle}
+            className="status-bar-pause-button"
+            title={isLoadingPaused ? "Resume loading" : "Pause loading"}
+          >
+            {isLoadingPaused ? (
+              <PlayIcon className="status-bar-pause-icon" />
+            ) : (
+              <PauseIcon className="status-bar-pause-icon" />
+            )}
+          </button>
+        )}
         <div className="status-bar-section">
           {pageType === "search" ? (
             // Search mode status
             searchStatus === "loading" || isLoadingFiles ? (
               <span className="status-bar-info">
-                <div className="status-bar-loading-spinner"></div>
+                {isLoadingAwake && (
+                  <div className="status-bar-loading-spinner"></div>
+                )}
                 {isLoadingFiles && loadedFileCount < totalFileCount
-                  ? `Loading files (${loadedFileCount} of ${totalFileCount})...`
+                  ? isLoadingPaused
+                    ? `Loading paused (${loadedFileCount} of ${totalFileCount})`
+                    : `Loading files (${loadedFileCount} of ${totalFileCount})...`
                   : "Searching..."}
                 <button
                   onClick={cancelCurrentPageLoad}
