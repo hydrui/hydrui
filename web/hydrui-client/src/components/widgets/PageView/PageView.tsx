@@ -623,11 +623,12 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
                 : loadedFiles
                     .filter((f) => selectedFiles.includes(f.file_id))
                     .map((f) => f.hash);
-              addVirtualPage(Math.random().toString(36).substring(2), {
+              const newPageKey = Math.random().toString(36).substring(2);
+              addVirtualPage(newPageKey, {
                 name: `best files (${selectedFiles.length})`,
                 hashes: selectedFileHashes,
               });
-              setPage(pageKey, "virtual");
+              setPage(newPageKey, "virtual");
             },
           },
           {

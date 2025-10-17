@@ -7,6 +7,8 @@ import { client, useApiStore } from "@/store/apiStore";
 import { useSearchStore } from "@/store/searchStore";
 import { jsonStorage } from "@/store/storage";
 
+import { useToastStore } from "./toastStore";
+
 // Special page key for our search tab - this will never conflict with API page keys
 export const SEARCH_PAGE_KEY = "hydrui-search-tab";
 
@@ -101,7 +103,7 @@ export const usePageStore = create<PageState>()(
           )[0];
         } else {
           const index = fileIdToIndex.get(fileId);
-          if (!index) {
+          if (index === undefined) {
             return;
           }
           return loadedFiles[index];
@@ -194,12 +196,38 @@ export const usePageStore = create<PageState>()(
           return chunks;
         };
         const waitForChunks = async (chunks: Set<number[]>) => {
-          await Promise.all(
-            [...chunks]
-              .map((chunk) => chunkToPromise.get(chunk))
-              .filter((n) => n !== undefined)
-              .map(([promise]) => promise),
+          const { addToast, removeToast } = useToastStore.getState().actions;
+          let cancel: ((reason: unknown) => void) | undefined = undefined;
+          const toastId = addToast(
+            "An interactive action is blocked on loading metadata. Please wait...",
+            "info",
+            {
+              duration: false,
+              actions: [
+                {
+                  label: "Cancel",
+                  variant: "danger",
+                  callback: () => {
+                    cancel?.(new Error("Canceled"));
+                    removeToast(toastId);
+                  },
+                },
+              ],
+            },
           );
+          try {
+            await new Promise((resolve, reject) => {
+              cancel = reject;
+              Promise.all(
+                [...chunks]
+                  .map((chunk) => chunkToPromise.get(chunk))
+                  .filter((n) => n !== undefined)
+                  .map(([promise]) => promise),
+              ).then(resolve, reject);
+            });
+          } finally {
+            removeToast(toastId);
+          }
           return;
         };
         const getRealizedFiles = (fileIds: number[]) => {
@@ -219,7 +247,6 @@ export const usePageStore = create<PageState>()(
             return loadedFile;
           });
         };
-        set({});
 
         // Abort any existing request
         if (state.currentAbortController) {
@@ -289,6 +316,9 @@ export const usePageStore = create<PageState>()(
             // Update progress
             loadedFileCount += response.metadata.length;
             set((state) => {
+              // For performance reasons, we re-use the same loadedFiles array.
+              // This is a potential footgun, since it means that the new state
+              // is referentially equal to the old state.
               const loadedFiles = state.loadedFiles;
               for (const file of response.metadata) {
                 const index = fileIdToIndex.get(file.file_id);
@@ -666,18 +696,33 @@ export const usePageStore = create<PageState>()(
             }
           },
 
-          removeFilesFromView: (fileIds: number[]) => {
-            const fileIdToIndex = new Map(get().fileIdToIndex);
-            for (const fileId of fileIds) {
-              fileIdToIndex.delete(fileId);
-            }
-            set((state) => ({
-              fileIds: state.fileIds.filter((id) => !fileIds.includes(id)),
-              loadedFiles: state.loadedFiles.filter(
-                (file) => !fileIds.includes(file.file_id),
-              ),
-              fileIdToIndex,
-            }));
+          removeFilesFromView: (fileIdsToRemove: number[]) => {
+            set((state) => {
+              if (state.isLoadingFiles) {
+                return {};
+              }
+              const fileIds = state.fileIds.filter(
+                (id) => !fileIdsToRemove.includes(id),
+              );
+              const loadedFiles = state.loadedFiles.filter(
+                (file) => !fileIdsToRemove.includes(file.file_id),
+              );
+              const fileIdToIndex = new Map<number, number>();
+              for (const [i, fileId] of fileIds.entries()) {
+                fileIdToIndex.set(fileId, i);
+              }
+              const totalFileCount = loadedFiles.length;
+              const loadedFileCount = loadedFiles.length;
+              return {
+                fileIds: state.fileIds.filter(
+                  (id) => !fileIdsToRemove.includes(id),
+                ),
+                loadedFiles,
+                loadedFileCount,
+                totalFileCount,
+                fileIdToIndex,
+              };
+            });
           },
 
           setPage: async (pageKey: string, type: PageType) => {
