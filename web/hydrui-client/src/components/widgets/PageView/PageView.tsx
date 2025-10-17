@@ -614,7 +614,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
             label: "Open best files in new page",
             icon: <LinkIcon />,
             onClick: async () => {
-              const selectedFileHashes = metadataLoadController
+              const hashes = metadataLoadController
                 ? (
                     await metadataLoadController.demandFetchMetadata(
                       selectedFiles,
@@ -623,10 +623,20 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
                 : loadedFiles
                     .filter((f) => selectedFiles.includes(f.file_id))
                     .map((f) => f.hash);
+              const relationships = await client.getFileRelationships({
+                hashes,
+              });
+              const kingHashes = new Set(
+                Object.values(relationships.file_relationships).map(
+                  (file) => file.king,
+                ),
+              );
+              const files = await client.getFileIdsByHashes([...kingHashes]);
+              const fileIds = files.metadata.map((file) => file.file_id);
               const newPageKey = Math.random().toString(36).substring(2);
               addVirtualPage(newPageKey, {
-                name: `best files (${selectedFiles.length})`,
-                hashes: selectedFileHashes,
+                name: `best files (${fileIds.length})`,
+                fileIds,
               });
               setPage(newPageKey, "virtual");
             },
