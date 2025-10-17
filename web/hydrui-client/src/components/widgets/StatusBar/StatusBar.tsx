@@ -11,7 +11,7 @@ const StatusBar: React.FC = () => {
   const { searchTags, searchStatus } = useSearchStore();
   const {
     loadedFiles,
-    isLoadingFiles: isLoading,
+    isLoadingFiles,
     pageType,
     pageName,
     error,
@@ -43,10 +43,10 @@ const StatusBar: React.FC = () => {
         <div className="status-bar-section">
           {pageType === "search" ? (
             // Search mode status
-            searchStatus === "loading" || isLoading ? (
+            searchStatus === "loading" || isLoadingFiles ? (
               <span className="status-bar-info">
                 <div className="status-bar-loading-spinner"></div>
-                {isLoading && loadedFileCount < totalFileCount
+                {isLoadingFiles && loadedFileCount < totalFileCount
                   ? `Loading files (${loadedFileCount} of ${totalFileCount})...`
                   : "Searching..."}
                 <button
@@ -81,7 +81,7 @@ const StatusBar: React.FC = () => {
               {pageName && (
                 <span className="status-bar-text-highlight">{pageName}:</span>
               )}
-              {isLoading ? (
+              {isLoadingFiles ? (
                 <span className="status-bar-info">
                   <div className="status-bar-loading-spinner"></div>
                   {loadedFileCount < totalFileCount

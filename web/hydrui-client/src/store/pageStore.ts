@@ -452,8 +452,7 @@ export const usePageStore = create<PageState>()(
                   set({ pageName: "Search" });
                   const fileIds = useSearchStore.getState().searchResults;
                   set({
-                    isLoadingFiles:
-                      useSearchStore.getState().searchStatus === "loading",
+                    isLoadingFiles: fileIds.length > 0,
                   });
                   await updateWithFileIds(fileIds, pageKey, requestId);
                   break;
