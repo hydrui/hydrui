@@ -26,10 +26,17 @@ const SetupScreen: React.FC = () => {
       try {
         const success = await verifyAuthentication(client, apiKey, baseUrl);
         if (!success) {
-          setError(
-            "Bad URL or invalid API key. Please check your key and try again.",
-          );
-          return;
+          // On failure, try again without a slash if there is a trailing slash.
+          if (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.slice(0, baseUrl.length - 1);
+          }
+          const success = await verifyAuthentication(client, apiKey, baseUrl);
+          if (!success) {
+            setError(
+              "Bad URL or invalid API key. Please check your key and try again.",
+            );
+            return;
+          }
         }
         setCredentials(apiKey, baseUrl);
         setAuthenticated(true);
@@ -92,7 +99,7 @@ const SetupScreen: React.FC = () => {
               ref={baseUrlInput}
               defaultValue={baseUrl}
               className="setup-input"
-              placeholder="Enter your Hydrus API URL, e.g. http://localhost:45869"
+              placeholder="Hydrus API URL, e.g. http://localhost:45869"
               required
             />
           </div>
@@ -108,7 +115,7 @@ const SetupScreen: React.FC = () => {
               ref={apiKeyInput}
               defaultValue={apiKey}
               className="setup-input"
-              placeholder="Enter your Hydrus API key"
+              placeholder="Hydrus API key"
               required
             />
             <p className="setup-help-text">
