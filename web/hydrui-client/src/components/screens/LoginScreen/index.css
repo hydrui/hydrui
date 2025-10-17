@@ -12,7 +12,6 @@
   padding: 1.5rem;
   background-color: var(--color-gray-800);
   border-radius: var(--radius-lg);
-  box-shadow: var(--tw-shadow-lg);
 }
 
 .login-heading {

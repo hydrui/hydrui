@@ -26,7 +26,6 @@
   position: relative;
   background-color: var(--color-gray-800);
   border-radius: var(--radius-lg);
-  box-shadow: var(--tw-shadow-xl);
   width: 100%;
   max-width: var(--container-4xl);
   height: 100%;
