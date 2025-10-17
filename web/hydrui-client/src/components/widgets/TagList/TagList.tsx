@@ -547,7 +547,8 @@ const TagList: React.FC = () => {
           {isLoadingFiles && isLoadingPaused ? (
             <div className="tag-list-paused">
               <span>
-                This tag list is incomplete because metadata loading is paused.
+                The tag list may be incomplete because metadata loading is
+                paused.
               </span>
               <button
                 onClick={() =>
