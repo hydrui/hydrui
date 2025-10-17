@@ -1331,9 +1331,9 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         )}
       </ScrollView>
 
-      {modalIndex !== -1 && loadedFiles[modalIndex] && (
+      {modalIndex !== -1 && fileIds[modalIndex] && (
         <FileViewerModal
-          fileId={loadedFiles[modalIndex].file_id}
+          fileId={fileIds[modalIndex]}
           fileData={loadedFiles[modalIndex]}
           onClose={handleModalClose}
           onPrevious={handleModalPrevious}
