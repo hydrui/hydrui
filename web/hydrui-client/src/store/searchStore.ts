@@ -50,7 +50,7 @@ export const useSearchStore = create<SearchState>()(
 
             // Auto-search if enabled
             if (autoSearch) {
-              setTimeout(() => performSearch, 0);
+              setTimeout(() => performSearch(), 0);
             }
           }
         },
