@@ -17,8 +17,7 @@ export type PageType = "search" | "hydrus" | "virtual";
 // Interface for virtual pages
 export interface VirtualPage {
   name: string;
-  fileIds?: number[];
-  hashes?: string[];
+  fileIds: number[];
 }
 
 // Map of virtual page keys to their data
@@ -375,120 +374,6 @@ export const usePageStore = create<PageState>()(
         }
       };
 
-      // Helper function to update state with hashes
-      const updateWithHashes = async (
-        hashes: string[],
-        pageKey: string,
-        requestId: number,
-      ) => {
-        const state = get();
-        const CHUNK_SIZE = 256;
-
-        // Only update if we're on the same page.
-        if (state.activePageKey !== pageKey) return;
-
-        if (hashes.length === 0) {
-          set({
-            fileIds: [],
-            fileIdToIndex: new Map(),
-            isLoadingFiles: false,
-            loadedFiles: [],
-            loadedFileCount: 0,
-            totalFileCount: 0,
-          });
-          return;
-        }
-
-        // Abort any existing request
-        if (state.currentAbortController) {
-          state.currentAbortController.abort();
-        }
-
-        // AbortController isn't supported in Servo yet. It's not critical, so just ignore it.
-        // An on-going page load can still be cancelled, just not as quickly.
-        let abortController: AbortController | null = null;
-        if (typeof AbortController !== "undefined") {
-          abortController = new AbortController();
-        }
-        set({
-          fileIds: [],
-          fileIdToIndex: new Map(),
-          isLoadingFiles: true,
-          loadedFiles: [],
-          loadedFileCount: 0,
-          totalFileCount: hashes.length,
-          currentAbortController: abortController,
-          metadataLoadController: null,
-        });
-
-        try {
-          const loadedFiles: FileMetadata[] = [];
-
-          // Process hashes in chunks
-          for (let i = 0; i < hashes.length; i += CHUNK_SIZE) {
-            // Check if this is still the current request
-            if (
-              get().lastRequestId !== requestId ||
-              get().activePageKey !== pageKey
-            ) {
-              return;
-            }
-
-            const chunk = hashes.slice(i, i + CHUNK_SIZE);
-            const response = await client.getFileMetadataByHashes(
-              chunk,
-              abortController?.signal,
-            );
-
-            // Update progress
-            loadedFiles.push(...response.metadata);
-            if (get().activePageKey === pageKey) {
-              set({ loadedFileCount: Math.min(i + CHUNK_SIZE, hashes.length) });
-            }
-          }
-
-          // Only update if we're still on the same page and this is the most recent request
-          if (
-            get().activePageKey === pageKey &&
-            get().lastRequestId === requestId
-          ) {
-            const fileIds = loadedFiles.map((m) => m.file_id);
-            const fileIdToIndex = new Map<number, number>();
-            for (const [i, fileId] of fileIds.entries()) {
-              fileIdToIndex.set(fileId, i);
-            }
-            set({
-              fileIds,
-              fileIdToIndex,
-              isLoadingFiles: false,
-              loadedFiles,
-              loadedFileCount: hashes.length,
-              totalFileCount: hashes.length,
-              currentAbortController: null,
-              metadataLoadController: null,
-            });
-          }
-        } catch (error: unknown) {
-          // Only update error if it wasn't due to abort
-          if (
-            error instanceof Error &&
-            error.name !== "AbortError" &&
-            get().activePageKey === pageKey &&
-            get().lastRequestId === requestId
-          ) {
-            console.error("Failed to load file metadata:", error);
-            if (get().activePageKey === pageKey) {
-              set({
-                error: "Failed to load file data",
-                isLoadingFiles: false,
-                currentAbortController: null,
-                metadataLoadController: null,
-              });
-            }
-          }
-        }
-      };
-
       return {
         // Initial state
         activePageKey: SEARCH_PAGE_KEY,
@@ -583,20 +468,11 @@ export const usePageStore = create<PageState>()(
                   set({
                     pageName: virtualPage.name,
                   });
-
-                  if (virtualPage.fileIds) {
-                    await updateWithFileIds(
-                      virtualPage.fileIds,
-                      pageKey,
-                      requestId,
-                    );
-                  } else if (virtualPage.hashes) {
-                    await updateWithHashes(
-                      virtualPage.hashes,
-                      pageKey,
-                      requestId,
-                    );
-                  }
+                  await updateWithFileIds(
+                    virtualPage.fileIds,
+                    pageKey,
+                    requestId,
+                  );
                   break;
                 }
               }
@@ -991,9 +867,6 @@ export const usePageStore = create<PageState>()(
                 break;
               }
               case "virtual": {
-                const hashes = get()
-                  .loadedFiles.filter((file) => fileIds.includes(file.file_id))
-                  .map((file) => file.hash);
                 set((state) => {
                   const setState: Partial<PageState> = {
                     virtualPages: { ...state.virtualPages },
@@ -1002,16 +875,9 @@ export const usePageStore = create<PageState>()(
                   if (!page) {
                     return {};
                   }
-                  if (page.fileIds) {
-                    page.fileIds = page.fileIds.filter(
-                      (id) => !fileIds.includes(id),
-                    );
-                  }
-                  if (page.hashes) {
-                    page.hashes = page.hashes.filter(
-                      (hash) => !hashes.includes(hash),
-                    );
-                  }
+                  page.fileIds = page.fileIds.filter(
+                    (id) => !fileIds.includes(id),
+                  );
                   return setState;
                 });
                 await get().actions.updatePageContents(pageKey, "virtual");
