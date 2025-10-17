@@ -8,6 +8,7 @@ import {
 import React, { useEffect } from "react";
 
 import { JobStatus } from "@/api/types";
+import { client } from "@/store/apiStore";
 import { usePageActions, usePageStore } from "@/store/pageStore";
 import { usePopupStore } from "@/store/popupStore";
 
@@ -63,20 +64,25 @@ const PopupPanel: React.FC = () => {
   const handleOpenInTab = async (job: JobStatus) => {
     if (!job.files?.hashes?.length) return;
 
+    // Get file IDs for hashes
+    const fileIds = (
+      await client.getFileIdsByHashes(job.files.hashes)
+    ).metadata.map((file) => file.file_id);
+
     // Create a unique key for the virtual page
     const pageKey = `job-${job.key}`;
 
     // Check if the page already exists
     if (virtualPages[pageKey]) {
-      // Update existing page with new hashes
+      // Update existing page with new files
       await updateVirtualPage(pageKey, {
-        hashes: job.files.hashes,
+        fileIds,
       });
     } else {
       // Add new virtual page
       addVirtualPage(pageKey, {
         name: job.files.label || "Job Results",
-        hashes: job.files.hashes,
+        fileIds,
       });
     }
     await setPage(pageKey, "virtual");
