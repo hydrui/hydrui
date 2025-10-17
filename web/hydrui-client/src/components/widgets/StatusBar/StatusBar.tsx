@@ -14,7 +14,6 @@ const StatusBar: React.FC = () => {
     isLoadingFiles,
     isLoadingPaused,
     isLoadingAwake,
-    metadataLoadController,
     pageType,
     pageName,
     error,
@@ -25,7 +24,6 @@ const StatusBar: React.FC = () => {
 
   const handlePauseToggle = () => {
     setIsLoadingPaused(!isLoadingPaused);
-    metadataLoadController?.wakeup();
   };
 
   // Calculate file stats

@@ -212,7 +212,9 @@ export const usePageStore = create<PageState>()(
               ...fileIdChunks.filter((chunk) => !chunks.has(chunk)),
             ],
           );
-          wakeupRef.value();
+          if (demandSet.size > 0) {
+            wakeupRef.value();
+          }
         };
         const getChunksForFileIDs = (fileIds: number[]) => {
           const chunks = new Set<number[]>();
@@ -934,6 +936,9 @@ export const usePageStore = create<PageState>()(
 
           setIsLoadingPaused: (isLoadingPaused: boolean) => {
             set({ isLoadingPaused });
+            if (!isLoadingPaused) {
+              get().metadataLoadController?.wakeup();
+            }
           },
         },
       };
