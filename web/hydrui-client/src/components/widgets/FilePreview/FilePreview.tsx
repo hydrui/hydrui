@@ -14,7 +14,8 @@ const FilePreview: React.FC = () => {
   const {
     activePageKey,
     activeFileByPage,
-    files,
+    loadedFiles,
+    fileIdToIndex,
     isLoadingFiles,
     actions: { refreshFileMetadata },
   } = usePageStore();
@@ -22,8 +23,13 @@ const FilePreview: React.FC = () => {
   const [updatingServices, setUpdatingServices] = useState<Set<string>>(
     new Set(),
   );
-  const activeFileId = activePageKey ? activeFileByPage[activePageKey] : null;
-  const fileData = files.find((f) => f.file_id === activeFileId);
+  const activeFileId = activePageKey
+    ? activeFileByPage[activePageKey]
+    : undefined;
+  const activeFileIndex = activeFileId
+    ? (fileIdToIndex.get(activeFileId) ?? -1)
+    : -1;
+  const fileData = loadedFiles[activeFileIndex];
   const { ratings } = useFileRatings(fileData || null);
   const {
     actions: { addToast },
@@ -38,7 +44,7 @@ const FilePreview: React.FC = () => {
     serviceKey: string,
     rating: boolean | number | null,
   ) => {
-    if (!activeFileId) return;
+    if (!activeFileId || activeFileIndex === -1) return;
 
     setUpdatingServices((prev) => new Set([...prev, serviceKey]));
     try {
@@ -47,8 +53,9 @@ const FilePreview: React.FC = () => {
       for (let i = 0; i < 10; i++) {
         await refreshFileMetadata([activeFileId]);
         if (
-          usePageStore.getState().files.find((f) => f.file_id === activeFileId)
-            ?.ratings?.[serviceKey] === rating
+          usePageStore.getState().loadedFiles[activeFileIndex]?.ratings?.[
+            serviceKey
+          ] === rating
         ) {
           break;
         }
@@ -68,16 +75,16 @@ const FilePreview: React.FC = () => {
     }
   };
 
-  if (isLoadingFiles) {
+  if (!activeFileId) {
+    return <div className="file-preview-empty-message">No file selected</div>;
+  }
+
+  if (isLoadingFiles && !fileData) {
     return (
       <div className="file-preview-loading">
         <div className="file-preview-spinner"></div>
       </div>
     );
-  }
-
-  if (!activeFileId) {
-    return <div className="file-preview-empty-message">No file selected</div>;
   }
 
   if (!fileData) {

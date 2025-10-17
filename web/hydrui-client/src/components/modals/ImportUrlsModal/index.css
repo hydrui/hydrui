@@ -24,7 +24,6 @@
   position: relative;
   background-color: var(--color-gray-800);
   border-radius: var(--radius-lg);
-  box-shadow: var(--tw-shadow-xl);
   max-width: var(--container-4xl);
   width: 100%;
 }

@@ -20,6 +20,9 @@ import {
   FileMetadataParams,
   FileMetadataResponse,
   FileMetadataResponseSchema,
+  GetFileRelationshipsParams,
+  GetFileRelationshipsResponse,
+  GetFileRelationshipsResponseSchema,
   HydrusApiClient,
   PageInfoParams,
   PageInfoResponse,
@@ -481,6 +484,19 @@ export class HydrusClient implements HydrusApiClient {
    */
   async associateUrl(body: AssociateUrlRequest): Promise<void> {
     return this.postEmpty("/add_urls/associate_url", { body });
+  }
+
+  /**
+   * Get relationships of files
+   */
+  async getFileRelationships(
+    params: GetFileRelationshipsParams,
+  ): Promise<GetFileRelationshipsResponse> {
+    return this.get(
+      "/manage_file_relationships/get_file_relationships",
+      GetFileRelationshipsResponseSchema,
+      { params },
+    );
   }
 
   /**

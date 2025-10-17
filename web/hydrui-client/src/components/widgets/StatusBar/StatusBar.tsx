@@ -1,4 +1,4 @@
-import { XMarkIcon } from "@heroicons/react/24/solid";
+import { PauseIcon, PlayIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import React from "react";
 
 import { usePageStore } from "@/store/pageStore";
@@ -10,18 +10,24 @@ import "./index.css";
 const StatusBar: React.FC = () => {
   const { searchTags, searchStatus } = useSearchStore();
   const {
-    files,
-    isLoadingFiles: isLoading,
+    loadedFiles,
+    isLoadingFiles,
+    isLoadingPaused,
+    isLoadingAwake,
     pageType,
     pageName,
     error,
     loadedFileCount,
     totalFileCount,
-    actions: { cancelCurrentPageLoad },
+    actions: { cancelCurrentPageLoad, setIsLoadingPaused },
   } = usePageStore();
 
+  const handlePauseToggle = () => {
+    setIsLoadingPaused(!isLoadingPaused);
+  };
+
   // Calculate file stats
-  const fileStats = files.reduce(
+  const fileStats = loadedFiles.reduce(
     (stats, file) => {
       const totalSize = stats.totalSize + (file.size || 0);
       const mime = file.mime || "";
@@ -40,14 +46,31 @@ const StatusBar: React.FC = () => {
   return (
     <div className="status-bar">
       <div className="status-bar-info">
+        {isLoadingFiles && (
+          <button
+            onClick={handlePauseToggle}
+            className="status-bar-pause-button"
+            title={isLoadingPaused ? "Resume loading" : "Pause loading"}
+          >
+            {isLoadingPaused ? (
+              <PlayIcon className="status-bar-pause-icon" />
+            ) : (
+              <PauseIcon className="status-bar-pause-icon" />
+            )}
+          </button>
+        )}
         <div className="status-bar-section">
           {pageType === "search" ? (
             // Search mode status
-            searchStatus === "loading" || isLoading ? (
+            searchStatus === "loading" || isLoadingFiles ? (
               <span className="status-bar-info">
-                <div className="status-bar-loading-spinner"></div>
-                {isLoading && loadedFileCount < totalFileCount
-                  ? `Loading files (${loadedFileCount} of ${totalFileCount})...`
+                {isLoadingAwake && (
+                  <div className="status-bar-loading-spinner"></div>
+                )}
+                {isLoadingFiles && loadedFileCount < totalFileCount
+                  ? isLoadingPaused
+                    ? `Loading paused (${loadedFileCount} of ${totalFileCount})`
+                    : `Loading files (${loadedFileCount} of ${totalFileCount})...`
                   : "Searching..."}
                 <button
                   onClick={cancelCurrentPageLoad}
@@ -59,9 +82,9 @@ const StatusBar: React.FC = () => {
               </span>
             ) : searchStatus === "initial" ? (
               <span className="status-bar-text-muted">No search active</span>
-            ) : files.length > 0 ? (
+            ) : loadedFiles.length > 0 ? (
               <span>
-                {files.length} file{files.length !== 1 ? "s" : ""}
+                {loadedFiles.length} file{loadedFiles.length !== 1 ? "s" : ""}
                 {searchTags.length > 0 && (
                   <span className="status-bar-text-muted status-bar-text-indent">
                     for {searchTags.join(", ")}
@@ -81,7 +104,7 @@ const StatusBar: React.FC = () => {
               {pageName && (
                 <span className="status-bar-text-highlight">{pageName}:</span>
               )}
-              {isLoading ? (
+              {isLoadingFiles ? (
                 <span className="status-bar-info">
                   <div className="status-bar-loading-spinner"></div>
                   {loadedFileCount < totalFileCount
@@ -97,8 +120,8 @@ const StatusBar: React.FC = () => {
                 </span>
               ) : error ? (
                 <span className="status-bar-text-error">{error}</span>
-              ) : files.length > 0 ? (
-                `${files.length} file${files.length !== 1 ? "s" : ""}`
+              ) : loadedFiles.length > 0 ? (
+                `${loadedFiles.length} file${loadedFiles.length !== 1 ? "s" : ""}`
               ) : (
                 "No files"
               )}
@@ -106,7 +129,7 @@ const StatusBar: React.FC = () => {
           )}
         </div>
 
-        {files.length > 0 &&
+        {loadedFiles.length > 0 &&
           fileStats.images + fileStats.videos + fileStats.other > 0 && (
             <div className="status-bar-file-stats">
               {fileStats.images > 0 && (

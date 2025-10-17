@@ -35,7 +35,6 @@
   overflow-y: auto;
   background-color: var(--color-gray-700);
   border-radius: var(--radius-sm);
-  box-shadow: var(--tw-shadow-lg);
   z-index: 10;
 }
 

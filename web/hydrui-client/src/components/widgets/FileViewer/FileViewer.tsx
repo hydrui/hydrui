@@ -16,7 +16,7 @@ const SWFViewer = lazy(() => import("./SWFViewer"));
 
 interface FileViewerProps {
   fileId: number;
-  fileData: FileMetadata;
+  fileData?: FileMetadata | undefined;
 
   // Whether or not to automatically activate potentially heavy media players
   autoActivate?: boolean;
@@ -45,6 +45,10 @@ const FileViewerImpl: React.FC<FileViewerProps> = ({
     autopreviewMimeTypes,
     actions: { addAutopreviewMimeType },
   } = usePreferencesStore();
+
+  if (!fileData) {
+    return <div className="image-viewer-container"></div>;
+  }
 
   const shouldAutoActivate =
     autoActivate ||

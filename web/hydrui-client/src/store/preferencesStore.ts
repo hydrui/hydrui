@@ -40,6 +40,7 @@ interface PreferencesState {
   thumbnailSize: number;
   useVirtualViewport: boolean;
   allowTokenPassing: boolean;
+  eagerLoadThreshold: number;
   actions: {
     setNamespaceColor: (namespace: string, color: string) => void;
     clearNamespaceColor: (namespace: string) => void;
@@ -52,6 +53,7 @@ interface PreferencesState {
     setThumbnailSize: (size: number) => void;
     setVirtualViewport: (enabled: boolean) => void;
     setAllowTokenPassing: (enabled: boolean) => void;
+    setEagerLoadThreshold: (eagerLoadThreshold: number) => void;
   };
 }
 
@@ -79,6 +81,9 @@ export const usePreferencesStore = create<PreferencesState>()(
 
       // Allow passing tokens to external client-side apps
       allowTokenPassing: false,
+
+      // Maximum number of files in a page before eagerly loading metadata is disabled
+      eagerLoadThreshold: 20000,
 
       actions: {
         setNamespaceColor: (namespace: string, color: string) => {
@@ -193,6 +198,12 @@ export const usePreferencesStore = create<PreferencesState>()(
             allowTokenPassing: enabled,
           });
         },
+
+        setEagerLoadThreshold: (eagerLoadThreshold: number) => {
+          set({
+            eagerLoadThreshold,
+          });
+        },
       },
     }),
     {
@@ -202,6 +213,9 @@ export const usePreferencesStore = create<PreferencesState>()(
         tagColors: state.tagColors,
         autopreviewMimeTypes: state.autopreviewMimeTypes,
         thumbnailSize: state.thumbnailSize,
+        useVirtualViewport: state.useVirtualViewport,
+        allowTokenPassing: state.allowTokenPassing,
+        eagerLoadThreshold: state.eagerLoadThreshold,
       }),
     },
   ),

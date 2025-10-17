@@ -9,6 +9,7 @@ import {
   AddUrlResponse,
   FileIdentifiersResponse,
   FileMetadataResponse,
+  GetFileRelationshipsResponse,
   HydrusApiClient,
   PageInfoResponse,
   PageResponse,
@@ -628,6 +629,17 @@ export class MockHydrusClient implements HydrusApiClient {
     if (this.apiKey !== this.validApiKey) {
       throw new Error("Invalid API key");
     }
+  }
+
+  /**
+   * Get relationships between files
+   */
+  async getFileRelationships(): Promise<GetFileRelationshipsResponse> {
+    if (this.apiKey !== this.validApiKey) {
+      throw new Error("Invalid API key");
+    }
+
+    throw new Error("Not implemented");
   }
 
   /**

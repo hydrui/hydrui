@@ -1,7 +1,6 @@
 .menu {
   min-width: 200px;
   background-color: var(--color-gray-800);
-  box-shadow: var(--tw-shadow-lg);
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-gray-700);
   overflow: hidden;
@@ -90,7 +89,6 @@
   z-index: 50;
   min-width: 200px;
   background-color: var(--color-gray-800);
-  box-shadow: var(--tw-shadow-lg);
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-gray-700);
   overflow: hidden;
@@ -131,7 +129,6 @@
   position: fixed;
   min-width: 200px;
   background-color: var(--color-gray-800);
-  box-shadow: var(--tw-shadow-lg);
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-gray-700);
 }

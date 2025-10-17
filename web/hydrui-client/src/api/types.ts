@@ -343,6 +343,30 @@ export interface FileRelationshipPair {
   delete_b?: boolean;
 }
 
+export type GetFileRelationshipsParams = FilesParam;
+
+export const GetFileRelationshipsResponseSchema = z.looseObject({
+  file_relationships: z.record(
+    z.string(),
+    z.looseObject({
+      is_king: z.boolean(),
+      king: z.string(),
+      king_is_on_file_domain: z.catch(
+        z.boolean(),
+        unknownValue("file_relationships.king_is_on_file_domain", true),
+      ),
+      king_is_local: z.catch(
+        z.boolean(),
+        unknownValue("file_relationships.king_is_local", true),
+      ),
+    }),
+  ),
+});
+
+export type GetFileRelationshipsResponse = z.infer<
+  typeof GetFileRelationshipsResponseSchema
+>;
+
 export interface SetFileRelationshipsRequest {
   relationships: FileRelationshipPair[];
 }
@@ -446,6 +470,9 @@ export interface HydrusApiClient {
   associateUrl: (request: AssociateUrlRequest) => Promise<void>;
 
   // File relationship operations
+  getFileRelationships: (
+    params: GetFileRelationshipsParams,
+  ) => Promise<GetFileRelationshipsResponse>;
   setFileRelationships: (request: SetFileRelationshipsRequest) => Promise<void>;
   setKings: (fileIds: number[]) => Promise<void>;
 

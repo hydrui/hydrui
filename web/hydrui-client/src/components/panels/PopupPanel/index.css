@@ -57,7 +57,6 @@
   flex-direction: column;
   background-color: var(--color-gray-800);
   border-radius: var(--radius-lg);
-  box-shadow: var(--tw-shadow-lg);
   border: 1px solid var(--color-gray-700);
 }
 

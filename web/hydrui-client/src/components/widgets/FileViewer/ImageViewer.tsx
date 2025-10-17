@@ -616,12 +616,13 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
           className={`image-viewer-img ${isTransitioning ? "transitioning" : "normal"}`}
           style={{
             transform: `translate(${translateX + edgeTranslationX}px, ${translateY}px) scale(${scale})`,
-            transition: "transform 50ms ease-in-out, opacity 200ms ease-in-out",
+            transition: "opacity 200ms ease-in-out",
             transformOrigin: "top left",
             touchAction: "none",
             pointerEvents: "none", // Prevent the image from capturing mouse events
           }}
           onLoad={handleImageLoad}
+          draggable={false}
         />
       </div>
     </>

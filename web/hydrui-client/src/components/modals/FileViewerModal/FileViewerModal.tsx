@@ -21,7 +21,7 @@ import "./index.css";
 
 interface FileViewerModalProps {
   fileId: number;
-  fileData: FileMetadata;
+  fileData?: FileMetadata | undefined;
   onClose: () => void;
   onPrevious: () => void;
   onNext: () => void;
@@ -175,21 +175,27 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({
     }
   }, [onClose, previewRef]);
 
-  const showBrokenImageReport = fileData.mime === "image/vnd.adobe.photoshop";
+  const showBrokenImageReport = fileData?.mime === "image/vnd.adobe.photoshop";
 
   return (
     <FocusTrap focusTrapOptions={{ allowOutsideClick: true }}>
       <div className="file-viewer-modal-container">
         {/* Header */}
         <div className="file-viewer-modal-header">
-          <div className="file-viewer-modal-file-info">
-            {fileData.width &&
-              fileData.height &&
-              `${fileData.width} × ${fileData.height} • `}
-            {fileData.duration && `${formatDuration(fileData.duration)} • `}
-            {`${formatFileSize(fileData.size)} • `}
-            {`${fileData.mime}`}
-          </div>
+          {fileData ? (
+            <div className="file-viewer-modal-file-info">
+              {fileData.width &&
+                fileData.height &&
+                `${fileData.width} × ${fileData.height} • `}
+              {fileData.duration && `${formatDuration(fileData.duration)} • `}
+              {`${formatFileSize(fileData.size)} • `}
+              {`${fileData.mime}`}
+            </div>
+          ) : (
+            <div className="file-viewer-modal-file-info">
+              Loading file metadata...
+            </div>
+          )}
           <div className="file-viewer-modal-actions">
             {showBrokenImageReport && (
               <PushButton
@@ -209,7 +215,7 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({
             </a>
             <a
               href={`${client.getFileUrl(fileId)}&download=true`}
-              download={generateFileName(fileData)}
+              download={fileData ? generateFileName(fileData) : ""}
               className="file-viewer-modal-action-button"
             >
               <ArrowDownTrayIcon className="file-viewer-modal-small-icon" />

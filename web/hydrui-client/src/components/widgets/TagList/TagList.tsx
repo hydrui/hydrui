@@ -102,8 +102,10 @@ const TagList: React.FC = () => {
   const { setLastActiveTagService } = useUIStateActions();
   const [activeServiceKey, setActiveServiceKey] = useState<string | null>();
   const activePageKey = usePageStore((state) => state.activePageKey);
-  const files = usePageStore((state) => state.files);
+  const loadedFiles = usePageStore((state) => state.loadedFiles);
   const isLoadingFiles = usePageStore((state) => state.isLoadingFiles);
+  const isLoadingPaused = usePageStore((state) => state.isLoadingPaused);
+  const loadedFileCount = usePageStore((state) => state.loadedFileCount);
   const pageType = usePageStore((state) => state.pageType);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { setPage, setSelectedFiles, addVirtualPage, refreshFileMetadata } =
@@ -114,17 +116,34 @@ const TagList: React.FC = () => {
     searchTags,
   } = useSearchStore();
   const { useVirtualViewport } = usePreferencesStore();
-  const selectedFiles = useMemo(
-    () =>
-      activePageKey &&
+  const selectedFiles = useMemo(() => {
+    if (loadedFileCount) {
+      // Dummy dependency. For performance reasons we re-use the same sparse
+      // loadedFiles array during the load, so this useMemo needs some
+      // dependency on something that will change when it might be updated.
+    }
+    // During load, loadedFiles is a sparse array. Even with strict indexing on,
+    // TypeScript has soundness holes around things like Object.entries.
+    // It's best to just condense the array here.
+    return activePageKey &&
       selectedFilesByPage[activePageKey] &&
       selectedFilesByPage[activePageKey].length > 0
-        ? files.filter((f) =>
-            selectedFilesByPage[activePageKey]?.includes(f.file_id),
-          )
-        : files,
-    [activePageKey, files, selectedFilesByPage],
-  );
+      ? loadedFiles.filter((f) =>
+          selectedFilesByPage[activePageKey]?.includes(f.file_id),
+        )
+      : !isLoadingFiles
+        ? loadedFiles
+        : isLoadingPaused
+          ? Object.values(loadedFiles)
+          : [];
+  }, [
+    activePageKey,
+    loadedFiles,
+    selectedFilesByPage,
+    isLoadingFiles,
+    isLoadingPaused,
+    loadedFileCount,
+  ]);
 
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [quickEdit, setQuickEdit] = useState<boolean>(false);
@@ -335,7 +354,7 @@ const TagList: React.FC = () => {
       }
       setSelectedFiles(
         activePageKey,
-        files
+        loadedFiles
           .filter((f) => {
             if (!f.tags) {
               return false;
@@ -361,7 +380,7 @@ const TagList: React.FC = () => {
           .map((f) => f.file_id),
       );
     },
-    [setSelectedFiles, activePageKey, files],
+    [setSelectedFiles, activePageKey, loadedFiles],
   );
 
   const handleContextMenu = useCallback(
@@ -515,7 +534,7 @@ const TagList: React.FC = () => {
         </div>
       ) : undefined}
 
-      {isLoadingFiles ? (
+      {!isLoadingPaused && isLoadingFiles && selectedFiles.length === 0 ? (
         <div className="tag-list-loading">
           <div className="tag-list-spinner"></div>
         </div>
@@ -525,6 +544,21 @@ const TagList: React.FC = () => {
           ref={listRef}
           onScroll={() => handleRecalculateRenderView(tagSummary.length)}
         >
+          {isLoadingFiles && isLoadingPaused ? (
+            <div className="tag-list-paused">
+              <span>
+                The tag list may be incomplete because metadata loading is
+                paused.
+              </span>
+              <button
+                onClick={() =>
+                  usePageStore.getState().actions.setIsLoadingPaused(false)
+                }
+              >
+                Resume
+              </button>
+            </div>
+          ) : undefined}
           {tagSummary.length === 0 ? (
             <div className="tag-list-empty">
               {pageType === "search" && searchTags.length === 0

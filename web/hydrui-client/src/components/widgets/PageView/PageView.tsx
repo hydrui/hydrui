@@ -72,9 +72,11 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
     },
     selectedFilesByPage,
     activeFileByPage,
-    files,
+    fileIds,
+    fileIdToIndex,
+    loadedFiles,
+    metadataLoadController,
     isLoadingFiles,
-    clearDuringLoad,
     error,
     pageType,
   } = usePageStore();
@@ -122,25 +124,26 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
     showBatchAutotagModal;
   const [renderView, setRenderView] = useState({
     firstIndex: 0,
-    lastIndex: files.length,
+    lastIndex: fileIds.length,
     topRows: 0,
     bottomRows: 0,
     viewHeight: 0,
   });
 
   const selectAllFiles = useCallback(() => {
-    const { files } = usePageStore.getState();
-    setSelectedFiles(
-      pageKey,
-      files.map((f) => f.file_id),
-    );
+    const { fileIds } = usePageStore.getState();
+    setSelectedFiles(pageKey, [...fileIds]);
   }, [pageKey, setSelectedFiles]);
 
   const findSimilarFiles = async (distance: number) => {
     const selectedFiles = selectedFilesByPage[pageKey] || [];
-    const selectedFileHashes = files
-      .filter((f) => selectedFiles.includes(f.file_id))
-      .map((f) => f.hash);
+    const selectedFileHashes = metadataLoadController
+      ? (await metadataLoadController.demandFetchMetadata(selectedFiles)).map(
+          (f) => f.hash,
+        )
+      : loadedFiles
+          .filter((f) => selectedFiles.includes(f.file_id))
+          .map((f) => f.hash);
     const query =
       "system:similar to " +
       selectedFileHashes.join(", ") +
@@ -283,9 +286,13 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
       if (!gridRef.current) return;
       const width = gridRef.current.clientWidth - 32; // Account for container padding
       const cols = Math.floor(width / (thumbnailSize + GAP_SIZE));
-      const rows = Math.ceil(files.length / cols);
+      const rows = Math.ceil(fileIds.length / cols);
       setGridDimensions({ cols, rows });
-      handleRecalculateRenderView(files.length, { cols, rows }, thumbnailSize);
+      handleRecalculateRenderView(
+        fileIds.length,
+        { cols, rows },
+        thumbnailSize,
+      );
     };
 
     calculateDimensions();
@@ -308,7 +315,42 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         window.removeEventListener("resize", calculateDimensions);
       }
     };
-  }, [files.length, handleRecalculateRenderView, thumbnailSize]);
+  }, [fileIds.length, handleRecalculateRenderView, thumbnailSize]);
+
+  // Reprioritize metadata loading when scrolling w/ debounce
+  useEffect(() => {
+    function reprioritizeRenderView() {
+      if (!metadataLoadController) {
+        return;
+      }
+      metadataLoadController.reprioritize(
+        fileIds.slice(renderView.firstIndex, renderView.lastIndex),
+      );
+    }
+    if (!metadataLoadController) {
+      return;
+    }
+    const timeout = setTimeout(reprioritizeRenderView, 1000);
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [
+    fileIds,
+    metadataLoadController,
+    renderView.firstIndex,
+    renderView.lastIndex,
+  ]);
+
+  // Reprioritize metadata loading when trying to load a file modal
+  useEffect(() => {
+    if (!metadataLoadController) {
+      return;
+    }
+    if (modalIndex === -1 || fileIds[modalIndex] === undefined) {
+      return;
+    }
+    metadataLoadController.reprioritize([fileIds[modalIndex]]);
+  }, [metadataLoadController, modalIndex, fileIds]);
 
   // Handle drag and drop
   useEffect(() => {
@@ -349,7 +391,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
               hashes: [response.hash],
               page_key: pageKey,
             });
-            await updatePageContents(pageKey, pageType, false);
+            await updatePageContents(pageKey, pageType);
           } else {
             const identifiers = await client.getFileIdsByHashes([
               response.hash,
@@ -462,13 +504,13 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
       }
     } else if (event.shiftKey && selectedFiles.length > 0 && activeFileId) {
       // Select range with Shift
-      const currentIndex = files.findIndex((f) => f.file_id === fileId);
-      const activeIndex = files.findIndex((f) => f.file_id === activeFileId);
+      const currentIndex = fileIdToIndex.get(fileId);
+      const activeIndex = fileIdToIndex.get(activeFileId);
 
-      if (currentIndex !== -1 && activeIndex !== -1) {
+      if (currentIndex !== undefined && activeIndex !== undefined) {
         const start = Math.min(currentIndex, activeIndex);
         const end = Math.max(currentIndex, activeIndex);
-        const rangeIds = files.slice(start, end + 1).map((f) => f.file_id);
+        const rangeIds = fileIds.slice(start, end + 1);
 
         setSelectedFiles(pageKey, rangeIds);
       }
@@ -481,8 +523,8 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
 
   const handleFileDoubleClick = (fileId: number) => {
     // Double click - open modal
-    const fileIndex = files.findIndex((f) => f.file_id === fileId);
-    if (fileIndex !== -1) {
+    const fileIndex = fileIdToIndex.get(fileId);
+    if (fileIndex !== undefined) {
       setModalIndex(fileIndex);
     }
     return;
@@ -508,7 +550,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
     setActiveFileId(pageKey, fileId);
 
     // Get the selected files' metadata
-    const selectedFileMetadata = files.filter((f) =>
+    const selectedFileMetadata = loadedFiles.filter((f) =>
       selectedFiles.includes(f.file_id),
     );
 
@@ -529,8 +571,8 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         onClick: () => {
           const newPageKey = Math.random().toString(36).substring(2);
           addVirtualPage(newPageKey, {
-            name: "files (" + selectedFileMetadata.length + ")",
-            fileIds: selectedFileMetadata.map((f) => f.file_id),
+            name: "files (" + selectedFiles.length + ")",
+            fileIds: [...selectedFiles],
           });
           setPage(newPageKey, "virtual");
         },
@@ -571,12 +613,32 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
             id: "open-best",
             label: "Open best files in new page",
             icon: <LinkIcon />,
-            onClick: () => {
-              addVirtualPage(Math.random().toString(36).substring(2), {
-                name: `best files (${selectedFiles.length})`,
-                hashes: selectedFileMetadata.map((f) => f.hash),
+            onClick: async () => {
+              const hashes = metadataLoadController
+                ? (
+                    await metadataLoadController.demandFetchMetadata(
+                      selectedFiles,
+                    )
+                  ).map((f) => f.hash)
+                : loadedFiles
+                    .filter((f) => selectedFiles.includes(f.file_id))
+                    .map((f) => f.hash);
+              const relationships = await client.getFileRelationships({
+                hashes,
               });
-              setPage(pageKey, "virtual");
+              const kingHashes = new Set(
+                Object.values(relationships.file_relationships).map(
+                  (file) => file.king,
+                ),
+              );
+              const files = await client.getFileIdsByHashes([...kingHashes]);
+              const fileIds = files.metadata.map((file) => file.file_id);
+              const newPageKey = Math.random().toString(36).substring(2);
+              addVirtualPage(newPageKey, {
+                name: `best files (${fileIds.length})`,
+                fileIds,
+              });
+              setPage(newPageKey, "virtual");
             },
           },
           {
@@ -630,8 +692,12 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         id: "edit-tags",
         label: "Edit Tags",
         icon: <TagIcon />,
-        onClick: () => {
-          setTagEditFiles(selectedFileMetadata);
+        onClick: async () => {
+          setTagEditFiles(
+            metadataLoadController
+              ? await metadataLoadController.demandFetchMetadata(selectedFiles)
+              : selectedFileMetadata,
+          );
           setShowEditTagsModal(true);
         },
       },
@@ -639,8 +705,12 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         id: "edit-urls",
         label: "Edit URLs",
         icon: <LinkIcon />,
-        onClick: () => {
-          setUrlEditFiles(selectedFileMetadata);
+        onClick: async () => {
+          setUrlEditFiles(
+            metadataLoadController
+              ? await metadataLoadController.demandFetchMetadata(selectedFiles)
+              : selectedFileMetadata,
+          );
           setShowEditUrlsModal(true);
         },
       },
@@ -648,12 +718,16 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         id: "edit-notes",
         label: "Edit Notes",
         icon: <PencilSquareIcon />,
-        onClick: () => {
-          const currentIndex = files.findIndex(
-            (f) => f.file_id === activeFileId,
-          );
-          if (currentIndex === -1 || !files[currentIndex]) return;
-          setEditNotesFile(files[currentIndex]);
+        onClick: async () => {
+          const currentIndex = fileIdToIndex.get(fileId);
+          if (currentIndex === undefined) return;
+          const file = metadataLoadController
+            ? (await metadataLoadController.demandFetchMetadata([fileId]))[0]
+            : loadedFiles[currentIndex];
+          if (!file) {
+            return;
+          }
+          setEditNotesFile(file);
           setShowEditNotesModal(true);
         },
       },
@@ -795,7 +869,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
   };
 
   const modalHasPrevious = modalIndex > 0;
-  const modalHasNext = modalIndex < files.length - 1;
+  const modalHasNext = modalIndex < fileIds.length - 1;
 
   const handleModalPrevious = () => {
     if (modalHasPrevious) {
@@ -811,8 +885,8 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
 
   // Handle keyboard navigation
   const handleFileKeyDown = (fileId: number, event: React.KeyboardEvent) => {
-    const currentIndex = files.findIndex((f) => f.file_id === fileId);
-    if (currentIndex === -1) return;
+    const currentIndex = fileIdToIndex.get(fileId);
+    if (currentIndex === undefined) return;
 
     let nextIndex: number | null = null;
     const { cols } = gridDimensions;
@@ -827,7 +901,10 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
 
       case "ArrowRight":
         event.preventDefault();
-        if (currentIndex % cols < cols - 1 && currentIndex < files.length - 1) {
+        if (
+          currentIndex % cols < cols - 1 &&
+          currentIndex < fileIds.length - 1
+        ) {
           nextIndex = currentIndex + 1;
         }
         break;
@@ -841,7 +918,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
 
       case "ArrowDown":
         event.preventDefault();
-        if (currentIndex + cols < files.length) {
+        if (currentIndex + cols < fileIds.length) {
           nextIndex = currentIndex + cols;
         }
         break;
@@ -867,13 +944,11 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
           }
         } else if (event.shiftKey && selectedFiles.length > 0 && activeFileId) {
           // Select range with Shift
-          const activeIndex = files.findIndex(
-            (f) => f.file_id === activeFileId,
-          );
-          if (activeIndex !== -1) {
+          const activeIndex = fileIdToIndex.get(activeFileId);
+          if (activeIndex !== undefined) {
             const start = Math.min(currentIndex, activeIndex);
             const end = Math.max(currentIndex, activeIndex);
-            const rangeIds = files.slice(start, end + 1).map((f) => f.file_id);
+            const rangeIds = fileIds.slice(start, end + 1);
             setSelectedFiles(pageKey, rangeIds);
           }
         } else {
@@ -888,8 +963,8 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         break;
     }
 
-    if (nextIndex !== null && nextIndex >= 0 && nextIndex < files.length) {
-      const nextFileId = files[nextIndex]?.file_id;
+    if (nextIndex !== null && nextIndex >= 0 && nextIndex < fileIds.length) {
+      const nextFileId = fileIds[nextIndex];
       if (nextFileId) {
         setFocusedFileId(nextFileId);
         document
@@ -976,9 +1051,9 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         height: Math.abs(mouseY - dragStart.y),
       };
 
-      const selectedFiles: FileMetadata[] = [];
+      const selectedFiles: number[] = [];
       const { cols } = gridDimensions;
-      const maxRow = Math.max(0, Math.ceil(files.length / cols) - 1);
+      const maxRow = Math.max(0, Math.ceil(fileIds.length / cols) - 1);
       const firstRow = Math.min(
         maxRow,
         Math.max(
@@ -1004,10 +1079,10 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         gridWidth - cols * thumbnailSize - (cols - 1) * GAP_SIZE;
       const horizontalGutter = extraWidth / cols / 2;
       const firstFileIndex = firstRow * cols;
-      const lastFileIndex = Math.min((lastRow + 1) * cols, files.length);
+      const lastFileIndex = Math.min((lastRow + 1) * cols, fileIds.length);
       for (let i = firstFileIndex; i < lastFileIndex; i++) {
-        const file = files[i];
-        if (!file) {
+        const fileId = fileIds[i];
+        if (!fileId) {
           console.warn(`Invalid file index: ${i} - This is probably a bug.`);
           continue;
         }
@@ -1028,43 +1103,40 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
           fileTop > selectionRect.top + selectionRect.height
         );
         if (intersects) {
-          selectedFiles.push(file);
+          selectedFiles.push(fileId);
         }
       }
 
       // Update selection
-      let fileIds = [];
+      let fileIdsToSelect = [];
       if (inverseSelection.current) {
-        const selectedFileSet = new Set(selectedFiles.map((f) => f.file_id));
-        fileIds = dragStartSelectionRef.current.filter(
+        const selectedFileSet = new Set(selectedFiles);
+        fileIdsToSelect = dragStartSelectionRef.current.filter(
           (id) => !selectedFileSet.has(id),
         );
       } else {
-        fileIds = [
-          ...new Set([
-            ...dragStartSelectionRef.current,
-            ...selectedFiles.map((f) => f.file_id),
-          ]),
+        fileIdsToSelect = [
+          ...new Set([...dragStartSelectionRef.current, ...selectedFiles]),
         ];
       }
 
       if (
-        fileIds.length !== 0 ||
+        fileIdsToSelect.length !== 0 ||
         (selectedFilesByPage[pageKey] &&
           selectedFilesByPage[pageKey].length !== 0)
       ) {
-        setSelectedFiles(pageKey, fileIds);
+        setSelectedFiles(pageKey, fileIdsToSelect);
       }
 
       // Update active file
-      if (fileIds.length > 0 && fileIds[0]) {
+      if (fileIdsToSelect.length > 0 && fileIdsToSelect[0]) {
         if (
           !activeFileByPage[pageKey] ||
-          !fileIds.includes(activeFileByPage[pageKey])
+          !fileIdsToSelect.includes(activeFileByPage[pageKey])
         ) {
-          setActiveFileId(pageKey, fileIds[0]);
+          setActiveFileId(pageKey, fileIdsToSelect[0]);
         }
-      } else if (fileIds.length === 0 && activeFileByPage[pageKey]) {
+      } else if (fileIdsToSelect.length === 0 && activeFileByPage[pageKey]) {
         if (activeFileByPage[pageKey]) {
           setActiveFileId(pageKey, null);
         }
@@ -1073,7 +1145,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
     [
       isDragging,
       dragStart,
-      files,
+      fileIds,
       pageKey,
       setSelectedFiles,
       setActiveFileId,
@@ -1109,11 +1181,11 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
   const isLoading =
     isLoadingFiles || (pageType === "search" && searchStatus === "loading");
 
-  let renderFiles: FileMetadata[];
+  let renderFiles: number[];
   if (useVirtualViewport) {
-    renderFiles = files.slice(renderView.firstIndex, renderView.lastIndex);
+    renderFiles = fileIds.slice(renderView.firstIndex, renderView.lastIndex);
   } else {
-    renderFiles = files;
+    renderFiles = fileIds;
   }
 
   return (
@@ -1136,12 +1208,12 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         onContextMenu={handleViewContextMenu}
         onScroll={() =>
           handleRecalculateRenderView(
-            files.length,
+            fileIds.length,
             gridDimensions,
             thumbnailSize,
           )
         }
-        loaded={!(isLoading && clearDuringLoad) && renderView.lastIndex !== 0}
+        loaded={fileIds.length !== 0 && renderView.lastIndex !== 0}
       >
         {/* Selection rectangle */}
         {isDragging && dragStart && dragEnd && (
@@ -1156,7 +1228,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
           />
         )}
 
-        {isLoading && (clearDuringLoad || files.length === 0) ? (
+        {isLoading && fileIds.length === 0 ? (
           // Loading state
           <div className="files-grid-loading">
             <div className="page-loading-spinner"></div>
@@ -1166,7 +1238,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
           <div className="files-grid-error">
             <div>{error}</div>
           </div>
-        ) : files.length === 0 ? (
+        ) : fileIds.length === 0 ? (
           // Empty state
           <div className="files-grid-empty">
             {pageType === "search" ? (
@@ -1213,14 +1285,14 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
           </div>
         ) : (
           // Files grid
-          renderFiles.map((file, i) => (
+          renderFiles.map((fileId, i) => (
             <div
-              key={file.file_id}
+              key={fileId}
               data-file-item
-              data-file-id={file.file_id}
+              data-file-id={fileId}
               className={`file-item ${
-                selectedFiles.includes(file.file_id)
-                  ? activeFileId === file.file_id
+                selectedFiles.includes(fileId)
+                  ? activeFileId === fileId
                     ? "file-item-active"
                     : "file-item-selected"
                   : ""
@@ -1237,32 +1309,32 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
                     ? renderView.bottomRows * (thumbnailSize + GAP_SIZE)
                     : 0,
               }}
-              onClick={(e) => handleFileClick(file.file_id, e)}
-              onDoubleClick={() => handleFileDoubleClick(file.file_id)}
-              onKeyDown={(e) => handleFileKeyDown(file.file_id, e)}
+              onClick={(e) => handleFileClick(fileId, e)}
+              onDoubleClick={() => handleFileDoubleClick(fileId)}
+              onKeyDown={(e) => handleFileKeyDown(fileId, e)}
               onMouseUp={(e) => {
                 if (e.button === 1) {
                   e.preventDefault();
-                  window.open(client.getFileUrl(file.file_id), "_blank");
+                  window.open(client.getFileUrl(fileId), "_blank");
                 }
               }}
-              onContextMenu={(e) => handleFileContextMenu(e, file.file_id)}
+              onContextMenu={(e) => handleFileContextMenu(e, fileId)}
               tabIndex={0}
               role="button"
-              aria-selected={selectedFiles.includes(file.file_id)}
-              aria-label={`File ${file.file_id}`}
+              aria-selected={selectedFiles.includes(fileId)}
+              aria-label={`File ${fileId}`}
               {...longPressHandlers}
             >
-              <Thumbnail fileId={file.file_id} className="thumbnail-wrapper" />
+              <Thumbnail fileId={fileId} className="thumbnail-wrapper" />
             </div>
           ))
         )}
       </ScrollView>
 
-      {modalIndex !== -1 && files[modalIndex] && (
+      {modalIndex !== -1 && fileIds[modalIndex] && (
         <FileViewerModal
-          fileId={files[modalIndex].file_id}
-          fileData={files[modalIndex]}
+          fileId={fileIds[modalIndex]}
+          fileData={loadedFiles[modalIndex]}
           onClose={handleModalClose}
           onPrevious={handleModalPrevious}
           onNext={handleModalNext}

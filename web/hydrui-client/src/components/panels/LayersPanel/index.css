@@ -7,7 +7,6 @@
   background-color: var(--color-gray-800);
   border: 1px solid var(--color-gray-700);
   border-radius: var(--radius-lg);
-  box-shadow: var(--tw-shadow-lg);
   transition-property: all;
   transition-duration: 300ms;
   transition-timing-function: var(--ease-in-out);

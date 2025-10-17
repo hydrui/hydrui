@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+import { SearchFilesResponse } from "@/api/types";
+
 import { client } from "./apiStore";
 import { jsonStorage } from "./storage";
 
@@ -12,6 +14,7 @@ interface SearchState {
   searchStatus: SearchStatus;
   searchError: string | null;
   autoSearch: boolean;
+  cancelSearch: (() => void) | null;
 
   actions: {
     addSearchTag: (tag: string) => void;
@@ -32,39 +35,51 @@ export const useSearchStore = create<SearchState>()(
       searchStatus: "initial",
       searchError: null,
       autoSearch: true,
+      cancelSearch: null,
 
       actions: {
         addSearchTag: (tag: string) => {
-          const { searchTags, autoSearch } = get();
+          const {
+            searchTags,
+            autoSearch,
+            actions: { performSearch },
+          } = get();
           if (!searchTags.includes(tag)) {
             const newTags = [...searchTags, tag];
             set({ searchTags: newTags, searchError: null });
 
             // Auto-search if enabled
             if (autoSearch) {
-              setTimeout(() => get().actions.performSearch(), 0);
+              setTimeout(() => performSearch(), 0);
             }
           }
         },
 
         removeSearchTag: (tag: string) => {
-          const { searchTags, autoSearch } = get();
+          const {
+            searchTags,
+            autoSearch,
+            actions: { performSearch },
+          } = get();
           const newTags = searchTags.filter((t) => t !== tag);
           set({ searchTags: newTags, searchError: null });
 
           // Auto-search if enabled
           if (autoSearch) {
-            setTimeout(() => get().actions.performSearch(), 0);
+            setTimeout(() => performSearch(), 0);
           }
         },
 
         setSearchTags: (tags: string[]) => {
-          const { autoSearch } = get();
+          const {
+            autoSearch,
+            actions: { performSearch },
+          } = get();
           set({ searchTags: tags });
 
           // Auto-search if enabled
           if (autoSearch) {
-            setTimeout(() => get().actions.performSearch(), 0);
+            setTimeout(() => performSearch(), 0);
           }
         },
 
@@ -73,26 +88,56 @@ export const useSearchStore = create<SearchState>()(
         },
 
         performSearch: async () => {
-          const { searchTags } = get();
+          const { searchTags, cancelSearch } = get();
 
-          // Don't auto-search with no tags to avoid loading everything
+          // Abort existing request, if one exists.
+          if (cancelSearch) {
+            cancelSearch();
+          }
+
           if (searchTags.length === 0) {
-            set({ searchResults: [], searchStatus: "loaded" });
+            set({
+              searchResults: [],
+              searchStatus: "loaded",
+              cancelSearch: null,
+            });
             return;
           }
 
-          set({ searchStatus: "loading", searchError: null });
-
+          let promise: Promise<SearchFilesResponse> | null = null;
+          let rejectPromise: ((reason: unknown) => void) | null = null;
+          let abortController: AbortController | null = null;
+          if (typeof AbortController !== "undefined") {
+            abortController = new AbortController();
+          }
+          set({
+            searchStatus: "loading",
+            searchError: null,
+            cancelSearch: () => {
+              promise?.catch(() => {});
+              rejectPromise?.(new Error("Aborted"));
+              abortController?.abort();
+            },
+          });
           try {
-            const response = await client.searchFiles({ tags: searchTags });
+            promise = new Promise<SearchFilesResponse>((resolve, reject) => {
+              rejectPromise = reject;
+              client
+                .searchFiles({ tags: searchTags }, abortController?.signal)
+                .then(resolve, reject);
+            });
+            const response = await promise;
             set({ searchResults: response.file_ids, searchStatus: "loaded" });
           } catch (error) {
-            console.error("Search failed:", error);
             set({
               searchResults: [],
               searchStatus: "loaded",
               searchError:
                 error instanceof Error ? error.message : "Unknown error",
+            });
+          } finally {
+            set({
+              cancelSearch: null,
             });
           }
         },

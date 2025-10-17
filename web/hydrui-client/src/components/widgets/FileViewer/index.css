@@ -202,11 +202,10 @@
   width: auto;
   object-fit: contain;
   transform-origin: top left;
+  user-select: none;
   touch-action: none;
-  pointer-events: none; /* Prevent the image from capturing mouse events */
-  transition:
-    transform 50ms ease-in-out,
-    opacity 200ms ease-in-out;
+  pointer-events: none;
+  transition: opacity 200ms ease-in-out;
 }
 
 .image-viewer-img.transitioning {
