@@ -27,6 +27,43 @@
   padding: 0.25rem;
 }
 
+.tag-list-paused {
+  display: flex;
+  position: sticky;
+  top: 0;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem;
+  background-color: var(--color-gray-700);
+  border-radius: 0.25rem;
+  margin-bottom: 0.5rem;
+  font-size: var(--text-sm);
+  color: var(--color-gray-300);
+}
+
+.tag-list-paused span {
+  margin-right: 0.5rem;
+}
+
+.tag-list-paused button {
+  margin-left: auto;
+  padding: 0.25rem 0.5rem;
+  background-color: var(--color-gray-600);
+  color: var(--color-gray-200);
+  border-radius: 0.25rem;
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.tag-list-paused button:hover {
+  background-color: var(--color-gray-500);
+  color: var(--color-white);
+}
+
+.tag-list-paused button:active {
+  background-color: var(--color-gray-700);
+}
+
 .tag-list-quick-input {
   margin-top: -0.5rem;
   margin-left: 0.5rem;
