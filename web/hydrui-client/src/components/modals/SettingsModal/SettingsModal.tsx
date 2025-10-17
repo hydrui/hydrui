@@ -24,7 +24,7 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-type TabType = "api" | "general" | "thumbnails" | "models";
+type TabType = "api" | "general" | "pageview" | "models";
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState<TabType>("general");
@@ -89,14 +89,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                   General
                 </button>
                 <button
-                  onClick={() => setActiveTab("thumbnails")}
+                  onClick={() => setActiveTab("pageview")}
                   className={`settings-modal-tab ${
-                    activeTab === "thumbnails"
+                    activeTab === "pageview"
                       ? "settings-modal-tab-active"
                       : "settings-modal-tab-inactive"
                   }`}
                 >
-                  Thumbnails
+                  Page View
                 </button>
                 <button
                   onClick={() => setActiveTab("models")}
@@ -144,9 +144,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                   <TagColorsEditor editColor={setEditingColor} />
                 </>
               )}
-              {activeTab === "thumbnails" && (
+              {activeTab === "pageview" && (
                 <>
-                  <ThumbnailSettings />
+                  <PageViewSettings />
                 </>
               )}
               {activeTab === "models" && (
@@ -265,11 +265,16 @@ const MimeTypesEditor: React.FC = () => {
   );
 };
 
-const ThumbnailSettings: React.FC = () => {
+const PageViewSettings: React.FC = () => {
   const {
     thumbnailSize,
     useVirtualViewport,
-    actions: { setThumbnailSize: setThumbnailSizeState, setVirtualViewport },
+    eagerLoadThreshold,
+    actions: {
+      setThumbnailSize: setThumbnailSizeState,
+      setVirtualViewport,
+      setEagerLoadThreshold: setEagerLoadThresholdState,
+    },
   } = usePreferencesStore();
 
   const [thumbnailSizeInput, setThumbnailSizeInput] = useState(thumbnailSize);
@@ -279,10 +284,18 @@ const ThumbnailSettings: React.FC = () => {
     setThumbnailSizeInput(size);
   };
 
+  const [eagerLoadThresholdInput, setEagerLoadThresholdInput] =
+    useState(eagerLoadThreshold);
+
+  const setEagerLoadThreshold = (size: number) => {
+    setEagerLoadThresholdState(size);
+    setEagerLoadThresholdInput(size);
+  };
+
   return (
     <>
       <fieldset className="settings-form">
-        <legend>Thumbnail Size</legend>
+        <legend>Display</legend>
         <div className="settings-row">
           <label>Thumbnail Size</label>
           <input
@@ -304,9 +317,6 @@ const ThumbnailSettings: React.FC = () => {
             onChange={(e) => setThumbnailSize(parseInt(e.target.value) || 0)}
           ></input>
         </div>
-      </fieldset>
-      <fieldset className="settings-form">
-        <legend>Page Rendering</legend>
         <div>
           <label>
             <input
@@ -319,6 +329,29 @@ const ThumbnailSettings: React.FC = () => {
           <p>
             Virtual viewport greatly improves performance in large pages, but
             can lead to increased scroll jank.
+          </p>
+        </div>
+      </fieldset>
+      <fieldset className="settings-form">
+        <legend>Processing</legend>
+        <div className="settings-row">
+          <label>Eager Load Threshold</label>
+          <input
+            className="settings-text-input"
+            name="eager-load-threshold"
+            type="text"
+            value={eagerLoadThresholdInput}
+            onChange={(e) =>
+              setEagerLoadThresholdInput(parseInt(e.target.value) || 0)
+            }
+            onBlur={() => setEagerLoadThreshold(eagerLoadThresholdInput)}
+          ></input>
+        </div>
+        <div>
+          <p>
+            When there are greater than {eagerLoadThreshold} files on a page,
+            Hydrui will only load metadata as-needed rather than loading all of
+            it.
           </p>
         </div>
       </fieldset>

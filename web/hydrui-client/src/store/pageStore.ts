@@ -7,6 +7,7 @@ import { client, useApiStore } from "@/store/apiStore";
 import { useSearchStore } from "@/store/searchStore";
 import { jsonStorage } from "@/store/storage";
 
+import { usePreferencesStore } from "./preferencesStore";
 import { useToastStore } from "./toastStore";
 
 // Special page key for our search tab - this will never conflict with API page keys
@@ -291,6 +292,8 @@ export const usePageStore = create<PageState>()(
           fileIds,
           fileIdToIndex,
           isLoadingFiles: true,
+          isLoadingPaused:
+            fileIds.length > usePreferencesStore.getState().eagerLoadThreshold,
           isLoadingAwake: true,
           loadedFiles: [],
           loadedFileCount,
