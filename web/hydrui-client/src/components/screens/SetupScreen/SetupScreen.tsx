@@ -92,7 +92,7 @@ const SetupScreen: React.FC = () => {
               ref={baseUrlInput}
               defaultValue={baseUrl}
               className="setup-input"
-              placeholder="Enter your Hydrus API URL"
+              placeholder="Enter your Hydrus API URL, e.g. http://localhost:45869"
               required
             />
           </div>

@@ -58,7 +58,7 @@ export const useApiStore = create<ApiState>()(
   persist(
     (set) => ({
       apiKey: "",
-      baseUrl: "http://localhost:45869",
+      baseUrl: "",
       isAuthenticated: false,
       checkingAuthentication: false,
 
