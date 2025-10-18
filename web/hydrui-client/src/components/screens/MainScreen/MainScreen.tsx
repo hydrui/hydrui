@@ -16,7 +16,7 @@ import TabView from "@/components/widgets/TabView/TabView";
 import ToastContainer from "@/components/widgets/Toast/ToastContainer";
 import { useApiStore } from "@/store/apiStore";
 import { MenuBarMenu } from "@/store/contextMenuStore";
-import { isServerMode } from "@/utils/serverMode";
+import { isServerMode } from "@/utils/modes";
 
 import "./index.css";
 

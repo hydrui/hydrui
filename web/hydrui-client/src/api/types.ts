@@ -108,10 +108,10 @@ export interface FileDomainParam {
 }
 
 export interface FilesParam {
-  file_id?: number;
-  file_ids?: number[];
-  hash?: string;
-  hashes?: string[];
+  file_id?: number | undefined;
+  file_ids?: number[] | undefined;
+  hash?: string | undefined;
+  hashes?: string[] | undefined;
 }
 
 // Search params
@@ -148,7 +148,7 @@ export interface FileMetadataParams extends FilesParam {
 
 // File metadata response
 export const FileMetadataResponseSchema = z.extend(ApiResponseSchema, {
-  services: ServicesObjectSchema,
+  services: z.optional(ServicesObjectSchema),
   metadata: z.array(FileMetadataSchema),
 });
 
@@ -479,4 +479,33 @@ export interface HydrusApiClient {
   // Note operations
   addNotes: (request: AddNotesRequest) => Promise<AddNotesResponse>;
   deleteNotes: (request: DeleteNotesRequest) => Promise<void>;
+}
+
+export interface HttpRequestOptions {
+  body?: Blob | string | null;
+  credentials?: RequestCredentials;
+  headers?: HeadersInit;
+  method?: string;
+  signal?: AbortSignal | null;
+}
+
+export interface HttpResponse {
+  readonly body: ReadableStream<Uint8Array> | null;
+  readonly headers: Headers;
+  readonly ok: boolean;
+  readonly redirected: boolean;
+  readonly status: number;
+  readonly statusText: string;
+  readonly type: ResponseType;
+  readonly url: string;
+  arrayBuffer(): Promise<ArrayBuffer>;
+  blob(): Promise<Blob>;
+  bytes(): Promise<Uint8Array>;
+  formData(): Promise<FormData>;
+  json(): Promise<unknown>;
+  text(): Promise<string>;
+}
+
+export interface HttpClient {
+  fetch(url: string, options: HttpRequestOptions): Promise<HttpResponse>;
 }

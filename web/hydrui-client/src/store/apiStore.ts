@@ -2,15 +2,11 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import { HydrusClient } from "@/api/client";
-import { MockHydrusClient } from "@/api/mockClient";
 import { HydrusApiClient } from "@/api/types";
-import { isServerMode } from "@/utils/serverMode";
+import { isDemoMode, isServerMode } from "@/utils/modes";
 
 // Create client instance based on environment
-export const client =
-  typeof process !== "undefined" && process.env["NODE_ENV"] === "test"
-    ? new MockHydrusClient()
-    : new HydrusClient();
+export const client = new HydrusClient();
 
 interface ApiState {
   apiKey: string;
@@ -31,6 +27,9 @@ export const verifyAuthentication = async (
   apiKey: string,
   baseUrl: string,
 ): Promise<boolean> => {
+  if (isDemoMode) {
+    return true;
+  }
   try {
     if (client instanceof HydrusClient) {
       client.setBaseUrl(baseUrl);
@@ -38,10 +37,7 @@ export const verifyAuthentication = async (
 
     const isValid = await client.verifyAccessKey(apiKey);
     if (isValid) {
-      if (
-        client instanceof HydrusClient ||
-        client instanceof MockHydrusClient
-      ) {
+      if (client instanceof HydrusClient) {
         client.setApiKey(apiKey);
       }
       return true;

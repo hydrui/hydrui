@@ -1,7 +1,10 @@
 import * as z from "zod/mini";
 
-import { isServerMode } from "@/utils/serverMode";
+import { isDemoMode, isServerMode } from "@/utils/modes";
 
+import { DemoServer } from "./demoServer";
+import { FetchHttpClient } from "./fetchHttpClient";
+import { MemoryHttpClient } from "./memoryHttpClient";
 import {
   AddFileResponse,
   AddFilesRequest,
@@ -23,6 +26,9 @@ import {
   GetFileRelationshipsParams,
   GetFileRelationshipsResponse,
   GetFileRelationshipsResponseSchema,
+  HttpClient,
+  HttpRequestOptions,
+  HttpResponse,
   HydrusApiClient,
   PageInfoParams,
   PageInfoResponse,
@@ -61,10 +67,22 @@ interface RequestOptions<Params, Request> {
 export class HydrusClient implements HydrusApiClient {
   private baseUrl: string;
   private apiKey: string;
+  private httpClient: HttpClient;
+  private demoServer?: DemoServer;
 
-  constructor(baseUrl: string = "http://localhost:45869", apiKey: string = "") {
+  constructor(
+    baseUrl: string = "http://localhost:45869",
+    apiKey: string = "",
+    httpClient: HttpClient = new FetchHttpClient(),
+  ) {
     this.baseUrl = isServerMode ? "/hydrus" : baseUrl;
     this.apiKey = isServerMode ? "" : apiKey;
+    if (isDemoMode) {
+      this.demoServer = new DemoServer();
+      this.httpClient = new MemoryHttpClient(this.demoServer);
+    } else {
+      this.httpClient = httpClient;
+    }
   }
 
   /**
@@ -165,7 +183,7 @@ export class HydrusClient implements HydrusApiClient {
     method: "GET" | "POST" = "GET",
     endpoint: string,
     { body, params, signal }: RequestOptions<Params, Request> = {},
-  ): Promise<Response> {
+  ): Promise<HttpResponse> {
     // Prepare URL with query parameters
     let url = `${this.baseUrl}${endpoint}`;
 
@@ -183,7 +201,7 @@ export class HydrusClient implements HydrusApiClient {
     }
 
     // Prepare fetch options
-    const options: RequestInit = {
+    const options: HttpRequestOptions = {
       method,
       headers: {
         "Content-Type": "application/json",
@@ -200,7 +218,7 @@ export class HydrusClient implements HydrusApiClient {
     }
 
     // Make the request
-    const response = await fetch(url, options);
+    const response = await this.httpClient.fetch(url, options);
 
     // Handle errors
     if (!response.ok) {
@@ -229,12 +247,15 @@ export class HydrusClient implements HydrusApiClient {
     if (!key && !isServerMode) return false;
 
     try {
-      const response = await fetch(`${this.baseUrl}/verify_access_key`, {
-        method: "GET",
-        headers: {
-          "Hydrus-Client-API-Access-Key": key,
+      const response = await this.httpClient.fetch(
+        `${this.baseUrl}/verify_access_key`,
+        {
+          method: "GET",
+          headers: {
+            "Hydrus-Client-API-Access-Key": key,
+          },
         },
-      });
+      );
       return response.ok && response.status === 200;
     } catch {
       return false;
@@ -306,6 +327,9 @@ export class HydrusClient implements HydrusApiClient {
    * Get the direct URL for a file
    */
   getFileUrl(fileId: number): string {
+    if (isDemoMode) {
+      return String(this.demoServer!.getDemoFile(fileId, "file"));
+    }
     return `${this.baseUrl}/get_files/file?file_id=${fileId}${this.apiKey ? `&Hydrus-Client-API-Access-Key=${this.apiKey}` : ""}`;
   }
 
@@ -318,7 +342,7 @@ export class HydrusClient implements HydrusApiClient {
     const target = `/get_files/file?file_id=${fileId}${this.apiKey ? `&Hydrus-Client-API-Access-Key=${this.apiKey}` : ""}`;
     if (isServerMode) {
       const bridgePath = `/bridge/${Math.random().toString(36).substring(2)}`;
-      await fetch(bridgePath, {
+      await this.httpClient.fetch(bridgePath, {
         method: "POST",
         body: JSON.stringify({ target }),
         credentials: "include",
@@ -333,6 +357,9 @@ export class HydrusClient implements HydrusApiClient {
    * Get the direct URL for a thumbnail
    */
   getThumbnailUrl(fileId: number): string {
+    if (isDemoMode) {
+      return String(this.demoServer!.getDemoFile(fileId, "thumbnail"));
+    }
     return `${this.baseUrl}/get_files/thumbnail?file_id=${fileId}${this.apiKey ? `&Hydrus-Client-API-Access-Key=${this.apiKey}` : ""}`;
   }
 
@@ -452,6 +479,21 @@ export class HydrusClient implements HydrusApiClient {
     progressCallback?: (progress: number) => void,
     signal?: AbortSignal,
   ): Promise<AddFileResponse> {
+    if (isDemoMode) {
+      // For the demo, use fetch.
+      const response = await this.httpClient.fetch(
+        `${this.baseUrl}/add_files/add_file`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": file.type,
+            "Hydrus-Client-API-Access-Key": this.apiKey,
+          },
+          body: file,
+        },
+      );
+      return (await response.json()) as AddFileResponse;
+    }
     // For portability, we need to use an XHR for this to get progress.
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();

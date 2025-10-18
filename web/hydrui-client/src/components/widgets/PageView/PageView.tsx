@@ -40,7 +40,7 @@ import { usePageStore } from "@/store/pageStore";
 import { usePreferencesStore } from "@/store/preferencesStore";
 import { useSearchStore } from "@/store/searchStore";
 import { useToastStore } from "@/store/toastStore";
-import { isServerMode } from "@/utils/serverMode";
+import { isServerMode } from "@/utils/modes";
 
 import { SearchBar } from "./SearchBar";
 import { Thumbnail } from "./Thumbnail";

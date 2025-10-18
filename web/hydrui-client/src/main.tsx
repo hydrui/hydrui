@@ -5,7 +5,7 @@ import { registerSW } from "virtual:pwa-register";
 import { App } from "./App";
 import "./index.css";
 import { useToastStore } from "./store/toastStore";
-import { isServerMode } from "./utils/serverMode";
+import { isServerMode } from "./utils/modes";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

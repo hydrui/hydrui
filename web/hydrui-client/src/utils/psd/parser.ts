@@ -6,6 +6,7 @@ import {
   PSDChannelID,
   PSDColorMode,
   PSDCompressionMethod,
+  PSDResourceID,
   PSDSectionType,
   PSD_SIGNATURE,
   PSD_VERSION,
@@ -23,6 +24,7 @@ import {
 export class PSDParser {
   private stream: PSDDataStream;
   private document: PSDDocument;
+  private negativeLayers = false;
 
   constructor(file: File) {
     this.stream = new PSDDataStream(file);
@@ -51,6 +53,94 @@ export class PSDParser {
     await this.parseImageResources();
     await this.parseLayerAndMaskInfo();
     return this.document;
+  }
+
+  /**
+   * Parses the merged image. Call immediately after parse() if desired.
+   */
+  async parseMerged(): Promise<ImageBitmap> {
+    const { width, height, channels } = this.document.header;
+    const compressionMethod = await this.stream.readU16BE();
+    const channelData: Uint8Array[] = [];
+    if (compressionMethod === PSDCompressionMethod.RAW) {
+      const channelSize = width * height;
+      for (let i = 0; i < channels; i++) {
+        const data = await this.stream.readBuffer(channelSize);
+        channelData.push(data);
+      }
+    } else if (compressionMethod === PSDCompressionMethod.RLE) {
+      const channelRowLengths: number[][] = [];
+      for (let i = 0; i < channels; i++) {
+        const rowLengths: number[] = [];
+        this.stream.prefetch(0, height * 2);
+        for (let j = 0; j < height; j++) {
+          rowLengths.push(await this.stream.readU16BE());
+        }
+        channelRowLengths.push(rowLengths);
+      }
+      for (const rowLengths of channelRowLengths) {
+        const totalCompressedSize = rowLengths.reduce(
+          (sum, count) => sum + count,
+          0,
+        );
+        const compressedData =
+          await this.stream.readBuffer(totalCompressedSize);
+        const data = decompressRLERows(compressedData, rowLengths, width);
+        channelData.push(data);
+      }
+    } else {
+      throw new Error(
+        `Unsupported compression method ${compressionMethod} for merged image data`,
+      );
+    }
+    const pixelCount = width * height;
+    const rgba = new Uint8Array(pixelCount * 4);
+    let rChannel: Uint8Array;
+    let gChannel: Uint8Array;
+    let bChannel: Uint8Array;
+    let aChannel: Uint8Array | undefined = undefined;
+    if (channels === 1) {
+      rChannel = gChannel = bChannel = channelData[0]!;
+    } else if (channels === 2) {
+      rChannel = gChannel = bChannel = channelData[0]!;
+      aChannel = channelData[1]!;
+    } else if (channels === 3) {
+      rChannel = channelData[0]!;
+      gChannel = channelData[1]!;
+      bChannel = channelData[2]!;
+    } else {
+      rChannel = channelData[0]!;
+      gChannel = channelData[1]!;
+      bChannel = channelData[2]!;
+      aChannel = channelData[3]!;
+    }
+    if (this.negativeLayers) {
+      aChannel =
+        this.document.layers[this.document.layers.length - 1]?.channels[0]
+          ?.data;
+    } else {
+      const alphaIdent = this.document.resources.find(
+        (resource) => resource.id == PSDResourceID.ALPHA_IDENTIFIERS,
+      );
+      if (alphaIdent && alphaIdent.length >= 4) {
+        this.stream.setOffset(alphaIdent.offset);
+        const v = await this.stream.readI32BE();
+        if (v !== 0) {
+          aChannel = undefined;
+        }
+      } else {
+        // TODO: Check for Lr16, Lr32, Mtrn.
+        aChannel = undefined;
+      }
+    }
+    for (let i = 0; i < pixelCount; i++) {
+      rgba[i * 4 + 0] = rChannel[i] ?? 0;
+      rgba[i * 4 + 1] = gChannel[i] ?? 0;
+      rgba[i * 4 + 2] = bChannel[i] ?? 0;
+      rgba[i * 4 + 3] = aChannel?.[i] ?? 255;
+    }
+    const imageData = new ImageData(new Uint8ClampedArray(rgba), width, height);
+    return await createImageBitmap(imageData);
   }
 
   /**
@@ -157,7 +247,11 @@ export class PSDParser {
     this.stream.prefetch(this.stream.file.position, layerInfoLength);
 
     const endOffset = this.stream.file.position + layerInfoLength;
-    const layerCount = Math.abs(await this.stream.readI16BE());
+    const rawLayerCount = await this.stream.readI16BE();
+    if (rawLayerCount < 0) {
+      this.negativeLayers = true;
+    }
+    const layerCount = Math.abs(rawLayerCount);
     const layers: PSDLayer[] = [];
 
     // Read all layers
