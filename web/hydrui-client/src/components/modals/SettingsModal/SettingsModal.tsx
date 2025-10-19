@@ -222,7 +222,7 @@ function SettingsModal({ onClose }: SettingsModalProps) {
         {editingPreviewerOverrideMime !== undefined && (
           <SetViewerOverrideModal
             mime={editingPreviewerOverrideMime}
-            isPreview={false}
+            isPreview={true}
             onClose={() => setEditingPreviewerOverrideMime(undefined)}
           />
         )}
@@ -467,7 +467,7 @@ function ViewerOverride({ edit }: { edit: (mime: string) => void }) {
 
   return (
     <fieldset>
-      <legend>Override File Viewer for File Types</legend>
+      <legend>Override File Viewer for Filetype</legend>
       <MimeOverrideList
         edit={edit}
         remove={deleteMimeTypeViewerOverride}
@@ -493,7 +493,7 @@ function PreviewerOverride({ edit }: { edit: (mime: string) => void }) {
 
   return (
     <fieldset>
-      <legend>Override File Viewer for File Types</legend>
+      <legend>Override File Previewer for Filetype</legend>
       <MimeOverrideList
         edit={edit}
         remove={deleteMimeTypePreviewerOverride}
