@@ -1,13 +1,13 @@
 import { File } from "hydrui-util/src/stream";
 
-import { Layer } from "@/utils/layerTree";
-import { PSDBlendMode, PSDSectionType } from "@/utils/psd/constants";
+import { PSDBlendMode, PSDSectionType } from "@/file/psd/constants";
 import {
   convertPSDLayers,
   generatePSDLayerThumbnail,
-} from "@/utils/psd/layerUtils";
-import { PSDParser } from "@/utils/psd/parser";
-import { PSDDocument, PSDLayerMask } from "@/utils/psd/structure";
+} from "@/file/psd/layerUtils";
+import { PSDParser } from "@/file/psd/parser";
+import { PSDDocument, PSDLayerMask } from "@/file/psd/structure";
+import { Layer } from "@/utils/layerTree";
 
 interface LayerRenderData {
   id: string | number;

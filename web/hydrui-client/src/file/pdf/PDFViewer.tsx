@@ -7,8 +7,6 @@ import type {
   OnLoadProgressArgs,
 } from "react-pdf/dist/esm/shared/types.d.ts";
 
-import "./index.css";
-
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url),
   import.meta.url,

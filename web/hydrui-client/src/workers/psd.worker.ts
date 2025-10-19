@@ -1,7 +1,7 @@
 import { MemoryFile, createRemoteFile } from "hydrui-util/src/stream";
 
+import { PSDRenderer } from "@/file/psd/render";
 import { Layer } from "@/utils/layerTree";
-import { PSDRenderer } from "@/utils/psd/render";
 
 type WorkerInitRequest =
   | {

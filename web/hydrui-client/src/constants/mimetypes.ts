@@ -1,4 +1,5 @@
 export const knownMimetypes = Object.freeze([
+  "image",
   "image/jpe",
   "image/jpeg",
   "image/jpg",
@@ -22,9 +23,7 @@ export const knownMimetypes = Object.freeze([
   "image/vnd.microsoft.icon",
   "image",
   "application/x-shockwave-flash",
-  "application/x-photoshop",
   "image/vnd.adobe.photoshop",
-  "application/vnd.adobe.photoshop",
   "application/clip",
   "application/sai2",
   "application/x-krita",
@@ -75,6 +74,7 @@ export const knownMimetypes = Object.freeze([
   "audio/wavpack",
   "text/html",
   "text/plain",
+  "video",
   "video/x-msvideo",
   "video/x-flv",
   "video/quicktime",

@@ -2,7 +2,7 @@ import { MemoryFile } from "hydrui-util/src/stream";
 
 import { ContentUpdateAction } from "@/constants/contentUpdates";
 import { ServiceType } from "@/constants/services";
-import { PSDParser } from "@/utils/psd/parser";
+import { PSDParser } from "@/file/psd/parser";
 
 import { HttpHandler } from "./memoryHttpClient";
 import {

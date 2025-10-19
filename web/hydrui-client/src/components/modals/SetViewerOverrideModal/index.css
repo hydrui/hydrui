@@ -1,0 +1,71 @@
+.set-viewer-override-modal-container {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  overflow-y: auto;
+}
+
+.set-viewer-override-modal-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.set-viewer-override-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.set-viewer-override-modal-content {
+  position: relative;
+  background-color: var(--color-gray-800);
+  border-radius: var(--radius-lg);
+  max-width: var(--container-md);
+  width: 100%;
+}
+
+.set-viewer-override-modal-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-gray-700);
+}
+
+.set-viewer-override-modal-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.set-viewer-override-modal-body {
+  padding: 1rem;
+}
+
+.set-viewer-override-modal-viewer-input-container {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.set-viewer-override-modal-viewer-input {
+  flex: 1;
+  padding: 0.5rem;
+  background-color: var(--color-gray-700);
+  border: 1px solid var(--color-gray-600);
+  border-radius: 0.25rem;
+  color: var(--color-white);
+  font-size: 0.875rem;
+}
+
+.set-viewer-override-modal-viewer-input:focus {
+  outline: 2px solid var(--color-blue-400);
+  outline-offset: 2px;
+}
+
+.set-viewer-override-modal-footer {
+  padding: 1rem;
+  border-top: 1px solid var(--color-gray-700);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}

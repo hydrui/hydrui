@@ -3,6 +3,7 @@ import { CircleStackIcon } from "@heroicons/react/24/solid";
 import { TrashIcon } from "@heroicons/react/24/solid";
 import { ArrowDownTrayIcon } from "@heroicons/react/24/solid";
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/solid";
+import { PencilIcon } from "@heroicons/react/24/solid";
 import { FocusTrap } from "focus-trap-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
@@ -18,18 +19,23 @@ import { useToastActions } from "@/store/toastStore";
 import { isServerMode } from "@/utils/modes";
 
 import AddTagModelModal from "../AddTagModelModal/AddTagModelModal";
+import SetViewerOverrideModal from "../SetViewerOverrideModal/SetViewerOverrideModal";
 import "./index.css";
 
 interface SettingsModalProps {
   onClose: () => void;
 }
 
-type TabType = "api" | "general" | "pageview" | "models";
+type TabType = "api" | "general" | "pageview" | "fileview" | "models";
 
-const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
+function SettingsModal({ onClose }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>("general");
   const [editingColor, setEditingColor] = useState<string | boolean>();
   const [showAddTagsModelModal, setShowAddTagsModelModal] = useState(false);
+  const [editingViewerOverrideMime, setEditingViewerOverrideMime] =
+    useState<string>();
+  const [editingPreviewerOverrideMime, setEditingPreviewerOverrideMime] =
+    useState<string>();
 
   const {
     actions: { setAuthenticated },
@@ -99,6 +105,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                   Page View
                 </button>
                 <button
+                  onClick={() => setActiveTab("fileview")}
+                  className={`settings-modal-tab ${
+                    activeTab === "fileview"
+                      ? "settings-modal-tab-active"
+                      : "settings-modal-tab-inactive"
+                  }`}
+                >
+                  File View
+                </button>
+                <button
                   onClick={() => setActiveTab("models")}
                   className={`settings-modal-tab ${
                     activeTab === "models"
@@ -140,13 +156,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
               {activeTab === "general" && (
                 <>
                   <PrivacySettings />
-                  <MimeTypesEditor />
                   <TagColorsEditor editColor={setEditingColor} />
                 </>
               )}
               {activeTab === "pageview" && (
                 <>
                   <PageViewSettings />
+                </>
+              )}
+              {activeTab === "fileview" && (
+                <>
+                  <FileViewSettings
+                    setEditingViewerOverrideMime={setEditingViewerOverrideMime}
+                    setEditingPreviewerOverrideMime={
+                      setEditingPreviewerOverrideMime
+                    }
+                  />
                 </>
               )}
               {activeTab === "models" && (
@@ -183,14 +208,32 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         {showAddTagsModelModal ? (
           <AddTagModelModal onClose={() => setShowAddTagsModelModal(false)} />
         ) : undefined}
+
+        {/* Set viewer override modal */}
+        {editingViewerOverrideMime !== undefined && (
+          <SetViewerOverrideModal
+            mime={editingViewerOverrideMime}
+            isPreview={false}
+            onClose={() => setEditingViewerOverrideMime(undefined)}
+          />
+        )}
+
+        {/* Set previewer override modal */}
+        {editingPreviewerOverrideMime !== undefined && (
+          <SetViewerOverrideModal
+            mime={editingPreviewerOverrideMime}
+            isPreview={true}
+            onClose={() => setEditingPreviewerOverrideMime(undefined)}
+          />
+        )}
       </div>
     </FocusTrap>
   );
-};
+}
 
 export default SettingsModal;
 
-const PrivacySettings: React.FC = () => {
+function PrivacySettings() {
   const {
     allowTokenPassing,
     actions: { setAllowTokenPassing },
@@ -224,48 +267,9 @@ const PrivacySettings: React.FC = () => {
       </div>
     </fieldset>
   );
-};
+}
 
-const MimeTypesEditor: React.FC = () => {
-  const {
-    autopreviewMimeTypes,
-    actions: {
-      addAutopreviewMimeType,
-      removeAutopreviewMimeType,
-      resetAutopreviewMimeTypes,
-    },
-  } = usePreferencesStore();
-
-  return (
-    <fieldset>
-      <legend>File Types to Automatically Preview</legend>
-      <MimeInput onAdd={addAutopreviewMimeType} />
-      <ul className="settings-modal-mime-type-items">
-        {Array.from(autopreviewMimeTypes)
-          .sort()
-          .map((mimeType) => (
-            <li className="settings-modal-mime-type-item" key={mimeType}>
-              {mimeType}
-              <button
-                onClick={() => removeAutopreviewMimeType(mimeType)}
-                className="settings-modal-mime-type-remove-button"
-                title="Disable auto-preview for mimetype"
-              >
-                <MinusIcon className="h-4 w-4" />
-              </button>
-            </li>
-          ))}
-      </ul>
-      <div>
-        <PushButton variant="danger" onClick={resetAutopreviewMimeTypes}>
-          Reset to Default
-        </PushButton>
-      </div>
-    </fieldset>
-  );
-};
-
-const PageViewSettings: React.FC = () => {
+function PageViewSettings() {
   const {
     thumbnailSize,
     useVirtualViewport,
@@ -357,7 +361,152 @@ const PageViewSettings: React.FC = () => {
       </fieldset>
     </>
   );
-};
+}
+
+function FileViewSettings({
+  setEditingViewerOverrideMime,
+  setEditingPreviewerOverrideMime,
+}: {
+  setEditingViewerOverrideMime: (mime: string) => void;
+  setEditingPreviewerOverrideMime: (mime: string) => void;
+}) {
+  return (
+    <>
+      <MimeTypesEditor />
+      <ViewerOverride edit={setEditingViewerOverrideMime} />
+      <PreviewerOverride edit={setEditingPreviewerOverrideMime} />
+    </>
+  );
+}
+
+function MimeTypesEditor() {
+  const {
+    autopreviewMimeTypes,
+    actions: {
+      addAutopreviewMimeType,
+      removeAutopreviewMimeType,
+      resetAutopreviewMimeTypes,
+    },
+  } = usePreferencesStore();
+
+  return (
+    <fieldset>
+      <legend>File Types to Automatically Preview</legend>
+      <MimeInput onAdd={addAutopreviewMimeType} />
+      <ul className="settings-modal-mime-type-items">
+        {Array.from(autopreviewMimeTypes)
+          .sort()
+          .map((mimeType) => (
+            <li className="settings-modal-mime-type-item" key={mimeType}>
+              {mimeType}
+              <button
+                onClick={() => removeAutopreviewMimeType(mimeType)}
+                className="settings-modal-mime-type-remove-button"
+                title="Disable auto-preview for mimetype"
+              >
+                <MinusIcon className="h-4 w-4" />
+              </button>
+            </li>
+          ))}
+      </ul>
+      <div>
+        <PushButton variant="danger" onClick={resetAutopreviewMimeTypes}>
+          Reset to Default
+        </PushButton>
+      </div>
+    </fieldset>
+  );
+}
+
+function MimeOverrideList({
+  edit,
+  remove,
+  overrides,
+}: {
+  edit: (mime: string) => void;
+  remove: (mime: string) => void;
+  overrides: Map<string, string>;
+}) {
+  return (
+    <>
+      <MimeInput onAdd={edit} />
+      <ul className="settings-modal-mime-type-items">
+        {Array.from(overrides.entries())
+          .sort()
+          .map((override) => (
+            <li className="settings-modal-mime-type-item" key={override[0]}>
+              <span>
+                <b>{override[0]}:</b> Use {override[1]}
+              </span>
+              <button
+                onClick={() => edit(override[0])}
+                className="settings-modal-mime-type-edit-button"
+                title="Edit override for mimetype"
+              >
+                <PencilIcon />
+              </button>
+              <button
+                onClick={() => remove(override[0])}
+                className="settings-modal-mime-type-remove-button"
+                title="Remove override for mimetype"
+              >
+                <MinusIcon />
+              </button>
+            </li>
+          ))}
+      </ul>
+    </>
+  );
+}
+
+function ViewerOverride({ edit }: { edit: (mime: string) => void }) {
+  const {
+    mimeTypeViewerOverride,
+    actions: { deleteMimeTypeViewerOverride, clearMimeTypeViewerOverrides },
+  } = usePreferencesStore();
+
+  return (
+    <fieldset>
+      <legend>Override File Viewer for File Types</legend>
+      <MimeOverrideList
+        edit={edit}
+        remove={deleteMimeTypeViewerOverride}
+        overrides={mimeTypeViewerOverride}
+      />
+      <div>
+        <PushButton variant="danger" onClick={clearMimeTypeViewerOverrides}>
+          Clear
+        </PushButton>
+      </div>
+    </fieldset>
+  );
+}
+
+function PreviewerOverride({ edit }: { edit: (mime: string) => void }) {
+  const {
+    mimeTypePreviewerOverride,
+    actions: {
+      deleteMimeTypePreviewerOverride,
+      clearMimeTypePreviewerOverrides,
+    },
+  } = usePreferencesStore();
+
+  return (
+    <fieldset>
+      <legend>Override File Previewer for File Types</legend>
+      <MimeOverrideList
+        edit={edit}
+        remove={deleteMimeTypePreviewerOverride}
+        overrides={mimeTypePreviewerOverride}
+      />
+      <div>
+        <PushButton variant="danger" onClick={clearMimeTypePreviewerOverrides}>
+          Clear
+        </PushButton>
+      </div>
+    </fieldset>
+  );
+}
 
 const TagColorsEditor: React.FC<{
   editColor: (namespace: string | boolean | undefined) => void;
@@ -451,10 +600,13 @@ const TagColorsEditor: React.FC<{
   );
 };
 
-const ColorSwatch: React.FC<{ color: string; onClick: () => void }> = ({
+function ColorSwatch({
   color,
   onClick,
-}) => {
+}: {
+  color: string;
+  onClick: () => void;
+}) {
   return (
     <button
       className="settings-modal-namespace-colors-colorswatch"
@@ -463,15 +615,13 @@ const ColorSwatch: React.FC<{ color: string; onClick: () => void }> = ({
       onClick={onClick}
     ></button>
   );
-};
+}
 
 interface ModelsManagerProps {
   setShowAddTagsModelModal: (show: boolean) => void;
 }
 
-const ModelsManager: React.FC<ModelsManagerProps> = ({
-  setShowAddTagsModelModal,
-}) => {
+function ModelsManager({ setShowAddTagsModelModal }: ModelsManagerProps) {
   const {
     tagModels,
     tagModelNames,
@@ -747,4 +897,4 @@ const ModelsManager: React.FC<ModelsManagerProps> = ({
       </fieldset>
     </>
   );
-};
+}

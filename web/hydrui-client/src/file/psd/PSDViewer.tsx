@@ -2,16 +2,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import LayersPanel from "@/components/panels/LayersPanel/LayersPanel";
 import {
+  PSDRenderWorker,
+  createPSDRenderWorker,
+} from "@/file/psd/renderWorker";
+import {
   Layer,
   LayerThumbnailOptions,
   LayerVisibilityChangeCallback,
 } from "@/utils/layerTree";
-import {
-  PSDRenderWorker,
-  createPSDRenderWorker,
-} from "@/utils/psd/renderWorker";
 
-import "./index.css";
+export { PSDParser } from "@/file/psd/parser";
 
 export interface PSDViewerProps {
   fileUrl: string;

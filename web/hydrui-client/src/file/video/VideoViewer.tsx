@@ -3,11 +3,7 @@ import React, { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { FileMetadata } from "@/api/types";
 import { client } from "@/store/apiStore";
 
-import "./index.css";
-
-const OGVViewer = lazy(
-  () => import("@/components/widgets/FileViewer/OGVViewer"),
-);
+const OGVViewer = lazy(() => import("./OGVViewer"));
 
 interface VideoViewerProps {
   fileId: number;

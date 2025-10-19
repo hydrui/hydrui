@@ -100,6 +100,7 @@ const FilePreview: React.FC = () => {
           autoActivate={false}
           autoPlay={false}
           loop={false}
+          isPreview={true}
         />
 
         {/* Error overlay */}

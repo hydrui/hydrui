@@ -37,6 +37,9 @@ interface TagColorPreferences {
 interface PreferencesState {
   tagColors: TagColorPreferences;
   autopreviewMimeTypes: Set<string>;
+  mimeTypeViewerOverride: Map<string, string>;
+  mimeTypePreviewerOverride: Map<string, string>;
+  mimeTypeRendererOverride: Map<string, string>;
   thumbnailSize: number;
   useVirtualViewport: boolean;
   allowTokenPassing: boolean;
@@ -54,6 +57,15 @@ interface PreferencesState {
     setVirtualViewport: (enabled: boolean) => void;
     setAllowTokenPassing: (enabled: boolean) => void;
     setEagerLoadThreshold: (eagerLoadThreshold: number) => void;
+    setMimeTypeViewerOverride: (mimeType: string, viewer: string) => void;
+    deleteMimeTypeViewerOverride: (mimeType: string) => void;
+    clearMimeTypeViewerOverrides: () => void;
+    setMimeTypePreviewerOverride: (mimeType: string, viewer: string) => void;
+    deleteMimeTypePreviewerOverride: (mimeType: string) => void;
+    clearMimeTypePreviewerOverrides: () => void;
+    setMimeTypeRendererOverride: (mimeType: string, renderer: string) => void;
+    deleteMimeTypeRendererOverride: (mimeType: string) => void;
+    clearMimeTypeRendererOverrides: () => void;
   };
 }
 
@@ -84,6 +96,15 @@ export const usePreferencesStore = create<PreferencesState>()(
 
       // Maximum number of files in a page before eagerly loading metadata is disabled
       eagerLoadThreshold: 20000,
+
+      // Override the default viewer for viewing a given mimetype
+      mimeTypeViewerOverride: new Map(),
+
+      // Override the default viewer for previewing a given mimetype
+      mimeTypePreviewerOverride: new Map(),
+
+      // Override the default renderer for a given mimetype
+      mimeTypeRendererOverride: new Map(),
 
       actions: {
         setNamespaceColor: (namespace: string, color: string) => {
@@ -204,6 +225,78 @@ export const usePreferencesStore = create<PreferencesState>()(
             eagerLoadThreshold,
           });
         },
+
+        setMimeTypeViewerOverride: (mimeType: string, viewer: string) => {
+          set((state) => {
+            const mimeTypeViewerOverride = new Map(
+              state.mimeTypeViewerOverride,
+            );
+            mimeTypeViewerOverride.set(mimeType, viewer);
+            return { mimeTypeViewerOverride };
+          });
+        },
+
+        deleteMimeTypeViewerOverride: (mimeType: string) => {
+          set((state) => {
+            const mimeTypeViewerOverride = new Map(
+              state.mimeTypeViewerOverride,
+            );
+            mimeTypeViewerOverride.delete(mimeType);
+            return { mimeTypeViewerOverride };
+          });
+        },
+
+        clearMimeTypeViewerOverrides: () => {
+          set({ mimeTypeViewerOverride: new Map() });
+        },
+
+        setMimeTypePreviewerOverride: (mimeType: string, viewer: string) => {
+          set((state) => {
+            const mimeTypePreviewerOverride = new Map(
+              state.mimeTypePreviewerOverride,
+            );
+            mimeTypePreviewerOverride.set(mimeType, viewer);
+            return { mimeTypePreviewerOverride };
+          });
+        },
+
+        deleteMimeTypePreviewerOverride: (mimeType: string) => {
+          set((state) => {
+            const mimeTypePreviewerOverride = new Map(
+              state.mimeTypePreviewerOverride,
+            );
+            mimeTypePreviewerOverride.delete(mimeType);
+            return { mimeTypePreviewerOverride };
+          });
+        },
+
+        clearMimeTypePreviewerOverrides: () => {
+          set({ mimeTypePreviewerOverride: new Map() });
+        },
+
+        setMimeTypeRendererOverride: (mimeType: string, renderer: string) => {
+          set((state) => {
+            const mimeTypeRendererOverride = new Map(
+              state.mimeTypeRendererOverride,
+            );
+            mimeTypeRendererOverride.set(mimeType, renderer);
+            return { mimeTypeRendererOverride };
+          });
+        },
+
+        deleteMimeTypeRendererOverride: (mimeType: string) => {
+          set((state) => {
+            const mimeTypeRendererOverride = new Map(
+              state.mimeTypeRendererOverride,
+            );
+            mimeTypeRendererOverride.delete(mimeType);
+            return { mimeTypeRendererOverride };
+          });
+        },
+
+        clearMimeTypeRendererOverrides: () => {
+          set({ mimeTypeRendererOverride: new Map() });
+        },
       },
     }),
     {
@@ -216,6 +309,9 @@ export const usePreferencesStore = create<PreferencesState>()(
         useVirtualViewport: state.useVirtualViewport,
         allowTokenPassing: state.allowTokenPassing,
         eagerLoadThreshold: state.eagerLoadThreshold,
+        mimeTypeViewerOverride: state.mimeTypeViewerOverride,
+        mimeTypePreviewerOverride: state.mimeTypePreviewerOverride,
+        mimeTypeRendererOverride: state.mimeTypeRendererOverride,
       }),
     },
   ),

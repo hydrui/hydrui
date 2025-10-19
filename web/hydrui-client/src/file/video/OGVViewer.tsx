@@ -2,8 +2,6 @@
 import { OGVLoader, OGVPlayer } from "ogv";
 import { useEffect, useRef, useState } from "react";
 
-import "./index.css";
-
 OGVLoader.base = "/assets/ogv";
 
 export interface OGVViewerProps {

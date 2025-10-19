@@ -1,9 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 
 import { FileMetadata } from "@/api/types";
-import { client } from "@/store/apiStore";
-
-import "./index.css";
 
 // NOTE: This code is cursed. It's just not very good. I'm sorry. It needs to
 // be scrapped and rewritten from the ground up, but I have not had a chance.
@@ -20,6 +17,7 @@ import "./index.css";
 interface ImageViewerProps {
   fileId: number;
   fileData: FileMetadata;
+  fileUrl: string;
 
   navigateLeft?: (() => void) | undefined;
   navigateRight?: (() => void) | undefined;
@@ -46,10 +44,10 @@ interface ImageDimensions {
 const ImageViewer: React.FC<ImageViewerProps> = ({
   fileId,
   fileData,
+  fileUrl,
   navigateLeft,
   navigateRight,
 }) => {
-  const fileUrl = client.getFileUrl(fileId);
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
