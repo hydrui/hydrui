@@ -16,6 +16,7 @@ import {
   Page,
   PageInfoResponse,
   ServicesObject,
+  SetRatingRequest,
 } from "./types";
 
 interface DemoFile {
@@ -600,6 +601,27 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
     };
   }
 
+  private getFileTags(file: FileMetadata) {
+    return Object.values(this.fileTagsById[file.file_id] ?? {}).reduce(
+      (n, m) => new Set([...n, ...m]),
+      new Set<string>(),
+    );
+  }
+
+  private getTagAsNumber(file: FileMetadata, prefix: string): number[] {
+    const tagNumbers = [];
+    for (const fileTag of this.getFileTags(file)) {
+      if (fileTag.startsWith(prefix + ":")) {
+        const numPart = fileTag.substring(prefix.length + 1);
+        const num = parseInt(numPart);
+        if (!isNaN(num)) {
+          tagNumbers.push(num);
+        }
+      }
+    }
+    return tagNumbers;
+  }
+
   private getFiles(files: Array<{ hash: string }>): FileMetadata[] {
     return files.map(({ hash }) => {
       const file = this.filesByHash[hash];
@@ -820,6 +842,200 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
     });
   }
 
+  private async searchFiles(params: URLSearchParams) {
+    const re = {
+      duration:
+        /^system:duration\s*([<>~=]+|\sis\s)\s*(\d+(?:\.\d+)?)\s*([a-z]+)$/,
+      numTags: /^system:number of tags\s*([<>~=]+|\sis\s)\s*(\d+)$/,
+      width: /^system:width\s*([<>~=]+|\sis\s)\s*(\d+)$/,
+      height: /^system:height\s*([<>~=]+|\sis\s)\s*(\d+)$/,
+      filesize:
+        /^system:filesize\s*([<>~=]+|\sis\s)\s*(\d+(?:\.\d+)?)\s*((?:kilo|mega|giga|peta)bytes?|[kmgpKMGP]i?[bB])$/,
+      filetype: /^system:filetype\s*(?:=|\sis\s)\s*([a-zA-Z0-9/]+)/,
+      hash: /^system:hash\s*(?:=|\sis\s)\s*([a-zA-Z0-9/]+)/,
+      modTime: /^system:modified date\s*([<>~=]+|\sis\s)\s*(.+)$/,
+      ratio: /^system:ratio\s+(is|is wider than|taller than)\s+(\d+):(\d+)$/,
+      tagAsNum: /^system:tag as number\s+(.+?)\s*([<>~=]+)\s*(\d+)$/,
+      numNotes: /^system:num notes\s*([<>~=]+|\sis\s)\s*(\d+)$/,
+      limit: /^system:limit\s*(?:=|\sis\s)\s*(\d+)$/,
+    };
+    const tags = new Set(this.jsonArrayParam(params, "tags")?.map(String));
+    if (!tags) {
+      throw badRequest('The required parameter "search" was missing!');
+    }
+    let limit: number | undefined = undefined;
+    let match: RegExpMatchArray | null = null;
+    const filter: Array<(f: FileMetadata) => boolean> = [];
+    for (const tag of new Set(tags)) {
+      if (tag === "system:everything") {
+        // Do nothing
+      } else if (tag === "system:has audio") {
+        filter.push((f) => Boolean(f.has_audio));
+      } else if (tag === "system:no audio") {
+        filter.push((f) => Boolean(!f.has_audio));
+      } else if (tag === "system:has duration") {
+        filter.push((f) => Boolean(f.duration));
+      } else if (tag === "system:no duration") {
+        filter.push((f) => Boolean(!f.duration));
+      } else if (tag === "system:has tags") {
+        filter.push((f) => this.getFileTags(f).size !== 0);
+      } else if (tag === "system:no tags" || tag === "system:untagged") {
+        filter.push((f) => this.getFileTags(f).size === 0);
+      } else if (tag === "system:has notes") {
+        filter.push((f) => Object.keys(f.notes ?? {}).length > 0);
+      } else if (tag === "no notes" || tag === "does not have notes") {
+        filter.push((f) => Object.keys(f.notes ?? {}).length === 0);
+      } else if (tag.startsWith("system:has url matching regex ")) {
+        const regex = new RegExp(tag.substring(30));
+        filter.push((f) => !!f.known_urls?.some((u) => regex.test(u)));
+      } else if (tag.startsWith("system:does not have a url matching regex ")) {
+        const regex = new RegExp(tag.substring(42));
+        filter.push((f) => !f.known_urls?.some((u) => regex.test(u)));
+      } else if (tag.startsWith("system:has url ")) {
+        const url = tag.substring(15);
+        filter.push((f) => !!f.known_urls?.includes(url));
+      } else if (tag.startsWith("system:does not have url ")) {
+        const url = tag.substring(25);
+        filter.push((f) => !f.known_urls?.includes(url));
+      } else if (tag.startsWith("system:has domain ")) {
+        const domain = tag.substring(18);
+        filter.push((f) => !!f.known_urls?.some((url) => url.includes(domain)));
+      } else if (tag.startsWith("system:does not have domain ")) {
+        const domain = tag.substring(28);
+        filter.push((f) => !f.known_urls?.some((url) => url.includes(domain)));
+      } else if (tag.startsWith("system:has note with name ")) {
+        const noteName = tag.substring(19);
+        filter.push((f) => !!Object.keys(f.notes ?? {}).includes(noteName));
+      } else if (
+        tag.startsWith("system:no note with name ") ||
+        tag.startsWith("system:does not have note with name ")
+      ) {
+        const noteName = tag.startsWith("system:no note with name ")
+          ? tag.substring(25)
+          : tag.substring(36);
+        filter.push((f) => !Object.keys(f.notes ?? {}).includes(noteName));
+      } else if ((match = tag.match(re.duration))) {
+        const [, op, valueStr, unit] = match;
+        let value = parseFloat(String(valueStr));
+        if (unit!.match(/m(illi)?s(ec(ond)?s?)?/)) value *= 1;
+        else if (unit!.match(/s(ec(ond)?s?)?/)) value *= 1000;
+        else if (unit!.match(/m(in(ute)?s?)?/)) value *= 60000;
+        else if (unit!.match(/h(ours?)?/)) value *= 3600000;
+        else throw badRequest(`invalid duration unit ${unit}`);
+        filter.push((f) => this.cmpOp(f.duration ?? 0, op!, value));
+      } else if ((match = tag.match(re.numTags))) {
+        const [, op, valueStr] = match;
+        const value = parseInt(String(valueStr));
+        filter.push((f) => this.cmpOp(this.getFileTags(f).size, op!, value));
+      } else if ((match = tag.match(re.width))) {
+        const [, op, valueStr] = match;
+        const value = parseInt(String(valueStr));
+        filter.push((f) => !!f.width && this.cmpOp(f.width, op!, value));
+      } else if ((match = tag.match(re.height))) {
+        const [, op, valueStr] = match;
+        const value = parseInt(String(valueStr));
+        filter.push((f) => !!f.height && this.cmpOp(f.height, op!, value));
+      } else if ((match = tag.match(re.filesize))) {
+        const [, op, valueStr, unit] = match;
+        let value = parseFloat(String(valueStr));
+        if (unit![0] == "k" || unit![0] == "K") value *= 0x400;
+        else if (unit![0] == "m" || unit![0] == "M") value *= 0x100000;
+        else if (unit![0] == "g" || unit![0] == "G") value *= 0x40000000;
+        filter.push((f) => !!f.size && this.cmpOp(f.size, op!, value));
+      } else if ((match = tag.match(re.filetype))) {
+        const [, value] = match;
+        const lowerValue = value?.toLowerCase();
+        filter.push((f) => !!f.mime && f.mime.toLowerCase() === lowerValue);
+      } else if ((match = tag.match(re.hash))) {
+        const [, value] = match;
+        const lowerValue = value?.toLowerCase();
+        filter.push((f) => !!f.hash && f.hash.toLowerCase() === lowerValue);
+      } else if ((match = tag.match(re.modTime))) {
+        const [, op, dateStr] = match;
+        const value = new Date(String(dateStr)).getTime() / 1000;
+        filter.push(
+          (f) => !!f.time_modified && this.cmpOp(f.time_modified, op!, value),
+        );
+      } else if ((match = tag.match(re.ratio))) {
+        const [, comparison, width, height] = match;
+        const r = parseInt(String(width)) / parseInt(String(height));
+        if (comparison === "is") {
+          filter.push(
+            (f) =>
+              !!(
+                f.width &&
+                f.height &&
+                Math.abs(f.width / f.height - r) <= 0.01
+              ),
+          );
+        } else if (comparison === "is wider than") {
+          filter.push((f) => !!(f.width && f.height && f.width / f.height > r));
+        } else if (comparison === "taller than") {
+          filter.push((f) => !!(f.width && f.height && f.width / f.height < r));
+        }
+      } else if ((match = tag.match(re.tagAsNum))) {
+        const [, tagPrefix, op, valueStr] = match;
+        const value = parseInt(String(valueStr));
+        filter.push(
+          (f) =>
+            !this.getTagAsNumber(f, tagPrefix!).some((num) =>
+              this.cmpOp(num, op!, value),
+            ),
+        );
+      } else if ((match = tag.match(re.numNotes))) {
+        const [, op, valueStr] = match;
+        const value = parseInt(String(valueStr));
+        filter.push((f) =>
+          this.cmpOp(Object.keys(f.notes ?? {}).length, op!, value),
+        );
+      } else if ((match = tag.match(re.limit))) {
+        limit = Number(match[1]);
+      } else {
+        if (tag.startsWith("system:")) {
+          throw badRequest(`Unsupported system tag or invalid syntax: ${tag}`);
+        }
+        continue;
+      }
+      tags.delete(tag);
+    }
+    const file_ids: number[] = [];
+    const matchTags = [...tags];
+    for (const file of Object.values(this.filesById).filter((file) =>
+      filter.every((fn) => fn(file)),
+    )) {
+      if (limit && file_ids.length >= limit) {
+        break;
+      }
+      const fileTags = this.getFileTags(file);
+      if (matchTags.every(fileTags.has.bind(fileTags))) {
+        file_ids.push(file.file_id);
+      }
+    }
+    return jsonResponse({ file_ids });
+  }
+
+  private cmpOp(
+    fileValue: number,
+    operator: string,
+    targetValue: number,
+  ): boolean {
+    if (operator === "~=") {
+      const tolerance = targetValue * 0.15;
+      return Math.abs(fileValue - targetValue) <= tolerance;
+    } else if (operator === "=" || operator === " is ") {
+      return fileValue === targetValue;
+    } else if (operator === ">") {
+      return fileValue > targetValue;
+    } else if (operator === "<") {
+      return fileValue < targetValue;
+    } else if (operator === ">=") {
+      return fileValue >= targetValue;
+    } else if (operator === "<=") {
+      return fileValue <= targetValue;
+    }
+    return false;
+  }
+
   private async searchTags(params: URLSearchParams) {
     const search = this.requiredParam(params, "search");
     const tags = [
@@ -1001,6 +1217,23 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
     return jsonResponse({ status: 1, hash, note: "" });
   }
 
+  private async setRating(body: Blob) {
+    const request: SetRatingRequest = JSON.parse(await body.text());
+    const files = this.filesRequest(request);
+    for (const { file_id, hash } of files) {
+      if (!file_id || !this.filesById[file_id]) {
+        // TODO: not sure what the hydrus error is for this case
+        throw notFound(`Hash not found: ${hash}`);
+      }
+      if (!this.filesById[file_id].ratings) {
+        this.filesById[file_id].ratings = {};
+      }
+      this.filesById[file_id].ratings[request.rating_service_key] =
+        request.rating;
+    }
+    return emptyResponse();
+  }
+
   //
   // Demo router
   //
@@ -1022,6 +1255,8 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
         return this.addFiles(body);
       case "/get_files/file_metadata":
         return this.getFileMetadata(url.searchParams);
+      case "/get_files/search_files":
+        return this.searchFiles(url.searchParams);
       case "/add_tags/search_tags":
         return this.searchTags(url.searchParams);
       case "/add_tags/add_tags":
@@ -1034,6 +1269,10 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
         return this.addNotes(body);
       case "/add_files/add_file":
         return this.addFile(body);
+      case "/edit_ratings/set_rating":
+        return this.setRating(body);
+      case "/manage_pages/refresh_page":
+        return emptyResponse();
       default:
         console.log(`unhandled API path: ${url.pathname}`);
         return new Response("page not found", { status: 404 });
