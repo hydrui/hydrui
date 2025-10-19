@@ -242,7 +242,23 @@ export async function createPSDRenderWorker(
 ): Promise<PSDRenderWorker> {
   const isWebWorkerSupported = typeof Worker !== "undefined";
   const isOffscreenCanvasSupported = typeof OffscreenCanvas !== "undefined";
-  if (isWebWorkerSupported && isOffscreenCanvasSupported) {
+  let isOffscreenCanvasReallySupportedOrIsLadybirdTellingFibs = false;
+  try {
+    if (
+      new OffscreenCanvas(1, 1)
+        .getContext("2d")!
+        .getImageData(0, 0, 1, 1) instanceof ImageData
+    ) {
+      isOffscreenCanvasReallySupportedOrIsLadybirdTellingFibs = true;
+    }
+  } catch {
+    // Do nothing.
+  }
+  if (
+    isWebWorkerSupported &&
+    isOffscreenCanvasSupported &&
+    isOffscreenCanvasReallySupportedOrIsLadybirdTellingFibs
+  ) {
     try {
       const worker = new PSDBackgroundRenderWorker(url, callbacks, signal);
       return worker;
