@@ -73,6 +73,7 @@ export const FileMetadataSchema = z.looseObject({
   is_local: z.optional(z.boolean()),
   is_trashed: z.optional(z.boolean()),
   is_deleted: z.optional(z.boolean()),
+  time_modified: z.optional(z.number()),
   known_urls: z.catch(
     z.optional(z.array(z.string())),
     unknownValue("known_urls", undefined),
