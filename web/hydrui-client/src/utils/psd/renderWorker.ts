@@ -48,10 +48,21 @@ class PSDBackgroundRenderWorker implements PSDRenderWorker {
     );
     this.worker = worker;
     worker.addEventListener("message", this.handleWorkerMessage);
-    this.postMessage({
-      type: "load",
-      url,
-    });
+    if (url.startsWith("blob:")) {
+      fetch(url)
+        .then((r) => r.arrayBuffer())
+        .then((buffer) => {
+          this.postMessage({
+            type: "load",
+            buffer,
+          });
+        });
+    } else {
+      this.postMessage({
+        type: "load",
+        url,
+      });
+    }
     if (signal) {
       signal.addEventListener("abort", () => {
         this.postMessage({

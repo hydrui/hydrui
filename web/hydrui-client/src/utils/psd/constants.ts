@@ -36,6 +36,7 @@ export enum PSDResourceID {
   CAPTION = 1008,
   ICC_PROFILE = 1039,
   THUMBNAIL = 1033,
+  ALPHA_IDENTIFIERS = 1053,
   LAYER_COMP = 1065,
   LAYER_SELECTION_ID = 1069,
 }
@@ -69,6 +70,12 @@ export enum PSDBlendMode {
   SATURATION = "sat ",
   COLOR = "colr",
   LUMINOSITY = "lum ",
+}
+
+export enum PSDAdditionalLayerInfo {
+  MTRN = "Mtrn",
+  LR16 = "Lr16",
+  LR32 = "Lr32",
 }
 
 export enum PSDSectionType {

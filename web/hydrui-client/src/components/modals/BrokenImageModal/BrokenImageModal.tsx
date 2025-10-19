@@ -4,7 +4,7 @@ import React, { useCallback, useState } from "react";
 import PushButton from "@/components/widgets/PushButton/PushButton";
 import { useShortcut } from "@/hooks/useShortcut";
 import { useToastStore } from "@/store/toastStore";
-import { isServerMode } from "@/utils/serverMode";
+import { isServerMode } from "@/utils/modes";
 import type { WorkerResponse } from "@/workers/bugreport.worker";
 
 import "./index.css";

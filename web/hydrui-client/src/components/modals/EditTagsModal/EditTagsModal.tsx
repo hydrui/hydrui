@@ -17,7 +17,7 @@ import { usePageActions } from "@/store/pageStore";
 import { useServices } from "@/store/servicesStore";
 import { useToastActions } from "@/store/toastStore";
 import { useUIStateStore } from "@/store/uiStateStore";
-import { isServerMode } from "@/utils/serverMode";
+import { isServerMode } from "@/utils/modes";
 
 import "./index.css";
 

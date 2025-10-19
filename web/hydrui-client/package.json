@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:subdir": "tsc && vite build --base /client",
+    "build:subdir": "tsc && vite build --base /client/",
     "test": "vitest run",
     "test:watch": "vitest"
   },

@@ -7,10 +7,23 @@ import NoAuthScreen from "@/components/screens/NoAuthScreen/NoAuthScreen";
 import SetupScreen from "@/components/screens/SetupScreen/SetupScreen";
 import Crash from "@/components/widgets/Crash/Crash";
 import { useApiStore } from "@/store/apiStore";
-import { isServerMode, noAuth } from "@/utils/serverMode";
+import { isDemoMode, isServerMode, noAuth } from "@/utils/modes";
 
 function AppImpl() {
-  const { isAuthenticated, checkingAuthentication } = useApiStore();
+  const {
+    isAuthenticated,
+    checkingAuthentication,
+    actions: { setAuthenticated },
+  } = useApiStore();
+
+  if (!isAuthenticated && isDemoMode) {
+    setAuthenticated(true);
+    return (
+      <div className="app-loading-container">
+        <div className="app-loading-spinner"></div>
+      </div>
+    );
+  }
 
   if (checkingAuthentication) {
     return (

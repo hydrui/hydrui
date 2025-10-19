@@ -15,7 +15,7 @@ import { useApiStore } from "@/store/apiStore";
 import { useModelMetaStore } from "@/store/modelMetaStore";
 import { usePreferencesStore } from "@/store/preferencesStore";
 import { useToastActions } from "@/store/toastStore";
-import { isServerMode } from "@/utils/serverMode";
+import { isServerMode } from "@/utils/modes";
 
 import AddTagModelModal from "../AddTagModelModal/AddTagModelModal";
 import "./index.css";
