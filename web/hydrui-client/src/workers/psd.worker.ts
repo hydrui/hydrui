@@ -1,12 +1,17 @@
-import { createRemoteFile } from "hydrui-util/src/stream";
+import { MemoryFile, createRemoteFile } from "hydrui-util/src/stream";
 
 import { Layer } from "@/utils/layerTree";
 import { PSDRenderer } from "@/utils/psd/render";
 
-type WorkerInitRequest = {
-  type: "load";
-  url: string;
-};
+type WorkerInitRequest =
+  | {
+      type: "load";
+      url: string;
+    }
+  | {
+      type: "load";
+      buffer: ArrayBuffer;
+    };
 
 type LayerVisibilityRequest = {
   type: "setLayerVisibility";
@@ -89,7 +94,11 @@ self.addEventListener("message", async (event: MessageEvent<WorkerRequest>) => {
   switch (data.type) {
     case "load":
       renderer = await PSDRenderer.create(
-        await createRemoteFile(data.url, { signal: abortController.signal }),
+        "buffer" in data
+          ? new MemoryFile(data.buffer)
+          : await createRemoteFile(data.url, {
+              signal: abortController.signal,
+            }),
         (w: number, h: number) => new OffscreenCanvas(w, h),
       );
 
