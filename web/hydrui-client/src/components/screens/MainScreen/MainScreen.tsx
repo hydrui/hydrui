@@ -6,6 +6,7 @@ import {
 import { useState } from "react";
 
 import AboutModal from "@/components/modals/AboutModal/AboutModal";
+import DemoModal from "@/components/modals/DemoModal/DemoModal";
 import SettingsModal from "@/components/modals/SettingsModal/SettingsModal";
 import PopupPanel from "@/components/panels/PopupPanel/PopupPanel";
 import ContextMenu from "@/components/widgets/Menu/ContextMenu";
@@ -16,7 +17,7 @@ import TabView from "@/components/widgets/TabView/TabView";
 import ToastContainer from "@/components/widgets/Toast/ToastContainer";
 import { useApiStore } from "@/store/apiStore";
 import { MenuBarMenu } from "@/store/contextMenuStore";
-import { isServerMode } from "@/utils/modes";
+import { isDemoMode, isServerMode } from "@/utils/modes";
 
 import "./index.css";
 
@@ -26,6 +27,7 @@ const MainScreen = () => {
   } = useApiStore();
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
+  const [showDemoModal, setShowDemoModal] = useState(isDemoMode);
 
   const menus: MenuBarMenu[] = [
     {
@@ -98,6 +100,7 @@ const MainScreen = () => {
       {showSettingsModal && (
         <SettingsModal onClose={() => setShowSettingsModal(false)} />
       )}
+      {showDemoModal && <DemoModal onClose={() => setShowDemoModal(false)} />}
     </div>
   );
 };
