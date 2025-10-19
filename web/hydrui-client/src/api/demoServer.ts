@@ -175,8 +175,9 @@ async function processFile(blob: Blob) {
   if (!ctx) {
     throw new Error("Could not get canvas context");
   }
-  const blobType = await sniffMime(blob);
-  const objectUrl = URL.createObjectURL(blob);
+  const type = await sniffMime(blob);
+  const newBlob = new Blob([blob], { type });
+  const fileUrl = URL.createObjectURL(newBlob);
   let width: number | undefined = undefined;
   let height: number | undefined = undefined;
   let num_frames: number | undefined = undefined;
@@ -186,8 +187,8 @@ async function processFile(blob: Blob) {
   let thumbnail_width: number;
   let thumbnail_height: number;
   try {
-    if (blobType === "image/vnd.adobe.photoshop") {
-      const file = new MemoryFile(await blob.arrayBuffer());
+    if (type === "image/vnd.adobe.photoshop") {
+      const file = new MemoryFile(await newBlob.arrayBuffer());
       const stream = new PSDParser(file);
       await stream.parse();
       const bitmap = await stream.parseMerged();
@@ -198,12 +199,12 @@ async function processFile(blob: Blob) {
       height = bitmap.height;
       num_frames = 1;
       ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    } else if (blobType.startsWith("image/")) {
+    } else if (type.startsWith("image/")) {
       const img = new Image();
       await new Promise((resolve, reject) => {
         img.onload = resolve;
         img.onerror = reject;
-        img.src = objectUrl;
+        img.src = fileUrl;
       });
       const scale = Math.min(200 / img.width, 200 / img.height);
       canvas.width = img.width * scale;
@@ -212,13 +213,13 @@ async function processFile(blob: Blob) {
       height = img.height;
       num_frames = 1; // TODO: GIF
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    } else if (blobType.startsWith("video/")) {
+    } else if (type.startsWith("video/")) {
       const video = document.createElement("video");
       video.muted = true;
       await new Promise((resolve, reject) => {
         video.onloadedmetadata = resolve;
         video.onerror = reject;
-        video.src = objectUrl;
+        video.src = fileUrl;
       });
       video.currentTime = Math.min(5, video.duration);
       num_frames = video.getVideoPlaybackQuality()?.totalVideoFrames;
@@ -271,11 +272,11 @@ async function processFile(blob: Blob) {
     );
     thumbnail_width = 500;
     thumbnail_height = 500;
-  } finally {
-    URL.revokeObjectURL(objectUrl);
   }
   return {
     thumbnailUrl,
+    fileUrl,
+    mime: type,
     width,
     height,
     thumbnail_width,
@@ -1153,6 +1154,8 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
     }
     const {
       thumbnailUrl,
+      fileUrl,
+      mime,
       width,
       height,
       thumbnail_width,
@@ -1162,7 +1165,6 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
       has_audio,
     } = await processFile(body);
     const time = Date.now();
-    const fileUrl = URL.createObjectURL(body);
     const fileUrls: DemoFile = {
       file: new URL(fileUrl),
       thumbnail: new URL(thumbnailUrl),
@@ -1171,7 +1173,7 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
       file_id: this.nextFileID++,
       hash,
       size: body.size,
-      mime: body.type,
+      mime,
       width,
       height,
       thumbnail_width,
