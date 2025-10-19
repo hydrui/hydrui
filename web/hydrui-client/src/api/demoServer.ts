@@ -884,7 +884,10 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
         filter.push((f) => this.getFileTags(f).size === 0);
       } else if (tag === "system:has notes") {
         filter.push((f) => Object.keys(f.notes ?? {}).length > 0);
-      } else if (tag === "no notes" || tag === "does not have notes") {
+      } else if (
+        tag === "system:no notes" ||
+        tag === "system:does not have notes"
+      ) {
         filter.push((f) => Object.keys(f.notes ?? {}).length === 0);
       } else if (tag.startsWith("system:has url matching regex ")) {
         const regex = new RegExp(tag.substring(30));
@@ -905,7 +908,7 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
         const domain = tag.substring(28);
         filter.push((f) => !f.known_urls?.some((url) => url.includes(domain)));
       } else if (tag.startsWith("system:has note with name ")) {
-        const noteName = tag.substring(19);
+        const noteName = tag.substring(26);
         filter.push((f) => !!Object.keys(f.notes ?? {}).includes(noteName));
       } else if (
         tag.startsWith("system:no note with name ") ||
@@ -977,11 +980,10 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
       } else if ((match = tag.match(re.tagAsNum))) {
         const [, tagPrefix, op, valueStr] = match;
         const value = parseInt(String(valueStr));
-        filter.push(
-          (f) =>
-            !this.getTagAsNumber(f, tagPrefix!).some((num) =>
-              this.cmpOp(num, op!, value),
-            ),
+        filter.push((f) =>
+          this.getTagAsNumber(f, tagPrefix!).some((num) =>
+            this.cmpOp(num, op!, value),
+          ),
         );
       } else if ((match = tag.match(re.numNotes))) {
         const [, op, valueStr] = match;

@@ -72,7 +72,7 @@ export enum PSDBlendMode {
   LUMINOSITY = "lum ",
 }
 
-export enum PSDAdditonalLayerInfo {
+export enum PSDAdditionalLayerInfo {
   MTRN = "Mtrn",
   LR16 = "Lr16",
   LR32 = "Lr32",
