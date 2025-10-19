@@ -1,8 +1,12 @@
 import { createJSONStorage } from "zustand/middleware";
 
 import { createDebouncedStorage } from "@/utils/debouncedStorage";
+import { createMemoryStorage } from "@/utils/memoryStorage";
+import { isDemoMode } from "@/utils/modes";
 
-export const storage = createDebouncedStorage(localStorage);
+export const storage = isDemoMode
+  ? createMemoryStorage()
+  : createDebouncedStorage(localStorage);
 
 export const jsonStorage = createJSONStorage(() => storage, {
   reviver: (_key, value) => {
