@@ -467,7 +467,7 @@ function ViewerOverride({ edit }: { edit: (mime: string) => void }) {
 
   return (
     <fieldset>
-      <legend>Override File Viewer for Filetype</legend>
+      <legend>Override File Viewer for File Types</legend>
       <MimeOverrideList
         edit={edit}
         remove={deleteMimeTypeViewerOverride}
@@ -493,7 +493,7 @@ function PreviewerOverride({ edit }: { edit: (mime: string) => void }) {
 
   return (
     <fieldset>
-      <legend>Override File Previewer for Filetype</legend>
+      <legend>Override File Previewer for File Types</legend>
       <MimeOverrideList
         edit={edit}
         remove={deleteMimeTypePreviewerOverride}
