@@ -6,6 +6,7 @@ import { FileRelationship } from "@/constants/relationships";
 import { client, useApiStore } from "@/store/apiStore";
 import { useSearchStore } from "@/store/searchStore";
 import { jsonStorage } from "@/store/storage";
+import { isDemoMode } from "@/utils/modes";
 
 import { usePreferencesStore } from "./preferencesStore";
 import { useToastStore } from "./toastStore";
@@ -980,3 +981,12 @@ const unsubscribe = useApiStore.subscribe((state) => {
 useSearchStore.subscribe(() => {
   usePageStore.getState().actions.updatePageContents(SEARCH_PAGE_KEY, "search");
 });
+
+if (isDemoMode) {
+  const unsubscribe = usePageStore.subscribe((state) => {
+    if (state.pages[0] && state.activePageKey === SEARCH_PAGE_KEY) {
+      state.actions.setPage(state.pages[0].page_key, "hydrus");
+      unsubscribe();
+    }
+  });
+}
