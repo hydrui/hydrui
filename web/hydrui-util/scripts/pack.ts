@@ -95,7 +95,7 @@ function createArchive(files: FileEntry[]): Buffer {
   return Buffer.concat(buffers);
 }
 
-async function pack(dirPath: string, archivePath: string) {
+async function pack(dirPath: string, archivePath: string, exclude: string[]) {
   console.log("Scanning dist directory...");
   const filePaths = await scanDirectory(dirPath);
   filePaths.sort();
@@ -105,6 +105,11 @@ async function pack(dirPath: string, archivePath: string) {
   const jobs: Promise<FileEntry>[] = [];
 
   for (const filePath of filePaths) {
+    const relaPath = relative(dirPath, filePath);
+    if (exclude.some((p) => relaPath.startsWith(p))) {
+      console.log(`Skipped ${relaPath}`);
+      continue;
+    }
     jobs.push(
       (async () => {
         const entry = await processFile(filePath, dirPath);
@@ -139,7 +144,7 @@ async function main() {
   );
 
   try {
-    await pack(clientDistPath, clientPackPath);
+    await pack(clientDistPath, clientPackPath, ["demo/"]);
   } catch (error) {
     console.error("Error creating archives:", error);
     process.exit(1);
