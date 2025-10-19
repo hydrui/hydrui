@@ -33,6 +33,3 @@ export enum ViewerName {
 export enum RendererName {
   HydruiPSDMergedImageRenderer = "Hydrui PSD Merged Image Renderer",
 }
-
-export const viewers = new Map<ViewerName, FileViewer>();
-export const renderers = new Map<RendererName, FileRenderer>();
