@@ -1,8 +1,6 @@
 import "@ruffle-rs/ruffle";
 import { useEffect, useRef, useState } from "react";
 
-import "./index.css";
-
 // Ruffle currently only ships the selfhosted version of the module, which does
 // not have types. We should be able to clean this up substantially once
 // ruffle-core is published to npm.

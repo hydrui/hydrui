@@ -1,4 +1,4 @@
-import { File, MemoryFile, createRemoteFile } from "hydrui-util/src/stream";
+import { createRemoteFile } from "hydrui-util/src/stream";
 
 import { Layer } from "@/utils/layerTree";
 import type { WorkerRequest, WorkerResponse } from "@/workers/psd.worker";
@@ -186,21 +186,15 @@ class PSDMainThreadRenderWorker implements PSDRenderWorker {
     callbacks: PSDCallbacks,
     signal?: AbortSignal,
   ) {
-    let file: File;
-    if (url.startsWith("blob:")) {
-      // Remote file isn't compatible with blobs yet, for some reason.
-      const blob = await fetch(url);
-      const arrayBuffer = await blob.arrayBuffer();
-      file = new MemoryFile(arrayBuffer);
-    } else {
-      file = await createRemoteFile(url, { signal });
-    }
-    const renderer = await PSDRenderer.create(file, (w, h) => {
-      const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      return canvas;
-    });
+    const renderer = await PSDRenderer.create(
+      await createRemoteFile(url, { signal }),
+      (w, h) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        return canvas;
+      },
+    );
     return new PSDMainThreadRenderWorker(renderer, callbacks);
   }
 

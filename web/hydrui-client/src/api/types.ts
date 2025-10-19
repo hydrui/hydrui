@@ -63,6 +63,7 @@ export const FileMetadataSchema = z.looseObject({
   hash: z.string(),
   size: z.optional(z.number()),
   mime: z.optional(z.string()),
+  filetype_enum: z.optional(z.number()),
   width: z.optional(z.nullable(z.number())),
   height: z.optional(z.nullable(z.number())),
   duration: z.optional(z.nullable(z.number())),

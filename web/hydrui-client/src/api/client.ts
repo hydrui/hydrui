@@ -334,6 +334,16 @@ export class HydrusClient implements HydrusApiClient {
   }
 
   /**
+   * Get the URL for Hydrus to render a file
+   */
+  getFileRenderUrl(fileId: number): string {
+    if (isDemoMode) {
+      return String(this.demoServer!.getDemoFile(fileId, "file"));
+    }
+    return `${this.baseUrl}/get_files/render?file_id=${fileId}${this.apiKey ? `&Hydrus-Client-API-Access-Key=${this.apiKey}` : ""}`;
+  }
+
+  /**
    * Get a direct URL that can be used by other webapps. In Server Mode, this
    * is a one-time URL with no API key or other information in it. Otherwise,
    * it's just a normal file URL, with API key and all.

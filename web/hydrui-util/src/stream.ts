@@ -349,6 +349,12 @@ export async function createRemoteFile(
   url: string,
   options: RemoteFileOptions = {},
 ): Promise<File> {
+  if (url.startsWith("blob:")) {
+    // Remote file isn't compatible with blobs yet, for some reason.
+    const blob = await fetch(url);
+    const arrayBuffer = await blob.arrayBuffer();
+    return new MemoryFile(arrayBuffer);
+  }
   const headRequestInit: RequestInit = {
     method: "HEAD",
     headers: options.headers ?? {},

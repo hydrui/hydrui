@@ -1,20 +1,15 @@
-import React, { Suspense, lazy, useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 
 import { FileMetadata } from "@/api/types";
+import { ViewDispatcher } from "@/file/dispatch";
 import { client } from "@/store/apiStore";
 import { usePreferencesStore } from "@/store/preferencesStore";
 
 import Crash from "../Crash/Crash";
-import ImageViewer from "./ImageViewer";
-import VideoViewer from "./VideoViewer";
 import "./index.css";
 
-const PDFViewer = lazy(() => import("./PDFViewer"));
-const PSDViewer = lazy(() => import("./PSDViewer"));
-const SWFViewer = lazy(() => import("./SWFViewer"));
-
-interface FileViewerProps {
+export interface FileViewerProps {
   fileId: number;
   fileData?: FileMetadata | undefined;
 
@@ -27,6 +22,9 @@ interface FileViewerProps {
   // Whether or not to loop videos and animations
   loop?: boolean;
 
+  // Whether or not the file is in preview mode
+  isPreview?: boolean;
+
   navigateLeft?: (() => void) | undefined;
   navigateRight?: (() => void) | undefined;
 }
@@ -37,64 +35,26 @@ const FileViewerImpl: React.FC<FileViewerProps> = ({
   autoActivate = true,
   autoPlay = true,
   loop = true,
+  isPreview = false,
   navigateLeft,
   navigateRight,
 }) => {
-  const fileUrl = client.getFileUrl(fileId);
   const {
     autopreviewMimeTypes,
     actions: { addAutopreviewMimeType },
   } = usePreferencesStore();
-
   if (!fileData) {
     return <div className="image-viewer-container"></div>;
   }
-
   const shouldAutoActivate =
     autoActivate ||
-    (fileData.mime ? autopreviewMimeTypes.has(fileData.mime) : false);
-
-  let player: React.ReactNode;
-  if (fileData.mime?.startsWith("application/pdf")) {
-    player = (
-      <Suspense fallback={<div>Loading PDF Viewer...</div>}>
-        <PDFViewer fileUrl={fileUrl} />
-      </Suspense>
-    );
-  } else if (fileData.mime?.startsWith("image/vnd.adobe.photoshop")) {
-    player = (
-      <Suspense fallback={<div>Loading PSD Viewer...</div>}>
-        <PSDViewer fileUrl={fileUrl} />
-      </Suspense>
-    );
-  } else if (fileData.mime?.startsWith("application/x-shockwave-flash")) {
-    player = (
-      <Suspense fallback={<div>Loading SWF Viewer...</div>}>
-        <SWFViewer fileUrl={fileUrl} autoPlay={autoPlay} />
-      </Suspense>
-    );
-  } else if (fileData.mime?.startsWith("video/")) {
-    player = (
-      <VideoViewer
-        fileId={fileId}
-        fileData={fileData}
-        autoPlay={autoPlay}
-        loop={loop}
-      />
-    );
-  } else if (fileData.mime?.startsWith("image/")) {
-    player = (
-      <ImageViewer
-        fileId={fileId}
-        fileData={fileData}
-        navigateLeft={navigateLeft}
-        navigateRight={navigateRight}
-      />
-    );
-  } else {
-    player = <div>Unsupported file type</div>;
-  }
-
+    (fileData.mime ? autopreviewMimeTypes.has(fileData.mime) : false) ||
+    (fileData.mime
+      ? fileData.mime.startsWith("image/") && autopreviewMimeTypes.has("image")
+      : false) ||
+    (fileData.mime
+      ? fileData.mime.startsWith("video/") && autopreviewMimeTypes.has("video")
+      : false);
   return (
     <MediaPlaceholder
       fileId={fileId}
@@ -102,7 +62,15 @@ const FileViewerImpl: React.FC<FileViewerProps> = ({
       autoActivate={shouldAutoActivate}
       onAlwaysAutoActivate={addAutopreviewMimeType}
     >
-      {player}
+      <ViewDispatcher
+        fileId={fileId}
+        fileData={fileData}
+        autoPlay={autoPlay}
+        loop={loop}
+        isPreview={isPreview}
+        navigateLeft={navigateLeft}
+        navigateRight={navigateRight}
+      />
     </MediaPlaceholder>
   );
 };

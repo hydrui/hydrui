@@ -1,4 +1,5 @@
-import { Layer, LayerThumbnailOptions } from "../layerTree";
+import { Layer, LayerThumbnailOptions } from "@/utils/layerTree";
+
 import { PSDParser } from "./parser";
 import { PSDLayer } from "./structure";
 
@@ -89,9 +90,7 @@ export async function generatePSDLayerThumbnail(
     layerWithData.height,
   );
 
-  // This is just a workaround for TypeScript being unable to understand
-  // that the calls are valid for either context type.
-  (tempCtx as CanvasRenderingContext2D).putImageData(imageData, 0, 0);
+  tempCtx.putImageData(imageData, 0, 0);
 
   // Calculate scaled dimensions while preserving aspect ratio
   const scale = Math.min(
@@ -105,7 +104,7 @@ export async function generatePSDLayerThumbnail(
   const x = (canvas.width - scaledWidth) / 2;
   const y = (canvas.height - scaledHeight) / 2;
 
-  (ctx as CanvasRenderingContext2D).drawImage(
+  ctx.drawImage(
     tempCanvas,
     0,
     0,

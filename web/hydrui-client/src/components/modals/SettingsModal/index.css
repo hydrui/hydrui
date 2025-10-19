@@ -113,6 +113,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  min-height: 100px;
   max-height: 200px;
   border-radius: 0.25rem;
   border: 1px solid var(--color-gray-600);
@@ -137,6 +138,10 @@
   background-color: var(--color-gray-700);
 }
 
+.settings-modal-mime-type-item > span {
+  flex-grow: 1;
+}
+
 .settings-modal-mime-type-remove-button {
   padding: 0.25rem;
   color: var(--color-gray-400);
@@ -149,6 +154,20 @@
 
 .settings-modal-mime-type-remove-button:hover {
   color: var(--color-red-400);
+}
+
+.settings-modal-mime-type-edit-button {
+  padding: 0.25rem;
+  color: var(--color-gray-400);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.settings-modal-mime-type-edit-button:hover {
+  color: var(--color-blue-400);
 }
 
 .settings-modal-namespace-colors {
