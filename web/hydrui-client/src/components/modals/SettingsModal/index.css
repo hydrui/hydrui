@@ -109,7 +109,7 @@
   border-color: var(--color-gray-700);
 }
 
-.settings-modal-mime-type-items {
+.settings-modal-file-type-items {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -121,12 +121,12 @@
   margin-bottom: 0.5rem;
 }
 
-.settings-modal-mime-type-items:focus {
+.settings-modal-file-type-items:focus {
   outline: 2px solid var(--color-blue-400);
   outline-offset: 2px;
 }
 
-.settings-modal-mime-type-item {
+.settings-modal-file-type-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -134,15 +134,15 @@
   border-radius: 0.25rem;
 }
 
-.settings-modal-mime-type-item:hover {
+.settings-modal-file-type-item:hover {
   background-color: var(--color-gray-700);
 }
 
-.settings-modal-mime-type-item > span {
+.settings-modal-file-type-item > span {
   flex-grow: 1;
 }
 
-.settings-modal-mime-type-remove-button {
+.settings-modal-file-type-remove-button {
   padding: 0.25rem;
   color: var(--color-gray-400);
   background: transparent;
@@ -152,11 +152,11 @@
   height: 1.5rem;
 }
 
-.settings-modal-mime-type-remove-button:hover {
+.settings-modal-file-type-remove-button:hover {
   color: var(--color-red-400);
 }
 
-.settings-modal-mime-type-edit-button {
+.settings-modal-file-type-edit-button {
   padding: 0.25rem;
   color: var(--color-gray-400);
   background: transparent;
@@ -166,7 +166,7 @@
   height: 1.5rem;
 }
 
-.settings-modal-mime-type-edit-button:hover {
+.settings-modal-file-type-edit-button:hover {
   color: var(--color-blue-400);
 }
 

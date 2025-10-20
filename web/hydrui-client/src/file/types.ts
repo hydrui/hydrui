@@ -1,4 +1,5 @@
 import { FileMetadata } from "@/api/types";
+import { HydrusFileType } from "@/constants/filetypes";
 
 export interface ViewerProps {
   fileId: number;
@@ -13,7 +14,7 @@ export interface ViewerProps {
 
 export interface FileViewer {
   renderView(props: ViewerProps): React.ReactNode;
-  canHandle(mime: string): boolean;
+  canHandle(fileType: HydrusFileType): boolean;
 }
 
 export interface FileRenderer {

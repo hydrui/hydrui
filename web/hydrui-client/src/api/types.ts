@@ -1,5 +1,6 @@
 import * as z from "zod/mini";
 
+import { HydrusFileType } from "@/constants/filetypes";
 import { FileRelationship } from "@/constants/relationships";
 
 import { ServiceType } from "../constants/services";
@@ -63,7 +64,10 @@ export const FileMetadataSchema = z.looseObject({
   hash: z.string(),
   size: z.optional(z.number()),
   mime: z.optional(z.string()),
-  filetype_enum: z.optional(z.number()),
+  filetype_enum: z.catch(
+    z.optional(z.enum(HydrusFileType)),
+    unknownValue("filetype_enum", undefined),
+  ),
   width: z.optional(z.nullable(z.number())),
   height: z.optional(z.nullable(z.number())),
   duration: z.optional(z.nullable(z.number())),

@@ -2,6 +2,7 @@ import { FocusTrap } from "focus-trap-react";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 
 import PushButton from "@/components/widgets/PushButton/PushButton";
+import { HydrusFileType, filetypeEnumToString } from "@/constants/filetypes";
 import { viewers } from "@/file/viewers";
 import { useShortcut } from "@/hooks/useShortcut";
 import { usePreferencesStore } from "@/store/preferencesStore";
@@ -9,44 +10,44 @@ import { usePreferencesStore } from "@/store/preferencesStore";
 import "./index.css";
 
 interface SetViewerOverrideModalModalProps {
-  mime: string;
+  fileType: HydrusFileType;
   isPreview: boolean;
   onClose: () => void;
 }
 
 const SetViewerOverrideModalModal: React.FC<
   SetViewerOverrideModalModalProps
-> = ({ mime, isPreview, onClose }) => {
+> = ({ fileType, isPreview, onClose }) => {
   useShortcut({
     Escape: onClose,
   });
   const {
-    actions: { setMimeTypeViewerOverride, setMimeTypePreviewerOverride },
+    actions: { setFileTypeViewerOverride, setFileTypePreviewerOverride },
   } = usePreferencesStore();
   const inputRef = useRef<HTMLSelectElement | null>(null);
   const [showIncompatible, setShowIncompatible] = useState(false);
   const visibleViewers = useMemo(() => {
     return [...viewers.entries()]
-      .filter((entry) => showIncompatible || entry[1].canHandle(mime))
+      .filter((entry) => showIncompatible || entry[1].canHandle(fileType))
       .map((entry) => entry[0])
       .sort();
-  }, [showIncompatible, mime]);
+  }, [showIncompatible, fileType]);
   const save = useCallback(() => {
     if (!inputRef.current) {
       return;
     }
     const value = inputRef.current.value;
     if (isPreview) {
-      setMimeTypePreviewerOverride(mime, value);
+      setFileTypePreviewerOverride(fileType, value);
     } else {
-      setMimeTypeViewerOverride(mime, value);
+      setFileTypeViewerOverride(fileType, value);
     }
     onClose();
   }, [
     isPreview,
-    mime,
-    setMimeTypePreviewerOverride,
-    setMimeTypeViewerOverride,
+    fileType,
+    setFileTypePreviewerOverride,
+    setFileTypeViewerOverride,
     onClose,
   ]);
   return (
@@ -62,7 +63,7 @@ const SetViewerOverrideModalModal: React.FC<
             {/* Header */}
             <div className="set-viewer-override-modal-header">
               <h3 className="set-viewer-override-modal-title">
-                Viewer Override For {mime}
+                Viewer Override For {filetypeEnumToString.get(fileType)}
               </h3>
             </div>
 

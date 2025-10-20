@@ -9,8 +9,9 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 
 import EditColorModal from "@/components/modals/EditColorModal/EditColorModal";
-import MimeInput from "@/components/widgets/MimeInput/MimeInput";
+import FileTypeInput from "@/components/widgets/FileTypeInput/FileTypeInput";
 import PushButton from "@/components/widgets/PushButton/PushButton";
+import { HydrusFileType, filetypeEnumToString } from "@/constants/filetypes";
 import { useShortcut } from "@/hooks/useShortcut";
 import { useApiStore } from "@/store/apiStore";
 import { useModelMetaStore } from "@/store/modelMetaStore";
@@ -32,10 +33,12 @@ function SettingsModal({ onClose }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>("general");
   const [editingColor, setEditingColor] = useState<string | boolean>();
   const [showAddTagsModelModal, setShowAddTagsModelModal] = useState(false);
-  const [editingViewerOverrideMime, setEditingViewerOverrideMime] =
-    useState<string>();
-  const [editingPreviewerOverrideMime, setEditingPreviewerOverrideMime] =
-    useState<string>();
+  const [editingViewerOverrideFileType, setEditingViewerOverrideFileType] =
+    useState<HydrusFileType>();
+  const [
+    editingPreviewerOverrideFileType,
+    setEditingPreviewerOverrideFileType,
+  ] = useState<HydrusFileType>();
 
   const {
     actions: { setAuthenticated },
@@ -167,9 +170,11 @@ function SettingsModal({ onClose }: SettingsModalProps) {
               {activeTab === "fileview" && (
                 <>
                   <FileViewSettings
-                    setEditingViewerOverrideMime={setEditingViewerOverrideMime}
-                    setEditingPreviewerOverrideMime={
-                      setEditingPreviewerOverrideMime
+                    setEditingViewerOverrideFileType={
+                      setEditingViewerOverrideFileType
+                    }
+                    setEditingPreviewerOverrideFileType={
+                      setEditingPreviewerOverrideFileType
                     }
                   />
                 </>
@@ -210,20 +215,20 @@ function SettingsModal({ onClose }: SettingsModalProps) {
         ) : undefined}
 
         {/* Set viewer override modal */}
-        {editingViewerOverrideMime !== undefined && (
+        {editingViewerOverrideFileType !== undefined && (
           <SetViewerOverrideModal
-            mime={editingViewerOverrideMime}
+            fileType={editingViewerOverrideFileType}
             isPreview={false}
-            onClose={() => setEditingViewerOverrideMime(undefined)}
+            onClose={() => setEditingViewerOverrideFileType(undefined)}
           />
         )}
 
         {/* Set previewer override modal */}
-        {editingPreviewerOverrideMime !== undefined && (
+        {editingPreviewerOverrideFileType !== undefined && (
           <SetViewerOverrideModal
-            mime={editingPreviewerOverrideMime}
+            fileType={editingPreviewerOverrideFileType}
             isPreview={true}
-            onClose={() => setEditingPreviewerOverrideMime(undefined)}
+            onClose={() => setEditingPreviewerOverrideFileType(undefined)}
           />
         )}
       </div>
@@ -364,44 +369,44 @@ function PageViewSettings() {
 }
 
 function FileViewSettings({
-  setEditingViewerOverrideMime,
-  setEditingPreviewerOverrideMime,
+  setEditingViewerOverrideFileType,
+  setEditingPreviewerOverrideFileType,
 }: {
-  setEditingViewerOverrideMime: (mime: string) => void;
-  setEditingPreviewerOverrideMime: (mime: string) => void;
+  setEditingViewerOverrideFileType: (fileType: HydrusFileType) => void;
+  setEditingPreviewerOverrideFileType: (fileType: HydrusFileType) => void;
 }) {
   return (
     <>
-      <MimeTypesEditor />
-      <ViewerOverride edit={setEditingViewerOverrideMime} />
-      <PreviewerOverride edit={setEditingPreviewerOverrideMime} />
+      <FileTypesEditor />
+      <ViewerOverride edit={setEditingViewerOverrideFileType} />
+      <PreviewerOverride edit={setEditingPreviewerOverrideFileType} />
     </>
   );
 }
 
-function MimeTypesEditor() {
+function FileTypesEditor() {
   const {
-    autopreviewMimeTypes,
+    autopreviewFileTypes,
     actions: {
-      addAutopreviewMimeType,
-      removeAutopreviewMimeType,
-      resetAutopreviewMimeTypes,
+      addAutopreviewFileType,
+      removeAutopreviewFileType,
+      resetAutopreviewFileTypes,
     },
   } = usePreferencesStore();
 
   return (
     <fieldset>
       <legend>File Types to Automatically Preview</legend>
-      <MimeInput onAdd={addAutopreviewMimeType} />
-      <ul className="settings-modal-mime-type-items">
-        {Array.from(autopreviewMimeTypes)
+      <FileTypeInput onAdd={addAutopreviewFileType} />
+      <ul className="settings-modal-file-type-items">
+        {Array.from(autopreviewFileTypes)
           .sort()
-          .map((mimeType) => (
-            <li className="settings-modal-mime-type-item" key={mimeType}>
-              {mimeType}
+          .map((fileType) => (
+            <li className="settings-modal-file-type-item" key={fileType}>
+              {filetypeEnumToString.get(fileType)}
               <button
-                onClick={() => removeAutopreviewMimeType(mimeType)}
-                className="settings-modal-mime-type-remove-button"
+                onClick={() => removeAutopreviewFileType(fileType)}
+                className="settings-modal-file-type-remove-button"
                 title="Disable auto-preview for mimetype"
               >
                 <MinusIcon className="h-4 w-4" />
@@ -410,7 +415,7 @@ function MimeTypesEditor() {
           ))}
       </ul>
       <div>
-        <PushButton variant="danger" onClick={resetAutopreviewMimeTypes}>
+        <PushButton variant="danger" onClick={resetAutopreviewFileTypes}>
           Reset to Default
         </PushButton>
       </div>
@@ -418,36 +423,36 @@ function MimeTypesEditor() {
   );
 }
 
-function MimeOverrideList({
+function FileTypeOverrideList({
   edit,
   remove,
   overrides,
 }: {
-  edit: (mime: string) => void;
-  remove: (mime: string) => void;
-  overrides: Map<string, string>;
+  edit: (fileType: HydrusFileType) => void;
+  remove: (fileType: HydrusFileType) => void;
+  overrides: Map<HydrusFileType, string>;
 }) {
   return (
     <>
-      <MimeInput onAdd={edit} />
-      <ul className="settings-modal-mime-type-items">
+      <FileTypeInput onAdd={edit} />
+      <ul className="settings-modal-file-type-items">
         {Array.from(overrides.entries())
           .sort()
-          .map((override) => (
-            <li className="settings-modal-mime-type-item" key={override[0]}>
+          .map(([fileType, viewer]) => (
+            <li className="settings-modal-file-type-item" key={fileType}>
               <span>
-                <b>{override[0]}:</b> Use {override[1]}
+                <b>{filetypeEnumToString.get(fileType)}:</b> Use {viewer}
               </span>
               <button
-                onClick={() => edit(override[0])}
-                className="settings-modal-mime-type-edit-button"
+                onClick={() => edit(fileType)}
+                className="settings-modal-file-type-edit-button"
                 title="Edit override for mimetype"
               >
                 <PencilIcon />
               </button>
               <button
-                onClick={() => remove(override[0])}
-                className="settings-modal-mime-type-remove-button"
+                onClick={() => remove(fileType)}
+                className="settings-modal-file-type-remove-button"
                 title="Remove override for mimetype"
               >
                 <MinusIcon />
@@ -459,22 +464,26 @@ function MimeOverrideList({
   );
 }
 
-function ViewerOverride({ edit }: { edit: (mime: string) => void }) {
+function ViewerOverride({
+  edit,
+}: {
+  edit: (fileType: HydrusFileType) => void;
+}) {
   const {
-    mimeTypeViewerOverride,
-    actions: { deleteMimeTypeViewerOverride, clearMimeTypeViewerOverrides },
+    fileTypeViewerOverride,
+    actions: { deleteFileTypeViewerOverride, clearFileTypeViewerOverrides },
   } = usePreferencesStore();
 
   return (
     <fieldset>
       <legend>Override File Viewer for File Types</legend>
-      <MimeOverrideList
+      <FileTypeOverrideList
         edit={edit}
-        remove={deleteMimeTypeViewerOverride}
-        overrides={mimeTypeViewerOverride}
+        remove={deleteFileTypeViewerOverride}
+        overrides={fileTypeViewerOverride}
       />
       <div>
-        <PushButton variant="danger" onClick={clearMimeTypeViewerOverrides}>
+        <PushButton variant="danger" onClick={clearFileTypeViewerOverrides}>
           Clear
         </PushButton>
       </div>
@@ -482,25 +491,29 @@ function ViewerOverride({ edit }: { edit: (mime: string) => void }) {
   );
 }
 
-function PreviewerOverride({ edit }: { edit: (mime: string) => void }) {
+function PreviewerOverride({
+  edit,
+}: {
+  edit: (fileType: HydrusFileType) => void;
+}) {
   const {
-    mimeTypePreviewerOverride,
+    fileTypePreviewerOverride,
     actions: {
-      deleteMimeTypePreviewerOverride,
-      clearMimeTypePreviewerOverrides,
+      deleteFileTypePreviewerOverride,
+      clearFileTypePreviewerOverrides,
     },
   } = usePreferencesStore();
 
   return (
     <fieldset>
       <legend>Override File Previewer for File Types</legend>
-      <MimeOverrideList
+      <FileTypeOverrideList
         edit={edit}
-        remove={deleteMimeTypePreviewerOverride}
-        overrides={mimeTypePreviewerOverride}
+        remove={deleteFileTypePreviewerOverride}
+        overrides={fileTypePreviewerOverride}
       />
       <div>
-        <PushButton variant="danger" onClick={clearMimeTypePreviewerOverrides}>
+        <PushButton variant="danger" onClick={clearFileTypePreviewerOverrides}>
           Clear
         </PushButton>
       </div>
