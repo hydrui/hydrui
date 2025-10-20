@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+import { HydrusFileType, filetypeFromMime } from "@/constants/filetypes";
+
 import { jsonStorage } from "./storage";
 
 // Default tag namespace colors
@@ -17,13 +19,16 @@ const DEFAULT_TAG_COLORS: Record<string, string> = {
 export const DEFAULT_NAMESPACED_COLOR = "#72a0c1";
 const DEFAULT_UNNAMESPACED_COLOR = "#006ffa";
 
-const DEFAULT_AUTOPREVIEW_MIME_TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
-  "image/avif",
-  "image/heic",
+const DEFAULT_AUTOPREVIEW_FILE_TYPES: HydrusFileType[] = [
+  HydrusFileType.IMAGE_PNG,
+  HydrusFileType.IMAGE_JPEG,
+  HydrusFileType.IMAGE_GIF,
+  HydrusFileType.IMAGE_WEBP,
+  HydrusFileType.IMAGE_AVIF,
+  HydrusFileType.IMAGE_HEIC,
+  HydrusFileType.ANIMATION_APNG,
+  HydrusFileType.ANIMATION_GIF,
+  HydrusFileType.ANIMATION_WEBP,
 ];
 
 const DEFAULT_THUMBNAIL_SIZE = 100;
@@ -36,10 +41,10 @@ interface TagColorPreferences {
 
 interface PreferencesState {
   tagColors: TagColorPreferences;
-  autopreviewMimeTypes: Set<string>;
-  mimeTypeViewerOverride: Map<string, string>;
-  mimeTypePreviewerOverride: Map<string, string>;
-  mimeTypeRendererOverride: Map<string, string>;
+  autopreviewFileTypes: Set<HydrusFileType>;
+  fileTypeViewerOverride: Map<HydrusFileType, string>;
+  fileTypePreviewerOverride: Map<HydrusFileType, string>;
+  fileTypeRendererOverride: Map<HydrusFileType, string>;
   thumbnailSize: number;
   useVirtualViewport: boolean;
   allowTokenPassing: boolean;
@@ -50,22 +55,31 @@ interface PreferencesState {
     setDefaultNamespacedColor: (color: string) => void;
     setDefaultUnnamespacedColor: (color: string) => void;
     resetNamespaceColors: () => void;
-    addAutopreviewMimeType: (mimeType: string) => void;
-    removeAutopreviewMimeType: (mimeType: string) => void;
-    resetAutopreviewMimeTypes: () => void;
+    addAutopreviewFileType: (filetype: HydrusFileType) => void;
+    removeAutopreviewFileType: (filetype: HydrusFileType) => void;
+    resetAutopreviewFileTypes: () => void;
     setThumbnailSize: (size: number) => void;
     setVirtualViewport: (enabled: boolean) => void;
     setAllowTokenPassing: (enabled: boolean) => void;
     setEagerLoadThreshold: (eagerLoadThreshold: number) => void;
-    setMimeTypeViewerOverride: (mimeType: string, viewer: string) => void;
-    deleteMimeTypeViewerOverride: (mimeType: string) => void;
-    clearMimeTypeViewerOverrides: () => void;
-    setMimeTypePreviewerOverride: (mimeType: string, viewer: string) => void;
-    deleteMimeTypePreviewerOverride: (mimeType: string) => void;
-    clearMimeTypePreviewerOverrides: () => void;
-    setMimeTypeRendererOverride: (mimeType: string, renderer: string) => void;
-    deleteMimeTypeRendererOverride: (mimeType: string) => void;
-    clearMimeTypeRendererOverrides: () => void;
+    setFileTypeViewerOverride: (
+      filetype: HydrusFileType,
+      viewer: string,
+    ) => void;
+    deleteFileTypeViewerOverride: (filetype: HydrusFileType) => void;
+    clearFileTypeViewerOverrides: () => void;
+    setFileTypePreviewerOverride: (
+      filetype: HydrusFileType,
+      viewer: string,
+    ) => void;
+    deleteFileTypePreviewerOverride: (filetype: HydrusFileType) => void;
+    clearFileTypePreviewerOverrides: () => void;
+    setFileTypeRendererOverride: (
+      filetype: HydrusFileType,
+      renderer: string,
+    ) => void;
+    deleteFileTypeRendererOverride: (filetype: HydrusFileType) => void;
+    clearFileTypeRendererOverrides: () => void;
   };
 }
 
@@ -83,7 +97,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       },
 
       // Mime types to automatically load previews for
-      autopreviewMimeTypes: new Set(DEFAULT_AUTOPREVIEW_MIME_TYPES),
+      autopreviewFileTypes: new Set(DEFAULT_AUTOPREVIEW_FILE_TYPES),
 
       // Thumbnail size to use in page views
       thumbnailSize: DEFAULT_THUMBNAIL_SIZE,
@@ -98,13 +112,13 @@ export const usePreferencesStore = create<PreferencesState>()(
       eagerLoadThreshold: 20000,
 
       // Override the default viewer for viewing a given mimetype
-      mimeTypeViewerOverride: new Map(),
+      fileTypeViewerOverride: new Map(),
 
       // Override the default viewer for previewing a given mimetype
-      mimeTypePreviewerOverride: new Map(),
+      fileTypePreviewerOverride: new Map(),
 
       // Override the default renderer for a given mimetype
-      mimeTypeRendererOverride: new Map(),
+      fileTypeRendererOverride: new Map(),
 
       actions: {
         setNamespaceColor: (namespace: string, color: string) => {
@@ -176,29 +190,29 @@ export const usePreferencesStore = create<PreferencesState>()(
           }));
         },
 
-        addAutopreviewMimeType: (mimeType: string) => {
+        addAutopreviewFileType: (fileType: HydrusFileType) => {
           set((state) => {
-            const newAutopreviewMimeTypes = new Set(state.autopreviewMimeTypes);
-            newAutopreviewMimeTypes.add(mimeType);
+            const autopreviewFileTypes = new Set(state.autopreviewFileTypes);
+            autopreviewFileTypes.add(fileType);
             return {
-              autopreviewMimeTypes: newAutopreviewMimeTypes,
+              autopreviewFileTypes,
             };
           });
         },
 
-        removeAutopreviewMimeType: (mimeType: string) => {
+        removeAutopreviewFileType: (fileType: HydrusFileType) => {
           set((state) => {
-            const newAutopreviewMimeTypes = new Set(state.autopreviewMimeTypes);
-            newAutopreviewMimeTypes.delete(mimeType);
+            const autopreviewFileTypes = new Set(state.autopreviewFileTypes);
+            autopreviewFileTypes.delete(fileType);
             return {
-              autopreviewMimeTypes: newAutopreviewMimeTypes,
+              autopreviewFileTypes,
             };
           });
         },
 
-        resetAutopreviewMimeTypes: () => {
+        resetAutopreviewFileTypes: () => {
           set({
-            autopreviewMimeTypes: new Set(DEFAULT_AUTOPREVIEW_MIME_TYPES),
+            autopreviewFileTypes: new Set(DEFAULT_AUTOPREVIEW_FILE_TYPES),
           });
         },
 
@@ -226,93 +240,168 @@ export const usePreferencesStore = create<PreferencesState>()(
           });
         },
 
-        setMimeTypeViewerOverride: (mimeType: string, viewer: string) => {
+        setFileTypeViewerOverride: (
+          fileType: HydrusFileType,
+          viewer: string,
+        ) => {
           set((state) => {
-            const mimeTypeViewerOverride = new Map(
-              state.mimeTypeViewerOverride,
+            const fileTypeViewerOverride = new Map(
+              state.fileTypeViewerOverride,
             );
-            mimeTypeViewerOverride.set(mimeType, viewer);
-            return { mimeTypeViewerOverride };
+            fileTypeViewerOverride.set(fileType, viewer);
+            return { fileTypeViewerOverride };
           });
         },
 
-        deleteMimeTypeViewerOverride: (mimeType: string) => {
+        deleteFileTypeViewerOverride: (fileType: HydrusFileType) => {
           set((state) => {
-            const mimeTypeViewerOverride = new Map(
-              state.mimeTypeViewerOverride,
+            const fileTypeViewerOverride = new Map(
+              state.fileTypeViewerOverride,
             );
-            mimeTypeViewerOverride.delete(mimeType);
-            return { mimeTypeViewerOverride };
+            fileTypeViewerOverride.delete(fileType);
+            return { fileTypeViewerOverride };
           });
         },
 
-        clearMimeTypeViewerOverrides: () => {
-          set({ mimeTypeViewerOverride: new Map() });
+        clearFileTypeViewerOverrides: () => {
+          set({ fileTypeViewerOverride: new Map() });
         },
 
-        setMimeTypePreviewerOverride: (mimeType: string, viewer: string) => {
+        setFileTypePreviewerOverride: (
+          fileType: HydrusFileType,
+          viewer: string,
+        ) => {
           set((state) => {
-            const mimeTypePreviewerOverride = new Map(
-              state.mimeTypePreviewerOverride,
+            const fileTypePreviewerOverride = new Map(
+              state.fileTypePreviewerOverride,
             );
-            mimeTypePreviewerOverride.set(mimeType, viewer);
-            return { mimeTypePreviewerOverride };
+            fileTypePreviewerOverride.set(fileType, viewer);
+            return { fileTypePreviewerOverride };
           });
         },
 
-        deleteMimeTypePreviewerOverride: (mimeType: string) => {
+        deleteFileTypePreviewerOverride: (fileType: HydrusFileType) => {
           set((state) => {
-            const mimeTypePreviewerOverride = new Map(
-              state.mimeTypePreviewerOverride,
+            const fileTypePreviewerOverride = new Map(
+              state.fileTypePreviewerOverride,
             );
-            mimeTypePreviewerOverride.delete(mimeType);
-            return { mimeTypePreviewerOverride };
+            fileTypePreviewerOverride.delete(fileType);
+            return { fileTypePreviewerOverride };
           });
         },
 
-        clearMimeTypePreviewerOverrides: () => {
-          set({ mimeTypePreviewerOverride: new Map() });
+        clearFileTypePreviewerOverrides: () => {
+          set({ fileTypePreviewerOverride: new Map() });
         },
 
-        setMimeTypeRendererOverride: (mimeType: string, renderer: string) => {
+        setFileTypeRendererOverride: (
+          fileType: HydrusFileType,
+          renderer: string,
+        ) => {
           set((state) => {
-            const mimeTypeRendererOverride = new Map(
-              state.mimeTypeRendererOverride,
+            const fileTypeRendererOverride = new Map(
+              state.fileTypeRendererOverride,
             );
-            mimeTypeRendererOverride.set(mimeType, renderer);
-            return { mimeTypeRendererOverride };
+            fileTypeRendererOverride.set(fileType, renderer);
+            return { fileTypeRendererOverride };
           });
         },
 
-        deleteMimeTypeRendererOverride: (mimeType: string) => {
+        deleteFileTypeRendererOverride: (fileType: HydrusFileType) => {
           set((state) => {
-            const mimeTypeRendererOverride = new Map(
-              state.mimeTypeRendererOverride,
+            const fileTypeRendererOverride = new Map(
+              state.fileTypeRendererOverride,
             );
-            mimeTypeRendererOverride.delete(mimeType);
-            return { mimeTypeRendererOverride };
+            fileTypeRendererOverride.delete(fileType);
+            return { fileTypeRendererOverride };
           });
         },
 
-        clearMimeTypeRendererOverrides: () => {
-          set({ mimeTypeRendererOverride: new Map() });
+        clearFileTypeRendererOverrides: () => {
+          set({ fileTypeRendererOverride: new Map() });
         },
       },
     }),
     {
       name: "hydrui-preferences",
       storage: jsonStorage,
+      version: 1,
       partialize: (state) => ({
         tagColors: state.tagColors,
-        autopreviewMimeTypes: state.autopreviewMimeTypes,
+        autopreviewFileTypes: state.autopreviewFileTypes,
         thumbnailSize: state.thumbnailSize,
         useVirtualViewport: state.useVirtualViewport,
         allowTokenPassing: state.allowTokenPassing,
         eagerLoadThreshold: state.eagerLoadThreshold,
-        mimeTypeViewerOverride: state.mimeTypeViewerOverride,
-        mimeTypePreviewerOverride: state.mimeTypePreviewerOverride,
-        mimeTypeRendererOverride: state.mimeTypeRendererOverride,
+        fileTypeViewerOverride: state.fileTypeViewerOverride,
+        fileTypePreviewerOverride: state.fileTypePreviewerOverride,
+        fileTypeRendererOverride: state.fileTypeRendererOverride,
       }),
+      migrate: (persistedState: unknown, version: number) => {
+        if (version === 0) {
+          // v0 used mimetypes. v1 moves to hydrus filetype enum.
+          const stateV0 = persistedState as {
+            autopreviewMimeTypes?: Set<string>;
+            mimeTypeViewerOverride?: Map<string, string>;
+            mimeTypePreviewerOverride?: Map<string, string>;
+            mimeTypeRendererOverride?: Map<string, string>;
+            autopreviewFileTypes?: Set<HydrusFileType>;
+            fileTypeViewerOverride?: Map<HydrusFileType, string>;
+            fileTypePreviewerOverride?: Map<HydrusFileType, string>;
+            fileTypeRendererOverride?: Map<HydrusFileType, string>;
+          };
+          if (stateV0.autopreviewFileTypes === undefined) {
+            stateV0.autopreviewFileTypes = new Set();
+          }
+          if (stateV0.fileTypeViewerOverride === undefined) {
+            stateV0.fileTypeViewerOverride = new Map();
+          }
+          if (stateV0.fileTypePreviewerOverride === undefined) {
+            stateV0.fileTypePreviewerOverride = new Map();
+          }
+          if (stateV0.fileTypeRendererOverride === undefined) {
+            stateV0.fileTypeRendererOverride = new Map();
+          }
+          for (const previewMimeType of stateV0.autopreviewMimeTypes ??
+            new Set()) {
+            const fileType = filetypeFromMime(previewMimeType);
+            stateV0.autopreviewFileTypes.add(fileType);
+            switch (fileType) {
+              case HydrusFileType.IMAGE_PNG:
+                stateV0.autopreviewFileTypes.add(HydrusFileType.ANIMATION_APNG);
+                break;
+              case HydrusFileType.IMAGE_GIF:
+                stateV0.autopreviewFileTypes.add(HydrusFileType.ANIMATION_GIF);
+                break;
+              case HydrusFileType.IMAGE_WEBP:
+                stateV0.autopreviewFileTypes.add(HydrusFileType.ANIMATION_WEBP);
+                break;
+            }
+          }
+          for (const [mimetype, viewer] of stateV0.mimeTypeViewerOverride ??
+            new Map()) {
+            stateV0.fileTypeViewerOverride.set(
+              filetypeFromMime(mimetype),
+              viewer,
+            );
+          }
+          for (const [mimetype, viewer] of stateV0.mimeTypePreviewerOverride ??
+            new Map()) {
+            stateV0.fileTypePreviewerOverride.set(
+              filetypeFromMime(mimetype),
+              viewer,
+            );
+          }
+          for (const [mimetype, renderer] of stateV0.mimeTypeRendererOverride ??
+            new Map()) {
+            stateV0.fileTypeRendererOverride.set(
+              filetypeFromMime(mimetype),
+              renderer,
+            );
+          }
+        }
+        return persistedState;
+      },
     },
   ),
 );

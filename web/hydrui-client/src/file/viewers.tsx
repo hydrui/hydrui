@@ -1,5 +1,6 @@
 import { Suspense, lazy } from "react";
 
+import { HydrusFileType, categoryFromFiletype } from "@/constants/filetypes";
 import { client } from "@/store/apiStore";
 
 import ImageViewer from "./image/ImageViewer";
@@ -26,11 +27,13 @@ viewers.set(ViewerName.HydruiImageViewer, {
       />
     );
   },
-  canHandle(mime) {
-    if (mime === "image/vnd.adobe.photoshop") {
-      return false;
-    }
-    return Boolean(mime.match(/^image(\/.*|$)/));
+  canHandle(fileType) {
+    const category = categoryFromFiletype(fileType);
+    return (
+      (category === HydrusFileType.GENERAL_IMAGE ||
+        category === HydrusFileType.GENERAL_ANIMATION) &&
+      fileType !== HydrusFileType.ANIMATION_UGOIRA
+    );
   },
 });
 
@@ -45,8 +48,12 @@ viewers.set(ViewerName.HydruiVideoViewer, {
       />
     );
   },
-  canHandle(mime) {
-    return Boolean(mime.match(/^video(\/.*|$)/));
+  canHandle(fileType) {
+    const category = categoryFromFiletype(fileType);
+    return (
+      category === HydrusFileType.GENERAL_VIDEO ||
+      category === HydrusFileType.GENERAL_AUDIO
+    );
   },
 });
 
@@ -59,8 +66,8 @@ viewers.set(ViewerName.HydruiPSDLayerViewer, {
       </Suspense>
     );
   },
-  canHandle(mime) {
-    return mime === "image/vnd.adobe.photoshop";
+  canHandle(fileType) {
+    return fileType === HydrusFileType.APPLICATION_PSD;
   },
 });
 
@@ -72,8 +79,8 @@ viewers.set(ViewerName.HydruiPSDMergedImageViewer, {
       </Suspense>
     );
   },
-  canHandle(mime) {
-    return mime === "image/vnd.adobe.photoshop";
+  canHandle(fileType) {
+    return fileType === HydrusFileType.APPLICATION_PSD;
   },
 });
 
@@ -86,8 +93,8 @@ viewers.set(ViewerName.PDFjs, {
       </Suspense>
     );
   },
-  canHandle(mime) {
-    return mime === "application/pdf";
+  canHandle(fileType) {
+    return fileType === HydrusFileType.APPLICATION_PDF;
   },
 });
 
@@ -100,8 +107,8 @@ viewers.set(ViewerName.Ruffle, {
       </Suspense>
     );
   },
-  canHandle(mime) {
-    return mime === "application/x-shockwave-flash";
+  canHandle(fileType) {
+    return fileType === HydrusFileType.APPLICATION_FLASH;
   },
 });
 

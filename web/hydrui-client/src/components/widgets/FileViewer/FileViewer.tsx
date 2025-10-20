@@ -2,6 +2,11 @@ import React, { useCallback, useEffect, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 
 import { FileMetadata } from "@/api/types";
+import {
+  HydrusFileType,
+  categoryFromFiletype,
+  filetypeEnumToString,
+} from "@/constants/filetypes";
 import { ViewDispatcher } from "@/file/dispatch";
 import { client } from "@/store/apiStore";
 import { usePreferencesStore } from "@/store/preferencesStore";
@@ -40,27 +45,25 @@ const FileViewerImpl: React.FC<FileViewerProps> = ({
   navigateRight,
 }) => {
   const {
-    autopreviewMimeTypes,
-    actions: { addAutopreviewMimeType },
+    autopreviewFileTypes,
+    actions: { addAutopreviewFileType },
   } = usePreferencesStore();
   if (!fileData) {
     return <div className="image-viewer-container"></div>;
   }
+  const category = categoryFromFiletype(fileData.filetype_enum);
   const shouldAutoActivate =
     autoActivate ||
-    (fileData.mime ? autopreviewMimeTypes.has(fileData.mime) : false) ||
-    (fileData.mime
-      ? fileData.mime.startsWith("image/") && autopreviewMimeTypes.has("image")
+    (fileData.filetype_enum
+      ? autopreviewFileTypes.has(fileData.filetype_enum)
       : false) ||
-    (fileData.mime
-      ? fileData.mime.startsWith("video/") && autopreviewMimeTypes.has("video")
-      : false);
+    (category ? autopreviewFileTypes.has(category) : false);
   return (
     <MediaPlaceholder
       fileId={fileId}
       fileData={fileData}
       autoActivate={shouldAutoActivate}
-      onAlwaysAutoActivate={addAutopreviewMimeType}
+      onAlwaysAutoActivate={addAutopreviewFileType}
     >
       <ViewDispatcher
         fileId={fileId}
@@ -79,7 +82,7 @@ interface MediaPlaceholderProps {
   fileId: number;
   fileData: FileMetadata;
   children: React.ReactNode;
-  onAlwaysAutoActivate?: (mime: string) => void;
+  onAlwaysAutoActivate?: (filetype: HydrusFileType) => void;
   autoActivate?: boolean;
 }
 
@@ -102,10 +105,10 @@ const MediaPlaceholder: React.FC<MediaPlaceholderProps> = ({
   }, []);
 
   const handleAutoActivate = useCallback(() => {
-    if (fileData.mime) {
-      onAlwaysAutoActivate?.(fileData.mime);
+    if (fileData.filetype_enum) {
+      onAlwaysAutoActivate?.(fileData.filetype_enum);
     }
-  }, [fileData.mime, onAlwaysAutoActivate]);
+  }, [fileData.filetype_enum, onAlwaysAutoActivate]);
 
   if (isActive) {
     return children;
@@ -138,12 +141,13 @@ const MediaPlaceholder: React.FC<MediaPlaceholderProps> = ({
           </svg>
         </button>
 
-        {fileData.mime && (
+        {fileData.filetype_enum && (
           <button
             onClick={handleAutoActivate}
             className="media-placeholder-auto-preview-button"
           >
-            Always auto-preview {fileData.mime} files
+            Always auto-preview{" "}
+            {filetypeEnumToString.get(fileData.filetype_enum)} files
           </button>
         )}
       </div>

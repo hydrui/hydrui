@@ -1,4 +1,4 @@
-import { FileTypes } from "@/constants/filetypes";
+import { HydrusFileType, categoryFromFiletype } from "@/constants/filetypes";
 import { usePreferencesStore } from "@/store/preferencesStore";
 import { isDemoMode } from "@/utils/modes";
 
@@ -6,53 +6,46 @@ import { ViewerName, ViewerProps } from "./types";
 import { viewers } from "./viewers";
 
 export function ViewDispatcher(props: ViewerProps) {
-  const mimeTypeViewerOverride = usePreferencesStore(
-    (state) => state.mimeTypeViewerOverride,
+  const fileTypeViewerOverride = usePreferencesStore(
+    (state) => state.fileTypeViewerOverride,
   );
-  const mimeTypePreviewerOverride = usePreferencesStore(
-    (state) => state.mimeTypePreviewerOverride,
+  const fileTypePreviewerOverride = usePreferencesStore(
+    (state) => state.fileTypePreviewerOverride,
   );
   let viewerName: ViewerName | undefined = undefined;
-  const mime = props.fileData.mime ?? "";
-  if (props.fileData.filetype_enum == FileTypes.AnimationUgoira) {
+  const fileType = props.fileData.filetype_enum;
+  const category = categoryFromFiletype(fileType);
+  if (fileType === HydrusFileType.ANIMATION_UGOIRA) {
     viewerName = ViewerName.HydrusRenderer;
-  } else if (mime.startsWith("application/pdf")) {
+  } else if (fileType === HydrusFileType.APPLICATION_PDF) {
     viewerName = ViewerName.PDFjs;
-  } else if (mime.startsWith("image/vnd.adobe.photoshop")) {
+  } else if (fileType === HydrusFileType.APPLICATION_PSD) {
     viewerName = ViewerName.HydruiPSDLayerViewer;
-  } else if (mime.startsWith("application/x-shockwave-flash")) {
+  } else if (fileType === HydrusFileType.APPLICATION_FLASH) {
     viewerName = ViewerName.Ruffle;
-  } else if (mime.startsWith("video/")) {
+  } else if (category === HydrusFileType.GENERAL_VIDEO) {
     viewerName = ViewerName.HydruiVideoViewer;
-  } else if (mime.startsWith("image/")) {
+  } else if (category === HydrusFileType.GENERAL_AUDIO) {
+    viewerName = ViewerName.HydruiVideoViewer;
+  } else if (category === HydrusFileType.GENERAL_IMAGE) {
+    viewerName = ViewerName.HydruiImageViewer;
+  } else if (category === HydrusFileType.GENERAL_ANIMATION) {
     viewerName = ViewerName.HydruiImageViewer;
   }
   // User overrides
   if (props.isPreview) {
-    if (
-      mime.match(/^image(\/.*|$)/) &&
-      mimeTypePreviewerOverride.has("image")
-    ) {
-      viewerName = mimeTypePreviewerOverride.get("image") as ViewerName;
+    if (category && fileTypePreviewerOverride.has(category)) {
+      viewerName = fileTypePreviewerOverride.get(category) as ViewerName;
     }
-    if (
-      mime.match(/^video(\/.*|$)/) &&
-      mimeTypePreviewerOverride.has("video")
-    ) {
-      viewerName = mimeTypePreviewerOverride.get("video") as ViewerName;
-    }
-    if (mimeTypePreviewerOverride.has(mime)) {
-      viewerName = mimeTypePreviewerOverride.get(mime) as ViewerName;
+    if (fileType && fileTypePreviewerOverride.has(fileType)) {
+      viewerName = fileTypePreviewerOverride.get(fileType) as ViewerName;
     }
   } else {
-    if (mime.match(/^image(\/.*|$)/) && mimeTypeViewerOverride.has("image")) {
-      viewerName = mimeTypeViewerOverride.get("image") as ViewerName;
+    if (category && fileTypeViewerOverride.has(category)) {
+      viewerName = fileTypeViewerOverride.get(category) as ViewerName;
     }
-    if (mime.match(/^video(\/.*|$)/) && mimeTypeViewerOverride.has("video")) {
-      viewerName = mimeTypeViewerOverride.get("video") as ViewerName;
-    }
-    if (mimeTypeViewerOverride.has(mime)) {
-      viewerName = mimeTypeViewerOverride.get(mime) as ViewerName;
+    if (fileType && fileTypeViewerOverride.has(fileType)) {
+      viewerName = fileTypeViewerOverride.get(fileType) as ViewerName;
     }
   }
   if (isDemoMode && viewerName == ViewerName.HydrusRenderer) {

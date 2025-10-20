@@ -1,30 +1,32 @@
 import React, { useEffect, useRef, useState } from "react";
 
 import TagLabel from "@/components/widgets/TagLabel/TagLabel";
-import { knownMimetypes } from "@/constants/mimetypes";
+import { HydrusFileType, filetypeEnumToString } from "@/constants/filetypes";
 
 import "./index.css";
 
-interface MimeInputProps {
-  onAdd: (mimetype: string) => void;
+interface FileTypeInputProps {
+  onAdd: (filetype: HydrusFileType) => void;
   disabled?: boolean;
   className?: string;
 }
 
-const MimeInput: React.FC<MimeInputProps> = ({
+const FileTypeInput: React.FC<FileTypeInputProps> = ({
   onAdd,
   disabled = false,
   className = "",
 }) => {
   const [input, setInput] = useState("");
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<[HydrusFileType, string][]>(
+    [],
+  );
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  // Fetch mimetype suggestions when input changes
+  // Calculate filetype suggestions when input changes
   useEffect(() => {
     const calculateSuggestions = () => {
       const trimmedInput = input.trim();
@@ -32,12 +34,15 @@ const MimeInput: React.FC<MimeInputProps> = ({
         setSuggestions([]);
         return;
       }
-      const startsWith = knownMimetypes.filter((mime) =>
-        mime.startsWith(trimmedInput),
-      );
-      const contains = knownMimetypes.filter(
-        (mime) => mime.indexOf(trimmedInput) > 0,
-      );
+      const startsWith: [HydrusFileType, string][] = [];
+      const contains: [HydrusFileType, string][] = [];
+      for (const [filetype, name] of filetypeEnumToString.entries()) {
+        if (name.startsWith(trimmedInput)) {
+          startsWith.push([filetype, name]);
+        } else if (name.indexOf(trimmedInput) > 0) {
+          contains.push([filetype, name]);
+        }
+      }
       setSuggestions([...startsWith, ...contains]);
       setShowSuggestions(true);
     };
@@ -65,7 +70,7 @@ const MimeInput: React.FC<MimeInputProps> = ({
         selectedSuggestionIndex >= 0 &&
         suggestions[selectedSuggestionIndex]
       ) {
-        addMimeType(suggestions[selectedSuggestionIndex]);
+        addFileType(suggestions[selectedSuggestionIndex][0]);
       }
     } else if (e.key === "Enter") {
       e.preventDefault();
@@ -75,9 +80,7 @@ const MimeInput: React.FC<MimeInputProps> = ({
         selectedSuggestionIndex >= 0 &&
         suggestions[selectedSuggestionIndex]
       ) {
-        addMimeType(suggestions[selectedSuggestionIndex]);
-      } else if (input.trim() !== "") {
-        addMimeType(input.trim());
+        addFileType(suggestions[selectedSuggestionIndex][0]);
       }
     } else if (e.key === "Escape" && showSuggestions) {
       e.preventDefault();
@@ -87,8 +90,8 @@ const MimeInput: React.FC<MimeInputProps> = ({
   };
 
   // Add a tag and reset input
-  const addMimeType = (mimetype: string) => {
-    onAdd(mimetype);
+  const addFileType = (filetype: HydrusFileType) => {
+    onAdd(filetype);
     setInput("");
     setShowSuggestions(false);
   };
@@ -112,8 +115,8 @@ const MimeInput: React.FC<MimeInputProps> = ({
   }, []);
 
   return (
-    <div className={`mime-input-container ${className}`}>
-      {/* Mimetype input */}
+    <div className={`file-type-input-container ${className}`}>
+      {/* Filetype input */}
       <div className="relative">
         <input
           ref={inputRef}
@@ -121,24 +124,24 @@ const MimeInput: React.FC<MimeInputProps> = ({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Enter mimetypes..."
-          className="mime-input-field"
+          placeholder="Enter filetypes..."
+          className="file-type-input-field"
           disabled={disabled}
         />
 
         {/* Suggestions dropdown */}
         {showSuggestions && (
-          <div ref={suggestionsRef} className="mime-suggestions">
+          <div ref={suggestionsRef} className="file-type-suggestions">
             {suggestions.map((suggestion, index) => (
               <div
-                key={suggestion}
-                className={`mime-suggestion-item ${index === selectedSuggestionIndex ? "selected" : ""}`}
-                onClick={() => addMimeType(suggestion)}
+                key={suggestion[0]}
+                className={`file-type-suggestion-item ${index === selectedSuggestionIndex ? "selected" : ""}`}
+                onClick={() => addFileType(suggestion[0])}
                 onMouseEnter={() => setSelectedSuggestionIndex(index)}
                 tabIndex={0}
               >
                 <TagLabel
-                  tag={suggestion}
+                  tag={suggestion[1]}
                   selected={index === selectedSuggestionIndex}
                 />
               </div>
@@ -150,4 +153,4 @@ const MimeInput: React.FC<MimeInputProps> = ({
   );
 };
 
-export default MimeInput;
+export default FileTypeInput;
