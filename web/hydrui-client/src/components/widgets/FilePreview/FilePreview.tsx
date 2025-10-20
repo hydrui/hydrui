@@ -98,8 +98,6 @@ const FilePreview: React.FC = () => {
           fileId={activeFileId}
           fileData={fileData}
           autoActivate={false}
-          autoPlay={false}
-          loop={false}
           isPreview={true}
         />
 
