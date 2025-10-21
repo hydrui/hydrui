@@ -1,9 +1,9 @@
 .file-preview-container {
-  height: 50%;
   display: flex;
   flex-direction: column;
   padding: 0.5rem;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: scroll;
 }
 
 .file-preview-loading {
@@ -39,6 +39,7 @@
   border-radius: var(--radius-sm);
   overflow: hidden;
   position: relative;
+  min-height: 100px;
 }
 
 .file-preview-error-overlay {

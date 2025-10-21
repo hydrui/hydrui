@@ -1,6 +1,7 @@
 import { PlusIcon } from "@heroicons/react/24/solid";
 import { MinusIcon } from "@heroicons/react/24/solid";
 import React, {
+  CSSProperties,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -93,7 +94,7 @@ async function getTagSummary(
 }
 
 // TagList component to display tags of selected files or current view
-const TagList: React.FC = () => {
+function TagList({ style }: { style?: CSSProperties | undefined }) {
   const { showContextMenu } = useContextMenu();
   const selectedFilesByPage = usePageStore(
     (state) => state.selectedFilesByPage,
@@ -511,7 +512,7 @@ const TagList: React.FC = () => {
   }, [quickEdit, tagServices, activeServiceKey, setLastActiveTagService]);
 
   return (
-    <div className="tag-list-container">
+    <div className="tag-list-container" style={style}>
       <div className="tag-list-header">
         <h3 className="tag-list-title">Tags</h3>
         <label>
@@ -607,7 +608,7 @@ const TagList: React.FC = () => {
       )}
     </div>
   );
-};
+}
 
 interface TagListEntryProps {
   tag: string;

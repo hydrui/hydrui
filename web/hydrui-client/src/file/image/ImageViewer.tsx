@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { FileMetadata } from "@/api/types";
 
@@ -207,6 +207,8 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
 
     // Only initiate drag with left mouse button
     if (e.button !== 0) return;
+
+    e.preventDefault();
 
     setIsDragging(true);
     setDragStart({
@@ -586,6 +588,32 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
       setPinchInfo(null);
     }
   };
+
+  useLayoutEffect(() => {
+    const recenterImage = () => {
+      if (fileData.width && fileData.height) {
+        centerImageWithSize(fileData.width, fileData.height);
+      }
+    };
+    recenterImage();
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(recenterImage);
+      if (containerRef.current) {
+        resizeObserver.observe(containerRef.current);
+      }
+    } else {
+      window.addEventListener("resize", recenterImage);
+    }
+
+    return () => {
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      } else {
+        window.removeEventListener("resize", recenterImage);
+      }
+    };
+  }, [fileData.height, fileData.width]);
 
   return (
     <>
