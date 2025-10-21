@@ -22,7 +22,7 @@ const ContextMenu: React.FC = () => {
 
   // Handle click outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: Event) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         closeMenu();
       }
@@ -30,9 +30,6 @@ const ContextMenu: React.FC = () => {
 
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-      // Also close on scroll events
-      document.addEventListener("scroll", closeMenu, true);
-      // And on window resize
       window.addEventListener("resize", closeMenu);
     }
 
@@ -45,7 +42,6 @@ const ContextMenu: React.FC = () => {
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("scroll", closeMenu, true);
       window.removeEventListener("resize", closeMenu);
     };
   }, [isOpen, closeMenu]);
