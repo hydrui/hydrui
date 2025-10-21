@@ -18,7 +18,7 @@ export interface FileViewer {
 }
 
 export interface FileRenderer {
-  rasterize(file: Blob | URL): Promise<ImageBitmap>;
+  rasterize(file: Blob | URL, fileData: FileMetadata): Promise<ImageBitmap>;
 }
 
 export enum ViewerName {
@@ -32,5 +32,8 @@ export enum ViewerName {
 }
 
 export enum RendererName {
+  HydruiImageRenderer = "Hydrui Image Renderer",
+  HydruiVideoStillRenderer = "Hydrui Video Still Renderer",
   HydruiPSDMergedImageRenderer = "Hydrui PSD Merged Image Renderer",
+  HydrusRenderer = "Hydrus Renderer",
 }

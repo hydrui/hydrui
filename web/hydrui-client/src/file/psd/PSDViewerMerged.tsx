@@ -17,6 +17,7 @@ export function MergedPSDViewer({
   const [mergedUrl, setMergedUrl] = useState<string>();
   useEffect(() => {
     const render = async () => {
+      setMergedUrl(undefined);
       const url = String(await renderMergedImage(String(fileUrl)));
       setMergedUrl(url);
       return url;
@@ -24,12 +25,7 @@ export function MergedPSDViewer({
     const promise = render();
     return () => {
       promise.then((url) => {
-        // In React strict mode this will probably cause some spurious errors
-        // This is because it will render once, unmount, then mount again.
-        // This happens so quickly that it is likely to force the blob URL to
-        // get revoked once before the DOM has a chance to update. But, it's
-        // kind of okay, because it will get replaced with a working blob URL
-        // anyways.
+        setMergedUrl(undefined);
         URL.revokeObjectURL(url);
       });
     };
