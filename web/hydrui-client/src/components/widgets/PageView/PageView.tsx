@@ -11,6 +11,7 @@ import {
   WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/solid";
+import { ShareIcon } from "@heroicons/react/24/solid";
 import React, {
   useCallback,
   useEffect,
@@ -31,6 +32,7 @@ import ImportUrlsModal from "@/components/modals/ImportUrlsModal/ImportUrlsModal
 import TokenPassingModal from "@/components/modals/TokenPassingModal/TokenPassingModal";
 import Crash from "@/components/widgets/Crash/Crash";
 import ScrollView from "@/components/widgets/ScrollView/ScrollView";
+import { renderDispatch } from "@/file/renderers";
 import { useContextMenu } from "@/hooks/useContextMenu";
 import useLongPress from "@/hooks/useLongPress";
 import { useShortcut } from "@/hooks/useShortcut";
@@ -672,16 +674,122 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         label: "",
       },
       {
-        id: "copy-urls",
-        label: `Copy URL${selectedFileMetadata.length > 1 ? "s" : ""}`,
-        icon: <LinkIcon />,
-        onClick: () => {
-          navigator.clipboard.writeText(
-            selectedFileMetadata
-              .map((f) => client.getFileUrl(f.file_id))
-              .join("\n"),
-          );
-        },
+        id: "share",
+        label: "Share",
+        icon: <ShareIcon />,
+        items: [
+          {
+            id: "copy-image",
+            label: `Copy Image`,
+            icon: <LinkIcon />,
+            onClick: async () => {
+              const toast = addToast(
+                "Copying image to clipboard (Fetching and rendering...)",
+                "info",
+                {
+                  duration: false,
+                },
+              );
+              let blob: Blob;
+              try {
+                const currentIndex = fileIdToIndex.get(fileId);
+                if (currentIndex === undefined) return;
+                const fileData = metadataLoadController
+                  ? (
+                      await metadataLoadController.demandFetchMetadata([fileId])
+                    )[0]
+                  : loadedFiles[currentIndex];
+                if (!fileData) return;
+                const renderer = renderDispatch(fileData);
+                const bitmap = await renderer.rasterize(
+                  new URL(client.getFileUrl(fileId)),
+                  { ...fileData },
+                );
+                const canvas = document.createElement("canvas");
+                canvas.width = bitmap.width;
+                canvas.height = bitmap.height;
+                const ctx = canvas.getContext("2d");
+                if (!ctx) {
+                  throw new Error("Failed to get 2D rendering context");
+                }
+                ctx.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height);
+                blob = await new Promise<Blob>((resolve, reject) => {
+                  canvas.toBlob((blob) => {
+                    if (blob) {
+                      resolve(blob);
+                    } else {
+                      reject(new Error("Rendering canvas to blob failed"));
+                    }
+                  });
+                });
+              } catch (e) {
+                addToast(`Error copying image to clipboard: ${e}`, "error");
+                return;
+              } finally {
+                removeToast(toast);
+              }
+              const copyToClipboard = async () => {
+                try {
+                  await navigator.clipboard.write([
+                    new ClipboardItem({ [blob.type]: blob }),
+                  ]);
+                  addToast("Image copied to clipboard.", "success");
+                } catch (e) {
+                  const toast = addToast(
+                    `Error copying image to clipboard: ${e}. Try again?`,
+                    "error",
+                    {
+                      duration: false,
+                      actions: [
+                        {
+                          label: "Retry",
+                          variant: "primary",
+                          callback: async () => {
+                            removeToast(toast);
+                            await copyToClipboard();
+                          },
+                        },
+                      ],
+                    },
+                  );
+                }
+              };
+              await copyToClipboard();
+            },
+          },
+          {
+            id: "copy-hashes",
+            label: `Copy Hash${selectedFileMetadata.length > 1 ? "es" : ""}`,
+            icon: <LinkIcon />,
+            onClick: () => {
+              navigator.clipboard.writeText(
+                selectedFileMetadata.map((f) => f.hash).join("\n"),
+              );
+            },
+          },
+          {
+            id: "copy-file-ids",
+            label: `Copy ID${selectedFileMetadata.length > 1 ? "s" : ` (${fileId})`}`,
+            icon: <LinkIcon />,
+            onClick: () => {
+              navigator.clipboard.writeText(
+                selectedFileMetadata.map((f) => f.file_id).join("\n"),
+              );
+            },
+          },
+          {
+            id: "copy-urls",
+            label: `Copy URL${selectedFileMetadata.length > 1 ? "s" : ""}`,
+            icon: <LinkIcon />,
+            onClick: () => {
+              navigator.clipboard.writeText(
+                selectedFileMetadata
+                  .map((f) => client.getFileUrl(f.file_id))
+                  .join("\n"),
+              );
+            },
+          },
+        ],
       },
       {
         id: "divider2",
@@ -745,7 +853,9 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
             id: "sauce-nao",
             label: "Sauce Nao Lookup",
             onClick: async () => {
-              const toast = addToast("Preparing Sauce Nao request...", "info");
+              const toast = addToast("Preparing Sauce Nao request...", "info", {
+                duration: false,
+              });
               try {
                 const thumbnail = await (
                   await fetch(client.getThumbnailUrl(fileId))
