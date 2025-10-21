@@ -681,7 +681,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
           {
             id: "copy-image",
             label: `Copy Image`,
-            icon: <LinkIcon />,
+            icon: <ArrowUpTrayIcon />,
             onClick: async () => {
               const toast = addToast(
                 "Copying image to clipboard (Fetching and rendering...)",
