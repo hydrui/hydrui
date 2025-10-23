@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hydrus
+  labels:
+    app: hydrus
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: hydrus
+  template:
+    metadata:
+      labels:
+        app: hydrus
+    spec:
+      containers:
+        - name: hydrus
+          image: ghcr.io/hydrusnetwork/hydrus:v643
+          command: ["/bin/sh", "/.init-hydrus-api.sh"]
+          ports:
+            - containerPort: 5800
+              name: novnc
+              protocol: TCP
+            - containerPort: 5900
+              name: vnc
+              protocol: TCP
+            - containerPort: 45869
+              name: api
+              protocol: TCP
+          env:
+            - name: HYDRUI_HYDRUS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: hydrui-secrets
+                  key: HYDRUI_HYDRUS_API_KEY
+            - name: HYDRUI_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: hydrui-secrets
+                  key: HYDRUI_SECRET
+          livenessProbe:
+            httpGet:
+              path: /api_version
+              port: 45869
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api_version
+              port: 45869
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          volumeMounts:
+            - name: init-script
+              mountPath: /.init-hydrus-api.sh
+              subPath: init-hydrus-api.sh
+              readOnly: true
+            - name: hydrus-db
+              mountPath: /opt/hydrus/db
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+      terminationGracePeriodSeconds: 120
+      volumes:
+        - name: init-script
+          configMap:
+            name: hydrus-init-script
+            defaultMode: 0755
+        - name: hydrus-db
+          persistentVolumeClaim:
+            claimName: hydrus-db
+        - name: tmp
+          emptyDir:
+            medium: Memory

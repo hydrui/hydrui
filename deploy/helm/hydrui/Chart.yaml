@@ -1,0 +1,13 @@
+apiVersion: v2
+name: hydrui
+description: A Helm chart for Hydrui - A web-based UI for Hydrus Network
+type: application
+version: 0.1.0
+appVersion: edge
+keywords:
+  - hydrui
+  - hydrus
+  - media
+sources:
+  - https://github.com/hydrui/hydrui
+icon: https://raw.githubusercontent.com/hydrui/hydrui/refs/heads/master/web/hydrui-client/public/icon.svg

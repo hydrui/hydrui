@@ -1,0 +1,21 @@
+mode: server-bundled
+serverMode:
+  auth:
+    enabled: true
+  security:
+    secureCookies: true
+hydrui:
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: hydrui.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: hydrui-tls
+        hosts:
+          - hydrui.example.com

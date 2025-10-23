@@ -1,0 +1,37 @@
+secrets:
+  hydrui_htpasswd:
+    file: "./htpasswd.txt"
+
+volumes:
+  hydrus-db:
+
+services:
+  hydrus:
+    image: "ghcr.io/hydrusnetwork/hydrus:v643"
+    env_file: ./environment.txt
+    entrypoint: ["/bin/sh", "/.init-hydrus-api.sh"]
+    restart: "unless-stopped"
+    stop_grace_period: "2m"
+    ports:
+      - "0.0.0.0:5800:5800"
+      - "0.0.0.0:5900:5900"
+      - "0.0.0.0:45869:45869"
+    tmpfs:
+      - /tmp
+    volumes:
+      - "./init-hydrus-api.sh:/.init-hydrus-api.sh:ro"
+      - "hydrus-db:/opt/hydrus/db"
+
+  hydrui:
+    image: "ghcr.io/hydrui/hydrui:edge"
+    env_file: ./environment.txt
+    restart: "unless-stopped"
+    command: >
+      -htpasswd=/run/secrets/hydrui_htpasswd
+      -hydrus-url=http://hydrus:45869
+      -secure=false
+      -server-mode
+    ports:
+      - "0.0.0.0:8080:8080"
+    secrets:
+      - "hydrui_htpasswd"

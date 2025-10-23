@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hydrus
+  labels:
+    app: hydrus
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5800
+      targetPort: novnc
+      protocol: TCP
+      name: novnc
+    - port: 5900
+      targetPort: vnc
+      protocol: TCP
+      name: vnc
+    - port: 45869
+      targetPort: api
+      protocol: TCP
+      name: api
+  selector:
+    app: hydrus

@@ -1,0 +1,107 @@
+{{- $mode := .Values.mode -}}
+{{- $fullName := include "hydrui.fullname" . -}}
+{{- $namespace := include "hydrui.namespace" . -}}
+{{- $servicePort := .Values.hydrui.service.port -}}
+
+Hydrui has been installed as {{ .Release.Name }} and is using {{ $mode }} mode.
+
+{{- if eq $mode "client-only" }}
+
+# Client-only Mode
+
+Hydrui is running in client-only mode.
+
+{{- else if eq $mode "server-bundled" }}
+
+# Server Mode with Bundled Hydrus
+
+Hydrui is running in server mode with a bundled hydrus network client instance.
+
+The bundled Hydrus client is accessible via noVNC at:
+  Service: {{ $fullName }}-hydrus
+  noVNC Port: {{ .Values.hydrus.service.novncPort }}
+  VNC Port: {{ .Values.hydrus.service.vncPort }}
+
+You can use `kubectl port-forward` to access these locally.
+
+{{- else if eq $mode "server-external" }}
+
+# Server Mode with External Hydrus
+
+Hydrui is running in server mode and will connect to:
+  {{ include "hydrui.hydrusUrl" . }}
+
+{{- end }}
+{{- if and (or (eq .Values.mode "server-bundled") (eq .Values.mode "server-external")) }}
+{{- if .Values.serverMode.auth.enabled }}
+
+Default credentials (if using default htpasswd):
+  Username: admin
+  Password: admin
+
+Notice: make sure you change the default .htpasswd in real deployments.
+{{- else }}
+
+Authentication is disabled. Make sure you have appropriate security measures
+in place, or your Hydrui instance may be accessible to the world.
+{{- end }}
+{{- end }}
+
+# Accessing Hydrui
+
+{{- if .Values.hydrui.ingress.enabled }}
+{{- range $host := .Values.hydrui.ingress.hosts }}
+  http{{ if $.Values.hydrui.ingress.tls }}s{{ end }}://{{ $host.host }}{{ (index $host.paths 0).path }}
+{{- end }}
+{{- else if contains "NodePort" .Values.hydrui.service.type }}
+
+Get the application URL by running:
+  export NODE_PORT=$(kubectl get --namespace {{ $namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ $fullName }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ $namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+
+{{- else if contains "LoadBalancer" .Values.hydrui.service.type }}
+
+Get the application URL by running:
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+
+  export SERVICE_IP=$(kubectl get svc --namespace {{ $namespace }} {{ $fullName }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ $servicePort }}
+
+{{- else if contains "ClusterIP" .Values.hydrui.service.type }}
+
+To access Hydrui, forward a local port to the service:
+  kubectl port-forward --namespace {{ $namespace }} svc/{{ $fullName }} 8080:{{ $servicePort }}
+
+Then visit: http://localhost:8080
+
+{{- if and (eq .Values.mode "server-bundled") }}
+
+To access the Hydrus noVNC interface:
+  kubectl port-forward --namespace {{ $namespace }} svc/{{ $fullName }}-hydrus 5800:{{ .Values.hydrus.service.novncPort }}
+
+Then visit: http://localhost:5800
+{{- end }}
+{{- end }}
+
+# Documentation
+
+For more information on deploying and using Hydrui, visit:
+  https://hydrui.dev/en/docs/
+
+{{- if .Values.serverMode.acme.enabled }}
+
+# ACME/Let's Encrypt
+
+ACME is enabled. Certificates will be automatically obtained for:
+{{- if .Values.serverMode.acme.hostMatch }}
+  Hosts matching: {{ .Values.serverMode.acme.hostMatch }}
+{{- else }}
+  All incoming hosts (Not recommended)
+
+  (Consider configuring this with .serverMode.acme.hostMatch.)
+{{- end }}
+
+Make sure your domain is publicly accessible and points to this deployment.
+Hydrui's built-in ACME support only supports using HTTP-01.
+{{- end }}

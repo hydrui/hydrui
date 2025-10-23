@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hydrui
+  labels:
+    app: hydrui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hydrui
+  template:
+    metadata:
+      labels:
+        app: hydrui
+    spec:
+      containers:
+        - name: hydrui
+          image: ghcr.io/hydrui/hydrui:edge
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+            - containerPort: 5050
+              name: internal
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 5050
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 5050
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
