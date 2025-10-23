@@ -702,7 +702,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
                 if (!fileData) return;
                 const renderer = renderDispatch(fileData);
                 const bitmap = await renderer.rasterize(
-                  new URL(client.getFileUrl(fileId)),
+                  new URL(client.getFileUrl(fileId), document.URL),
                   { ...fileData },
                 );
                 const canvas = document.createElement("canvas");

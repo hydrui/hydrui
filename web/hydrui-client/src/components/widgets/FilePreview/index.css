@@ -3,7 +3,8 @@
   flex-direction: column;
   padding: 0.5rem;
   overflow-x: hidden;
-  overflow-y: scroll;
+  overflow-y: auto;
+  flex-grow: 1;
 }
 
 .file-preview-loading {
