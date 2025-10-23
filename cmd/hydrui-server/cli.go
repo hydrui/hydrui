@@ -23,8 +23,12 @@ func startCLI(ctx context.Context, log *slog.Logger) {
 		log.LogAttrs(ctx, slog.LevelError, "Invalid command line arguments.", slog.Any("error", err))
 		os.Exit(1)
 	}
-	if opts.FlagSet.Arg(0) == "healthcheck" {
-		dest := opts.FlagSet.Arg(1)
+	if opts.Arg(0) == "healthcheck" {
+		dest := opts.Arg(1)
+		if dest == "" {
+			log.LogAttrs(ctx, slog.LevelError, "Missing URL argument for healthcheck command.")
+			os.Exit(1)
+		}
 		client := http.Client{
 			Timeout: 10 * time.Second,
 		}
@@ -38,7 +42,7 @@ func startCLI(ctx context.Context, log *slog.Logger) {
 			log.LogAttrs(ctx, slog.LevelError, "Error during HTTP recv.", slog.Any("error", err))
 			os.Exit(2)
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if resp.StatusCode >= 400 {
 			os.Exit(1)
 		} else {

@@ -43,7 +43,7 @@ type Values struct {
 	NoAuth         bool
 	AllowBugReport bool
 	NoGUI          bool
-	*flag.FlagSet
+	*flag.FlagSet  `json:"-" yaml:"-"`
 }
 
 func NewDefault() *Values {
