@@ -43,6 +43,7 @@ type Values struct {
 	NoAuth         bool
 	AllowBugReport bool
 	NoGUI          bool
+	*flag.FlagSet
 }
 
 func NewDefault() *Values {
@@ -65,6 +66,7 @@ func (v *Values) ParseFlags(args []string) error {
 		args[i] = expandEnv(args[i])
 	}
 	set := flag.NewFlagSet(args[0], flag.ContinueOnError)
+	v.FlagSet = set
 	set.StringVar(&v.Listen, "listen", v.Listen, "Listen address for HTTP")
 	set.StringVar(&v.ListenTLS, "listen-tls", v.ListenTLS, "Listen address for HTTPS (TLS)")
 	set.StringVar(&v.ListenInternal, "listen-internal", v.ListenInternal, "Internal listen address (metrics/healthcheck/etc.)")

@@ -1,0 +1,6 @@
+services:
+  hydrui:
+    image: "ghcr.io/hydrui/hydrui:edge"
+    restart: "unless-stopped"
+    ports:
+      - "0.0.0.0:8080:8080"

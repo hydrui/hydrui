@@ -1,0 +1,10 @@
+mode: server-external
+serverMode:
+  auth:
+    enabled: true
+    htpasswd:
+      content: "admin:$2a$10$lq/aqnzpLksHhLVx.ZOxJOp20TZAhXJkoY41dGsTfpHLDQp22iPsq"
+  hydrus:
+    url: "http://my-hydrus.example.com:45869"
+    apiKey: "your-hydrus-api-key-here"
+    secure: false

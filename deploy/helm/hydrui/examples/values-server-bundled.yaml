@@ -1,0 +1,13 @@
+mode: server-bundled
+serverMode:
+  auth:
+    enabled: true
+    htpasswd:
+      content: "admin:$2a$10$lq/aqnzpLksHhLVx.ZOxJOp20TZAhXJkoY41dGsTfpHLDQp22iPsq"
+  hydrus:
+    apiKey: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+hydrus:
+  persistence:
+    enabled: true
+    size: 100Mi
+    storageClass: local-path

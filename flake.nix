@@ -27,6 +27,8 @@
         inherit (pkgs) hydrui-server hydrui-api;
         format = pkgs.callPackage ./nix/format.nix { };
         gen-module-options = pkgs.callPackage ./nix/gen-module-options.nix { inherit self nixpkgs; };
+        tests-docker-compose = pkgs.callPackage ./nix/tests/docker-compose.nix { };
+        tests-kubernetes = pkgs.callPackage ./nix/tests/kubernetes.nix { };
       in
       {
         packages = {
@@ -35,6 +37,8 @@
             hydrui-api
             format
             gen-module-options
+            tests-docker-compose
+            tests-kubernetes
             ;
           default = hydrui-server;
         };
@@ -42,7 +46,15 @@
           format = pkgs.runCommandLocal "check-format" { } ''
             cd ${self} && ${pkgs.lib.getExe format} --check && touch $out
           '';
-          inherit hydrui-server hydrui-api;
+          helm-lint = pkgs.runCommandLocal "check-helm-lint" { buildInputs = [ pkgs.kubernetes-helm ]; } ''
+            helm lint ${self}/deploy/helm/hydrui && touch $out
+          '';
+          inherit
+            hydrui-server
+            hydrui-api
+            tests-docker-compose
+            tests-kubernetes
+            ;
         };
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [

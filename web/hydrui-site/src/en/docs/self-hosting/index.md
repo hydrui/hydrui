@@ -22,6 +22,12 @@ Hydrui is fairly portable and can be hosted on a wide variety of computers and o
 
 - [Deploy Hydrui via Docker or Podman using OCI images.](./docker/) This method is preferred in some environments where deploying a Docker image is easiest, like a NAS. It is also possible to use on a Linux server or workstation. This method is not recommended on Windows or macOS.
 
+- [Deploy Hydrui via Docker Compose or Podman Compose.](./docker/compose/) This is an alternative to using the basic Kubernetes manifests that is somewhat more complex. This method is recommended if you are already using Helm.
+
+- [Deploy Hydrui onto a Kubernetes cluster.](./kubernetes/) This method is recommended for people who are cosplaying as sysadmins.
+
+- [Deploy Hydrui onto a Kubernetes cluster with Helm.](./kubernetes/helm/) This is an alternative to using the basic Kubernetes manifests that is somewhat more complex. This method is recommended if you are already using Helm.
+
 - [Deploy using static site hosting.](./static-site/) This method is perfectly reasonable if you do not care about any of the server mode features.
 
 - [Deploy using NixOS.](./nixos/) Hydrui is a Nix flake, so it is possible to deploy it via NixOS directly. This is recommended if you are already using NixOS.

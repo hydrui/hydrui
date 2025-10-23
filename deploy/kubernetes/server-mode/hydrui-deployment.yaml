@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hydrui
+  labels:
+    app: hydrui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hydrui
+  template:
+    metadata:
+      labels:
+        app: hydrui
+    spec:
+      containers:
+        - name: hydrui
+          image: ghcr.io/hydrui/hydrui:edge
+          args:
+            - "-htpasswd=/secrets/htpasswd"
+            - "-hydrus-url=http://hydrus:45869"
+            - "-secure=false"
+            - "-server-mode"
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+            - containerPort: 5050
+              name: internal
+              protocol: TCP
+          env:
+            - name: HYDRUI_HYDRUS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: hydrui-secrets
+                  key: HYDRUI_HYDRUS_API_KEY
+            - name: HYDRUI_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: hydrui-secrets
+                  key: HYDRUI_SECRET
+          livenessProbe:
+            httpGet:
+              path: /healthz?check_hydrus
+              port: 5050
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz?check_hydrus
+              port: 5050
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          volumeMounts:
+            - name: htpasswd
+              mountPath: /secrets
+              readOnly: true
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: htpasswd
+          secret:
+            secretName: hydrui-secrets
+            items:
+              - key: htpasswd
+                path: htpasswd

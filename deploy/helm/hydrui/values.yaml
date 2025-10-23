@@ -1,0 +1,191 @@
+# Deployment mode; one of "client-only", "server-bundled", or "server-external".
+# - client-only: Runs Hydrui in client-only mode.
+# - server-bundled: Runs Hydrui in server mode with a bundled hydrus client instance.
+# - server-external: Runs Hydrui in server mode connecting to an external hydrus instance.
+mode: "client-only"
+
+hydrui:
+  image:
+    repository: ghcr.io/hydrui/hydrui
+    pullPolicy: IfNotPresent
+    tag: edge
+
+  imagePullSecrets: []
+
+  replicaCount: 1
+
+  service:
+    type: ClusterIP
+    port: 8080
+    annotations: {}
+
+  internalService:
+    enabled: true
+    port: 5050
+
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    #   kubernetes.io/ingress.class: nginx
+    #   cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: hydrui.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+    #  - secretName: hydrui-tls
+    #    hosts:
+    #      - hydrui.local
+
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+  livenessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  extraArgs: []
+  extraEnv: []
+  #   - name: CUSTOM_VAR
+  #     value: "custom_value"
+  extraVolumeMounts: []
+  extraVolumes: []
+
+serverMode:
+  # Configures Hydrui login when using server mode
+  auth:
+    enabled: true
+    htpasswd:
+      # Bcrypt-hashed htpasswd content (default: admin/admin)
+      content: "admin:$2a$10$lq/aqnzpLksHhLVx.ZOxJOp20TZAhXJkoY41dGsTfpHLDQp22iPsq"
+      # Alternatively, reference an existing secret
+      existingSecret: ""
+      existingSecretKey: "htpasswd"
+
+  # Secret for session management
+  # If not provided, a random string will be generated.
+  sessionSecret: ""
+  # Alternatively, reference an existing secret
+  existingSessionSecret: ""
+  existingSessionSecretKey: "jwt-secret"
+
+  hydrus:
+    # For server-bundled mode, this defaults to http://hydrus:45869.
+    # Set this to the client API URL when using an external hydrus client.
+    url: ""
+    # Required; hydrus client API key
+    apiKey: ""
+    # Alternatively, reference an existing secret
+    existingApiKeySecret: ""
+    existingApiKeySecretKey: "hydrus-api-key"
+    # Validate TLS certificate when connecting to Hydrus
+    secure: false
+
+  security:
+    # Use secure cookies (set to false if not using HTTPS)
+    secureCookies: false
+
+  acme:
+    enabled: false
+    email: ""
+    url: "https://acme-v02.api.letsencrypt.org/directory"
+    storageDir: "/acme"
+    hostMatch: ""
+    persistence:
+      enabled: true
+      storageClass: ""
+      accessMode: ReadWriteOnce
+      size: 100Mi
+      existingClaim: ""
+
+  healthCheck:
+    checkHydrus: true
+
+hydrus:
+  image:
+    repository: ghcr.io/hydrusnetwork/hydrus
+    pullPolicy: IfNotPresent
+    tag: "v643"
+
+  service:
+    type: ClusterIP
+    apiPort: 45869
+    novncPort: 5800
+    vncPort: 5900
+    annotations: {}
+
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+  livenessProbe:
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+
+  readinessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+
+  persistence:
+    enabled: true
+    storageClass: local-path
+    accessMode: ReadWriteOnce
+    size: 10Gi
+    existingClaim: ""
+    annotations: {}
+
+  terminationGracePeriodSeconds: 120
+  podAnnotations: {}
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  tmpfs:
+    enabled: true
+    sizeLimit: ""
+  extraEnv: []
+  extraVolumeMounts: []
+  extraVolumes: []
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+commonLabels: {}
+
+namespaceOverride: ""
