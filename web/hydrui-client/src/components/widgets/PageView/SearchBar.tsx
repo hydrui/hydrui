@@ -10,12 +10,97 @@ import TagLabel from "@/components/widgets/TagLabel/TagLabel";
 import { client } from "@/store/apiStore";
 import { useSearchStore } from "@/store/searchStore";
 
+import {
+  FileTypeSystemTag,
+  RatingServiceSystemTag,
+  RatingSystemTag,
+  SimpleSystemTag,
+  TagAsNumberTag,
+  TagSuggestionUIProps,
+} from "./SystemTagUI";
 import "./index.css";
+
+type TagSuggestionUIRenderer = (props: TagSuggestionUIProps) => React.ReactNode;
 
 interface TagSuggestion {
   value: string;
-  count: number;
+  count?: number;
+  ui?: TagSuggestionUIRenderer;
 }
+
+function SimpleNumericTag(tag: string): TagSuggestion {
+  return {
+    value: `system:${tag}`,
+    ui: (props) => <SimpleSystemTag tag={tag} type="numeric" {...props} />,
+  };
+}
+
+function SimpleTextTag(tag: string): TagSuggestion {
+  return {
+    value: `system:${tag}`,
+    ui: (props) => <SimpleSystemTag tag={tag} type="text" {...props} />,
+  };
+}
+
+function RatingServiceTag(tag: string): TagSuggestion {
+  return {
+    value: `system:${tag}`,
+    ui: (props) => <RatingServiceSystemTag tag={tag} {...props} />,
+  };
+}
+
+function FileTypeTag(tag: string): TagSuggestion {
+  return {
+    value: `system:${tag}`,
+    ui: (props) => <FileTypeSystemTag tag={tag} {...props} />,
+  };
+}
+
+const SYSTEM_SUGGESTIONS: TagSuggestion[] = [
+  { value: "system:everything" },
+  { value: "system:inbox" },
+  { value: "system:archive" },
+  { value: "system:has duration" },
+  { value: "system:no duration" },
+  { value: "system:is the best quality file of its duplicate group" },
+  { value: "system:is not the best quality file of its duplicate group" },
+  { value: "system:has audio" },
+  { value: "system:no audio" },
+  { value: "system:has exif" },
+  { value: "system:no exif" },
+  { value: "system:has embedded metadata" },
+  { value: "system:no embedded metadata" },
+  { value: "system:has icc profile" },
+  { value: "system:no icc profile" },
+  { value: "system:has tags" },
+  { value: "system:no tags" },
+  { value: "system:untagged" },
+  { value: "system:has notes" },
+  { value: "system:no notes" },
+  { value: "system:does not have notes" },
+  SimpleNumericTag("number of tags"),
+  SimpleNumericTag("height"),
+  SimpleNumericTag("width"),
+  SimpleNumericTag("limit"),
+  SimpleNumericTag("views"),
+  SimpleNumericTag("views in media"),
+  SimpleNumericTag("views in preview"),
+  SimpleNumericTag("num notes"),
+  SimpleTextTag("has note with name"),
+  SimpleTextTag("no note with name"),
+  SimpleTextTag("has domain"),
+  SimpleTextTag("does not have domain"),
+  SimpleTextTag("has a url with class"),
+  SimpleTextTag("does not have a url with url class"),
+  { value: "system:rating", ui: (props) => <RatingSystemTag {...props} /> },
+  RatingServiceTag("has a rating for"),
+  RatingServiceTag("does not have a rating for"),
+  {
+    value: "system:tag as number",
+    ui: (props) => <TagAsNumberTag {...props} />,
+  },
+  FileTypeTag("filetype"),
+];
 
 export const SearchBar: React.FC = () => {
   const {
@@ -30,16 +115,38 @@ export const SearchBar: React.FC = () => {
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [editingTagIndex, setEditingTagIndex] = useState<number | null>(null);
+  const [currentTagUI, setCurrentTagUI] = useState<{
+    ui: TagSuggestionUIRenderer;
+  } | null>(null);
   const abortController = useRef<AbortController | null>(null);
 
+  const [hasFocus, setHasFocus] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
   // Fetch tag suggestions when input changes
   useEffect(() => {
     const fetchSuggestions = async () => {
-      if (input.trim() === "") {
+      if (currentTagUI !== null) {
+        return;
+      }
+      if (!hasFocus) {
         setSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+      const trimmedInput = input.trim();
+      if (trimmedInput === "" || trimmedInput.startsWith("system:")) {
+        setSuggestions([
+          ...SYSTEM_SUGGESTIONS.filter(({ value }) =>
+            value.startsWith(trimmedInput),
+          ),
+          ...SYSTEM_SUGGESTIONS.filter(
+            ({ value }) => value.indexOf(trimmedInput.slice(7)) > 7,
+          ),
+        ]);
+        setSelectedSuggestionIndex(0);
+        setShowSuggestions(true);
         return;
       }
 
@@ -47,10 +154,11 @@ export const SearchBar: React.FC = () => {
         abortController.current?.abort();
         abortController.current = new AbortController();
         const response = await client.searchTags(
-          input,
+          trimmedInput,
           undefined,
           abortController.current.signal,
         );
+        setCurrentTagUI(null);
         setSuggestions(response.tags.slice(0, 100));
         setSelectedSuggestionIndex(0);
         setShowSuggestions(response.tags.length > 0);
@@ -68,7 +176,7 @@ export const SearchBar: React.FC = () => {
       abortController.current?.abort();
       clearTimeout(timeoutId);
     };
-  }, [input]);
+  }, [hasFocus, input, currentTagUI]);
 
   // Handle keyboard navigation
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -86,8 +194,7 @@ export const SearchBar: React.FC = () => {
       suggestions[selectedSuggestionIndex]
     ) {
       e.preventDefault();
-      const selectedTag = suggestions[selectedSuggestionIndex].value;
-      addTag(selectedTag);
+      addTag(suggestions[selectedSuggestionIndex]);
     } else if (e.key === "Enter") {
       e.preventDefault();
       if (
@@ -95,8 +202,7 @@ export const SearchBar: React.FC = () => {
         showSuggestions &&
         suggestions[selectedSuggestionIndex]
       ) {
-        const selectedTag = suggestions[selectedSuggestionIndex].value;
-        addTag(selectedTag);
+        addTag(suggestions[selectedSuggestionIndex]);
       } else if (input.trim() !== "") {
         addTag(input.trim());
       } else {
@@ -106,7 +212,11 @@ export const SearchBar: React.FC = () => {
     } else if (e.key === "Escape" && showSuggestions) {
       e.preventDefault();
       e.stopPropagation();
-      setShowSuggestions(false);
+      if (currentTagUI) {
+        setCurrentTagUI(null);
+      } else {
+        setShowSuggestions(false);
+      }
     } else if (e.key === "Backspace") {
       if (input.length === 0 && searchTags.length > 0) {
         e.preventDefault();
@@ -128,7 +238,15 @@ export const SearchBar: React.FC = () => {
   };
 
   // Add a tag and reset input
-  const addTag = (tag: string) => {
+  const addTag = (tag: string | TagSuggestion) => {
+    if (typeof tag !== "string") {
+      if (tag.ui) {
+        setCurrentTagUI({ ui: tag.ui });
+        return;
+      } else {
+        tag = tag.value;
+      }
+    }
     if (editingTagIndex !== null) {
       // Replace the tag at editingTagIndex
       const newTags = [...searchTags];
@@ -180,11 +298,11 @@ export const SearchBar: React.FC = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        suggestionsRef.current &&
-        !suggestionsRef.current.contains(event.target as Node) &&
+        !suggestionsRef.current?.contains(event.target as Node) &&
         !inputRef.current?.contains(event.target as Node)
       ) {
         setShowSuggestions(false);
+        setCurrentTagUI(null);
       }
     };
 
@@ -239,7 +357,8 @@ export const SearchBar: React.FC = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            onFocus={() => input.trim() !== "" && setSuggestions(suggestions)}
+            onFocus={() => setHasFocus(true)}
+            onBlur={() => setHasFocus(false)}
             placeholder={searchTags.length > 0 ? "" : "Search tags..."}
             className="page-search-input"
           />
@@ -275,23 +394,34 @@ export const SearchBar: React.FC = () => {
       {/* Suggestions dropdown */}
       {showSuggestions && (
         <div ref={suggestionsRef} className="page-search-suggestions">
-          {suggestions.map((suggestion, index) => (
-            <div
-              key={suggestion.value}
-              className={`page-search-suggestion-item ${
-                index === selectedSuggestionIndex
-                  ? "page-search-suggestion-item-selected"
-                  : ""
-              }`}
-              onClick={() => addTag(suggestion.value)}
-              onMouseEnter={() => setSelectedSuggestionIndex(index)}
-            >
-              <TagLabel tag={suggestion.value} />
-              <span className="page-search-suggestion-count">
-                {suggestion.count}
-              </span>
-            </div>
-          ))}
+          {currentTagUI !== null
+            ? currentTagUI.ui({
+                addTag,
+                close: () => {
+                  setCurrentTagUI(null);
+                  setSuggestions([]);
+                  setShowSuggestions(false);
+                },
+              })
+            : suggestions.map((suggestion, index) => (
+                <div
+                  key={suggestion.value}
+                  className={`page-search-suggestion-item ${
+                    index === selectedSuggestionIndex
+                      ? "page-search-suggestion-item-selected"
+                      : ""
+                  }`}
+                  onClick={() => addTag(suggestion)}
+                  onMouseEnter={() => setSelectedSuggestionIndex(index)}
+                >
+                  <TagLabel tag={suggestion.value} />
+                  {suggestion.count && (
+                    <span className="page-search-suggestion-count">
+                      {suggestion.count}
+                    </span>
+                  )}
+                </div>
+              ))}
         </div>
       )}
     </div>

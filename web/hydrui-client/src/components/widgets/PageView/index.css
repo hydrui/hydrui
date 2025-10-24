@@ -8,6 +8,7 @@
 .page-search-bar-container {
   padding: 0.5rem;
   border-bottom: 1px solid var(--color-gray-700);
+  position: relative;
 }
 
 .files-grid {
@@ -287,8 +288,10 @@
 .page-search-suggestions {
   position: absolute;
   margin-top: 0.25rem;
-  width: 100%;
-  max-width: var(--container-2xl);
+  margin-left: 0.5rem;
+  margin-right: 0.5rem;
+  left: 0;
+  right: 0;
   max-height: 15rem;
   overflow-y: auto;
   background-color: var(--color-gray-700);
@@ -305,7 +308,7 @@
 }
 
 .page-search-suggestion-item:hover {
-  background-color: var(--color-gray-600);
+  background-color: var(--color-blue-600);
 }
 
 .page-search-suggestion-item-selected {
@@ -313,5 +316,69 @@
 }
 
 .page-search-suggestion-count {
+  color: var(--color-gray-400);
+}
+
+.system-tag-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background-color: var(--color-gray-700);
+  border-radius: 0.25rem;
+}
+
+.system-tag-operator {
+  padding: 0.25rem 0.5rem;
+  background-color: var(--color-gray-600);
+  border: 1px solid var(--color-gray-500);
+  border-radius: 0.25rem;
+  color: var(--color-white);
+  cursor: pointer;
+  flex-grow: 1;
+}
+
+.system-tag-operator:focus {
+  outline: 2px solid var(--color-blue-400);
+  outline-offset: 0;
+}
+
+.system-tag-number {
+  padding: 0.25rem 0.5rem;
+  background-color: var(--color-gray-600);
+  border: 1px solid var(--color-gray-500);
+  border-radius: 0.25rem;
+  color: var(--color-white);
+  min-width: 100px;
+  flex-grow: 1;
+}
+
+.system-tag-number:focus {
+  outline: 2px solid var(--color-blue-400);
+  outline-offset: 0;
+  border-color: var(--color-blue-500);
+}
+
+.system-tag-number::placeholder {
+  color: var(--color-gray-400);
+}
+
+.system-tag-text {
+  padding: 0.25rem 0.5rem;
+  background-color: var(--color-gray-600);
+  border: 1px solid var(--color-gray-500);
+  border-radius: 0.25rem;
+  color: var(--color-white);
+  min-width: 150px;
+  flex-grow: 1;
+}
+
+.system-tag-text:focus {
+  outline: 2px solid var(--color-blue-400);
+  outline-offset: 0;
+  border-color: var(--color-blue-500);
+}
+
+.system-tag-text::placeholder {
   color: var(--color-gray-400);
 }
