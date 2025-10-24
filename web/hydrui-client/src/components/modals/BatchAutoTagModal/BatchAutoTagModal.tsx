@@ -139,10 +139,7 @@ const BatchAutoTagModal: React.FC<BatchAutoTagModalProps> = ({
           new URL(client.getFileUrl(file.file_id), document.URL),
           { ...file },
         );
-        const result = await worker.processImage(
-          autotagThreshold,
-          await createImageBitmap(bitmap),
-        );
+        const result = await worker.processImage(autotagThreshold, bitmap);
         const existingTags = new Set<string>();
         let hasRating = false;
         const serviceTags =
