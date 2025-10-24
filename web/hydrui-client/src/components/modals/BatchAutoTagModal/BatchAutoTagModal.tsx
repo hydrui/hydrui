@@ -6,6 +6,7 @@ import { FileMetadata } from "@/api/types";
 import PushButton from "@/components/widgets/PushButton/PushButton";
 import { ContentUpdateAction } from "@/constants/contentUpdates";
 import { REAL_TAG_SERVICES } from "@/constants/services";
+import { renderDispatch } from "@/file/renderers";
 import { useShortcut } from "@/hooks/useShortcut";
 import { client } from "@/store/apiStore";
 import { useModelMetaStore } from "@/store/modelMetaStore";
@@ -133,12 +134,14 @@ const BatchAutoTagModal: React.FC<BatchAutoTagModalProps> = ({
         if (abortController) {
           requestInit.signal = abortController.signal;
         }
-        const imageData = await (
-          await fetch(client.getFileUrl(file.file_id), requestInit)
-        ).blob();
+        const renderer = renderDispatch(file);
+        const bitmap = await renderer.rasterize(
+          new URL(client.getFileUrl(file.file_id), document.URL),
+          { ...file },
+        );
         const result = await worker.processImage(
           autotagThreshold,
-          await createImageBitmap(imageData),
+          await createImageBitmap(bitmap),
         );
         const existingTags = new Set<string>();
         let hasRating = false;
