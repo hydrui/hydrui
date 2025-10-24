@@ -10,6 +10,7 @@ import TagInput from "@/components/widgets/TagInput/TagInput";
 import TagLabel from "@/components/widgets/TagLabel/TagLabel";
 import { ContentUpdateAction } from "@/constants/contentUpdates";
 import { REAL_TAG_SERVICES } from "@/constants/services";
+import { renderDispatch } from "@/file/renderers";
 import { useShortcut } from "@/hooks/useShortcut";
 import { client } from "@/store/apiStore";
 import { useModelMetaStore } from "@/store/modelMetaStore";
@@ -362,18 +363,19 @@ const EditTagsModal: React.FC<EditTagsModalProps> = ({ files, onClose }) => {
     if (!file) {
       return;
     }
-    const toast = addToast(`Processing autotag request...`, "info");
+    const toast = addToast(`Processing autotag request...`, "info", {
+      duration: false,
+    });
     try {
-      const imageData = await (
-        await fetch(client.getFileUrl(file.file_id))
-      ).blob();
+      const renderer = renderDispatch(file);
+      const bitmap = await renderer.rasterize(
+        new URL(client.getFileUrl(file.file_id), document.URL),
+        { ...file },
+      );
       const worker = await loadTagModel(autotagModel);
       let existing = 0;
       try {
-        const result = await worker.processImage(
-          autotagThreshold,
-          await createImageBitmap(imageData),
-        );
+        const result = await worker.processImage(autotagThreshold, bitmap);
         const existingTags = new Set<string>();
         let hasRating = false;
         if (activeServiceKey && tagCountsByService[activeServiceKey]) {
