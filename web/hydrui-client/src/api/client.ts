@@ -326,11 +326,11 @@ export class HydrusClient implements HydrusApiClient {
   /**
    * Get the direct URL for a file
    */
-  getFileUrl(fileId: number): string {
+  getFileUrl(fileId: number, download = false): string {
     if (isDemoMode) {
       return String(this.demoServer!.getDemoFile(fileId, "file"));
     }
-    return `${this.baseUrl}/get_files/file?file_id=${fileId}${this.apiKey ? `&Hydrus-Client-API-Access-Key=${this.apiKey}` : ""}`;
+    return `${this.baseUrl}/get_files/file?file_id=${fileId}${this.apiKey ? `&Hydrus-Client-API-Access-Key=${this.apiKey}` : ""}&download=${download}`;
   }
 
   /**

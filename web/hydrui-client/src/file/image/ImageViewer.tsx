@@ -649,6 +649,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
           }}
           onLoad={handleImageLoad}
           draggable={false}
+          crossOrigin="anonymous"
         />
       </div>
     </>
