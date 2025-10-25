@@ -214,7 +214,7 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({
               <ArrowTopRightOnSquareIcon className="file-viewer-modal-small-icon" />
             </a>
             <a
-              href={`${client.getFileUrl(fileId)}&download=true`}
+              href={`${client.getFileUrl(fileId, true)}`}
               download={fileData ? generateFileName(fileData) : ""}
               className="file-viewer-modal-action-button"
             >
