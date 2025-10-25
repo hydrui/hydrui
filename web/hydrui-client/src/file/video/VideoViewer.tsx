@@ -71,6 +71,7 @@ const VideoViewer: React.FC<VideoViewerProps> = ({
       preload="auto"
       onCanPlay={handleCanPlay}
       onError={handleError}
+      crossOrigin="anonymous"
     />
   );
 };
