@@ -111,7 +111,7 @@ in
       };
       allowReport = mkOption {
         type = types.nullOr types.bool;
-        default = true;
+        default = if cfg.serverMode then true else null;
         description = ''
           Allow users to submit issue reports to the Hydrui Mothership. You can
           disable this to improve privacy if you don't think you will ever use
