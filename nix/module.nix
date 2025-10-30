@@ -182,7 +182,7 @@ in
       ];
       serviceConfig = {
         DynamicUser = true;
-        ExecStart = "${cfg.package}/bin/hydrui-server ${args}";
+        ExecStart = "${cfg.package}/bin/hydrui-server ${lib.concatStringsSep " " args}";
         LoadCredential =
           optionals cfg.serverMode [
             "secret:${cfg.secretFile}"
