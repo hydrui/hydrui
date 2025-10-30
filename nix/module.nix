@@ -42,6 +42,9 @@ let
   ++ optionals (cfg.allowReport != null) [
     "-allow-bug-report=${boolStr cfg.allowReport}"
   ]
+  ++ optionals cfg.noAuth [
+    "-no-auth=true"
+  ]
   # Hydrui Server will create the secret file if it doesn't exist.
   ++ optionals (cfg.serverMode && cfg.secretFile == null) [
     "-secret-file"
@@ -118,6 +121,14 @@ in
           the issue reporting functionality within Hydrui. (server mode only)
         '';
       };
+      noAuth = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Disables authentication in server mode. Make sure you have appropriate
+          security in front of the Hydrui server! (server mode only)
+        '';
+      };
       secretFile = mkOption {
         type = types.nullOr types.path;
         default = null;
@@ -144,6 +155,10 @@ in
         message = "services.hydrui.htpasswd can't be set in client-only mode; see services.hydrui.serverMode";
       }
       {
+        assertion = cfg.serverMode == true || cfg.noAuth == false;
+        message = "services.hydrui.noAuth can't be set in client-only mode; see services.hydrui.serverMode";
+      }
+      {
         assertion = cfg.serverMode == true || cfg.allowReport == null;
         message = "services.hydrui.allowReport can't be set in client-only mode; see services.hydrui.serverMode";
       }
@@ -159,9 +174,13 @@ in
         assertion = cfg.serverMode == false || cfg.hydrusApiKeyFile != null;
         message = "services.hydrui.hydrusApiKeyFile must be set in server mode; see services.hydrui.serverMode";
       }
+      {
+        assertion = !cfg.noAuth || cfg.htpasswdFile == null;
+        message = "services.hydrui.htpasswdFile and services.hydrui.noAuth are mutually exclusive";
+      }
     ];
     warnings =
-      if cfg.serverMode == true && cfg.htpasswdFile == null then
+      if cfg.serverMode == true && cfg.htpasswdFile == null && !cfg.noAuth then
         [
           ''
             You have enabled server mode, but not provided an htpasswd file.
