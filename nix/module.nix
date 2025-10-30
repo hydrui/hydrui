@@ -140,7 +140,7 @@ in
         message = "services.hydrui.hydrusApiKeyFile can't be set in client-only mode; see services.hydrui.serverMode";
       }
       {
-        assertion = cfg.serverMode == true || cfg.htpasswd == null;
+        assertion = cfg.serverMode == true || cfg.htpasswdFile == null;
         message = "services.hydrui.htpasswd can't be set in client-only mode; see services.hydrui.serverMode";
       }
       {
@@ -161,7 +161,7 @@ in
       }
     ];
     warnings =
-      if cfg.serverMode == true && cfg.htpasswd == null then
+      if cfg.serverMode == true && cfg.htpasswdFile == null then
         [
           ''
             You have enabled server mode, but not provided an htpasswd file.
