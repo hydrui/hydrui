@@ -20,24 +20,19 @@ let
     "-acme=${boolStr cfg.acme}"
   ]
   ++ optionals (cfg.port != null) [
-    "-listen"
-    "${toString cfg.bindAddress}:${toString cfg.port}"
+    "-listen=${toString cfg.bindAddress}:${toString cfg.port}"
   ]
   ++ optionals (cfg.socket != null) [
-    "-socket"
-    cfg.socket
+    "-socket=${cfg.socket}"
   ]
   ++ optionals (cfg.hydrusUrl != null) [
-    "-hydrus-url"
-    cfg.hydrusUrl
+    "-hydrus-url=${cfg.hydrusUrl}"
   ]
   ++ optionals (cfg.hydrusApiKeyFile != null) [
-    "-hydrus-api-key-file"
-    "$CREDENTIALS_DIRECTORY/api-key"
+    "-hydrus-api-key-file=$CREDENTIALS_DIRECTORY/hydrus-api-key"
   ]
   ++ optionals (cfg.htpasswdFile != null) [
-    "-htpasswd"
-    "$CREDENTIALS_DIRECTORY/htpasswd"
+    "-htpasswd=$CREDENTIALS_DIRECTORY/htpasswd"
   ]
   ++ optionals (cfg.allowReport != null) [
     "-allow-bug-report=${boolStr cfg.allowReport}"
@@ -45,15 +40,14 @@ let
   ++ optionals cfg.noAuth [
     "-no-auth=true"
   ]
-  # Hydrui Server will create the secret file if it doesn't exist.
-  ++ optionals (cfg.serverMode && cfg.secretFile == null) [
-    "-secret-file"
-    "$STATE_DIRECTORY/secret"
-  ]
+  # # Hydrui Server will create the secret file if it doesn't exist.
+  # ++ optionals (cfg.serverMode && cfg.secretFile == null) [
+  #   "-secret-file"
+  #   "$STATE_DIRECTORY/secret"
+  # ]
   # If the user provides a secret file, we pass it in through credentials.
   ++ optionals (cfg.serverMode && cfg.secretFile != null) [
-    "-secret-file"
-    "$CREDENTIALS_DIRECTORY/secret"
+    "-secret-file=$CREDENTIALS_DIRECTORY/secret"
   ];
 in
 {
@@ -203,7 +197,7 @@ in
         DynamicUser = true;
         ExecStart = "${cfg.package}/bin/hydrui-server ${lib.concatStringsSep " " args}";
         LoadCredential =
-          optionals cfg.serverMode [
+          optionals (cfg.serverMode && cfg.secretFile != null) [
             "secret:${cfg.secretFile}"
           ]
           ++ optionals (cfg.hydrusApiKeyFile != null) [
