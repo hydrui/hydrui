@@ -20,37 +20,34 @@ let
     "-acme=${boolStr cfg.acme}"
   ]
   ++ optionals (cfg.port != null) [
-    "-listen"
-    "${toString cfg.bindAddress}:${toString cfg.port}"
+    "-listen=${toString cfg.bindAddress}:${toString cfg.port}"
   ]
   ++ optionals (cfg.socket != null) [
-    "-socket"
-    cfg.socket
+    "-socket=${cfg.socket}"
   ]
   ++ optionals (cfg.hydrusUrl != null) [
-    "-hydrus-url"
-    cfg.hydrusUrl
+    "-hydrus-url=${cfg.hydrusUrl}"
   ]
   ++ optionals (cfg.hydrusApiKeyFile != null) [
-    "-hydrus-api-key-file"
-    "$CREDENTIALS_DIRECTORY/api-key"
+    "-hydrus-api-key-file=$CREDENTIALS_DIRECTORY/hydrus-api-key"
   ]
   ++ optionals (cfg.htpasswdFile != null) [
-    "-htpasswd"
-    "$CREDENTIALS_DIRECTORY/htpasswd"
+    "-htpasswd=$CREDENTIALS_DIRECTORY/htpasswd"
   ]
   ++ optionals (cfg.allowReport != null) [
     "-allow-bug-report=${boolStr cfg.allowReport}"
   ]
-  # Hydrui Server will create the secret file if it doesn't exist.
-  ++ optionals (cfg.serverMode && cfg.secretFile == null) [
-    "-secret-file"
-    "$STATE_DIRECTORY/secret"
+  ++ optionals cfg.noAuth [
+    "-no-auth=true"
   ]
+  # # Hydrui Server will create the secret file if it doesn't exist.
+  # ++ optionals (cfg.serverMode && cfg.secretFile == null) [
+  #   "-secret-file"
+  #   "$STATE_DIRECTORY/secret"
+  # ]
   # If the user provides a secret file, we pass it in through credentials.
   ++ optionals (cfg.serverMode && cfg.secretFile != null) [
-    "-secret-file"
-    "$CREDENTIALS_DIRECTORY/secret"
+    "-secret-file=$CREDENTIALS_DIRECTORY/secret"
   ];
 in
 {
@@ -111,11 +108,19 @@ in
       };
       allowReport = mkOption {
         type = types.nullOr types.bool;
-        default = true;
+        default = if cfg.serverMode then true else null;
         description = ''
           Allow users to submit issue reports to the Hydrui Mothership. You can
           disable this to improve privacy if you don't think you will ever use
           the issue reporting functionality within Hydrui. (server mode only)
+        '';
+      };
+      noAuth = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Disables authentication in server mode. Make sure you have appropriate
+          security in front of the Hydrui server! (server mode only)
         '';
       };
       secretFile = mkOption {
@@ -140,8 +145,12 @@ in
         message = "services.hydrui.hydrusApiKeyFile can't be set in client-only mode; see services.hydrui.serverMode";
       }
       {
-        assertion = cfg.serverMode == true || cfg.htpasswd == null;
+        assertion = cfg.serverMode == true || cfg.htpasswdFile == null;
         message = "services.hydrui.htpasswd can't be set in client-only mode; see services.hydrui.serverMode";
+      }
+      {
+        assertion = cfg.serverMode == true || cfg.noAuth == false;
+        message = "services.hydrui.noAuth can't be set in client-only mode; see services.hydrui.serverMode";
       }
       {
         assertion = cfg.serverMode == true || cfg.allowReport == null;
@@ -159,9 +168,13 @@ in
         assertion = cfg.serverMode == false || cfg.hydrusApiKeyFile != null;
         message = "services.hydrui.hydrusApiKeyFile must be set in server mode; see services.hydrui.serverMode";
       }
+      {
+        assertion = !cfg.noAuth || cfg.htpasswdFile == null;
+        message = "services.hydrui.htpasswdFile and services.hydrui.noAuth are mutually exclusive";
+      }
     ];
     warnings =
-      if cfg.serverMode == true && cfg.htpasswd == null then
+      if cfg.serverMode == true && cfg.htpasswdFile == null && !cfg.noAuth then
         [
           ''
             You have enabled server mode, but not provided an htpasswd file.
@@ -182,9 +195,9 @@ in
       ];
       serviceConfig = {
         DynamicUser = true;
-        ExecStart = "${cfg.package}/bin/hydrui-server ${args}";
+        ExecStart = "${cfg.package}/bin/hydrui-server ${lib.concatStringsSep " " args}";
         LoadCredential =
-          optionals cfg.serverMode [
+          optionals (cfg.serverMode && cfg.secretFile != null) [
             "secret:${cfg.secretFile}"
           ]
           ++ optionals (cfg.hydrusApiKeyFile != null) [

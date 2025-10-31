@@ -15,5 +15,5 @@ buildGoModule {
     cp ${hydrui-www}/share/hydrui/internal/webdata/*.pack ./internal/webdata
   '';
 
-  vendorHash = "sha256-kPGwUat9pJrn+MkCiW3j8PyxXx0Rluz6+nxgOnaU+G4=";
+  vendorHash = "sha256-gwCUhW+8UDYpHu4oUPdY8x/cJB84X+V6Imvl+Rq6PO0=";
 }
