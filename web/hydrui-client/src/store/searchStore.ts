@@ -15,6 +15,7 @@ interface SearchState {
   searchError: string | null;
   autoSearch: boolean;
   cancelSearch: (() => void) | null;
+  serial: number;
 
   actions: {
     addSearchTag: (tag: string) => void;
@@ -36,37 +37,26 @@ export const useSearchStore = create<SearchState>()(
       searchError: null,
       autoSearch: true,
       cancelSearch: null,
+      serial: 0,
 
       actions: {
         addSearchTag: (tag: string) => {
           const {
             searchTags,
-            autoSearch,
-            actions: { performSearch },
+            actions: { setSearchTags },
           } = get();
           if (!searchTags.includes(tag)) {
-            const newTags = [...searchTags, tag];
-            set({ searchTags: newTags, searchError: null });
-
-            // Auto-search if enabled
-            if (autoSearch) {
-              setTimeout(() => performSearch(), 0);
-            }
+            setSearchTags([...searchTags, tag]);
           }
         },
 
         removeSearchTag: (tag: string) => {
           const {
             searchTags,
-            autoSearch,
-            actions: { performSearch },
+            actions: { setSearchTags },
           } = get();
-          const newTags = searchTags.filter((t) => t !== tag);
-          set({ searchTags: newTags, searchError: null });
-
-          // Auto-search if enabled
-          if (autoSearch) {
-            setTimeout(() => performSearch(), 0);
+          if (searchTags.includes(tag)) {
+            setSearchTags(searchTags.filter((t) => t !== tag));
           }
         },
 
@@ -76,7 +66,6 @@ export const useSearchStore = create<SearchState>()(
             actions: { performSearch },
           } = get();
           set({ searchTags: tags });
-
           // Auto-search if enabled
           if (autoSearch) {
             setTimeout(() => performSearch(), 0);
@@ -96,11 +85,12 @@ export const useSearchStore = create<SearchState>()(
           }
 
           if (searchTags.length === 0) {
-            set({
+            set(({ serial }) => ({
               searchResults: [],
               searchStatus: "loaded",
               cancelSearch: null,
-            });
+              serial: serial + 1,
+            }));
             return;
           }
 
@@ -110,14 +100,19 @@ export const useSearchStore = create<SearchState>()(
           if (typeof AbortController !== "undefined") {
             abortController = new AbortController();
           }
-          set({
-            searchStatus: "loading",
-            searchError: null,
-            cancelSearch: () => {
-              promise?.catch(() => {});
-              rejectPromise?.(new Error("Aborted"));
-              abortController?.abort();
-            },
+          let currentSerial = 0;
+          set(({ serial }) => {
+            currentSerial = serial + 1;
+            return {
+              searchStatus: "loading",
+              searchError: null,
+              cancelSearch: () => {
+                promise?.catch(() => {});
+                rejectPromise?.(new Error("Aborted"));
+                abortController?.abort();
+              },
+              serial: currentSerial,
+            };
           });
           try {
             promise = new Promise<SearchFilesResponse>((resolve, reject) => {
@@ -127,13 +122,30 @@ export const useSearchStore = create<SearchState>()(
                 .then(resolve, reject);
             });
             const response = await promise;
-            set({ searchResults: response.file_ids, searchStatus: "loaded" });
+            set(({ serial }) => {
+              if (serial !== currentSerial) {
+                return {};
+              }
+              return {
+                searchResults: response.file_ids,
+                searchStatus: "loaded",
+              };
+            });
           } catch (error) {
-            set({
-              searchResults: [],
-              searchStatus: "loaded",
-              searchError:
-                error instanceof Error ? error.message : "Unknown error",
+            set(({ serial }) => {
+              if (serial !== currentSerial) {
+                return {};
+              }
+              return {
+                searchResults: [],
+                searchStatus: "loaded",
+                searchError:
+                  error instanceof Error
+                    ? error.message === "Aborted"
+                      ? null
+                      : error.message
+                    : "Unknown error",
+              };
             });
           } finally {
             set({
