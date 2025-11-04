@@ -112,7 +112,7 @@ export const SearchBar: React.FC = () => {
   } = useSearchStore();
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState<TagSuggestion[]>([]);
-  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [editingTagIndex, setEditingTagIndex] = useState<number | null>(null);
   const [currentTagUI, setCurrentTagUI] = useState<{
@@ -145,7 +145,7 @@ export const SearchBar: React.FC = () => {
             ({ value }) => value.indexOf(trimmedInput.slice(7)) > 7,
           ),
         ]);
-        setSelectedSuggestionIndex(0);
+        setSelectedSuggestionIndex(-1);
         setShowSuggestions(true);
         return;
       }
@@ -160,7 +160,7 @@ export const SearchBar: React.FC = () => {
         );
         setCurrentTagUI(null);
         setSuggestions(response.tags.slice(0, 100));
-        setSelectedSuggestionIndex(0);
+        setSelectedSuggestionIndex(-1);
         setShowSuggestions(response.tags.length > 0);
       } catch (error) {
         if (!(error instanceof Error) || error.name !== "AbortError") {
@@ -187,10 +187,11 @@ export const SearchBar: React.FC = () => {
       );
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setSelectedSuggestionIndex((prev) => (prev > 0 ? prev - 1 : 0));
+      setSelectedSuggestionIndex((prev) => (prev > -1 ? prev - 1 : 0));
     } else if (
       e.key === "Tab" &&
       suggestions.length > 0 &&
+      selectedSuggestionIndex > -1 &&
       suggestions[selectedSuggestionIndex]
     ) {
       e.preventDefault();
