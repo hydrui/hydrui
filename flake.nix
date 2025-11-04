@@ -24,7 +24,7 @@
           inherit system;
           overlays = [ overlay ];
         };
-        inherit (pkgs) hydrui-server hydrui-api;
+        inherit (pkgs) hydrui-server hydrui-api hydrui-desktop;
         format = pkgs.callPackage ./nix/format.nix { };
         gen-module-options = pkgs.callPackage ./nix/gen-module-options.nix { inherit self nixpkgs; };
         tests-docker-compose = pkgs.callPackage ./nix/tests/docker-compose.nix { };
@@ -35,6 +35,7 @@
           inherit
             hydrui-server
             hydrui-api
+            hydrui-desktop
             format
             gen-module-options
             tests-docker-compose
@@ -56,11 +57,19 @@
             tests-kubernetes
             ;
         };
-        devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            nodejs_22
-            go
-          ];
+        devShells = {
+          default = pkgs.mkShell {
+            buildInputs = with pkgs; [
+              nodejs_22
+              go
+            ];
+          };
+          desktop = pkgs.mkShell {
+            buildInputs = [
+              pkgs.clang-tools
+            ];
+            inputsFrom = [ hydrui-desktop ];
+          };
         };
       }
     )

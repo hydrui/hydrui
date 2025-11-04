@@ -1,0 +1,16 @@
+// https://zed.dev/docs/configuring-zed#settings-files
+{
+  "lsp": {
+    "clangd": {
+      "binary": {
+        "path": "/usr/bin/env",
+        "arguments": ["nix", "develop", ".#desktop", "--command", "clangd"]
+      }
+    }
+  },
+  "languages": {
+    "C++": {
+      "format_on_save": "on"
+    }
+  }
+}

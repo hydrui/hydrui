@@ -5,3 +5,7 @@ indent_style = space
 [*.go]
 indent_size = 4
 indent_style = tab
+
+[{CMakeLists.txt,*.cmake,*.cpp,*.h}]
+indent_size = 4
+indent_style = space
