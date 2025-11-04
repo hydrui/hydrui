@@ -188,6 +188,12 @@ export const SearchBar: React.FC = () => {
       );
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
+      // This tricky behavior is working as intended:
+      // - When prev == 0, up arrow pushes to -1.
+      // - When prev == -1, up arrow pushes to 0.
+      // This makes it so that pressing up with nothing selected selects the top
+      // suggestion, but pressing up again deselects it. A little tricky, but it
+      // feels more ergonomic than having up do nothing at -1.
       setSelectedSuggestionIndex((prev) => (prev > -1 ? prev - 1 : 0));
     } else if (
       e.key === "Tab" &&
