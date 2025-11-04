@@ -180,6 +180,7 @@ export const SearchBar: React.FC = () => {
 
   // Handle keyboard navigation
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    const selectedOrFirstSuggestionIndex = Math.max(0, selectedSuggestionIndex);
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setSelectedSuggestionIndex((prev) =>
@@ -191,16 +192,16 @@ export const SearchBar: React.FC = () => {
     } else if (
       e.key === "Tab" &&
       suggestions.length > 0 &&
-      selectedSuggestionIndex > -1 &&
-      suggestions[selectedSuggestionIndex]
+      suggestions[selectedOrFirstSuggestionIndex]
     ) {
       e.preventDefault();
-      addTag(suggestions[selectedSuggestionIndex]);
+      addTag(suggestions[selectedOrFirstSuggestionIndex]);
     } else if (e.key === "Enter") {
       e.preventDefault();
       if (
         suggestions.length > 0 &&
         showSuggestions &&
+        selectedSuggestionIndex > -1 &&
         suggestions[selectedSuggestionIndex]
       ) {
         addTag(suggestions[selectedSuggestionIndex]);
@@ -218,6 +219,15 @@ export const SearchBar: React.FC = () => {
       } else {
         setShowSuggestions(false);
       }
+    } else if (
+      e.key === "Escape" &&
+      editingTagIndex !== null &&
+      searchTags[editingTagIndex]
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+      setEditingTagIndex(null);
+      setInput("");
     } else if (e.key === "Backspace") {
       if (input.length === 0 && searchTags.length > 0) {
         e.preventDefault();
