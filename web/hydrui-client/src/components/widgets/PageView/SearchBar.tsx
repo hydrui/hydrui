@@ -198,7 +198,10 @@ export const SearchBar: React.FC = () => {
     } else if (
       e.key === "Tab" &&
       suggestions.length > 0 &&
-      suggestions[selectedOrFirstSuggestionIndex]
+      suggestions[selectedOrFirstSuggestionIndex] &&
+      // Do not override tab if there is no input, otherwise tabbing the Hydrui
+      // UI becomes very annoying.
+      input.trim() !== ""
     ) {
       e.preventDefault();
       addTag(suggestions[selectedOrFirstSuggestionIndex]);
