@@ -112,7 +112,7 @@ export const SearchBar: React.FC = () => {
   } = useSearchStore();
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState<TagSuggestion[]>([]);
-  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [editingTagIndex, setEditingTagIndex] = useState<number | null>(null);
   const [currentTagUI, setCurrentTagUI] = useState<{
@@ -145,7 +145,7 @@ export const SearchBar: React.FC = () => {
             ({ value }) => value.indexOf(trimmedInput.slice(7)) > 7,
           ),
         ]);
-        setSelectedSuggestionIndex(0);
+        setSelectedSuggestionIndex(-1);
         setShowSuggestions(true);
         return;
       }
@@ -160,7 +160,7 @@ export const SearchBar: React.FC = () => {
         );
         setCurrentTagUI(null);
         setSuggestions(response.tags.slice(0, 100));
-        setSelectedSuggestionIndex(0);
+        setSelectedSuggestionIndex(-1);
         setShowSuggestions(response.tags.length > 0);
       } catch (error) {
         if (!(error instanceof Error) || error.name !== "AbortError") {
@@ -180,6 +180,7 @@ export const SearchBar: React.FC = () => {
 
   // Handle keyboard navigation
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    const selectedOrFirstSuggestionIndex = Math.max(0, selectedSuggestionIndex);
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setSelectedSuggestionIndex((prev) =>
@@ -187,19 +188,29 @@ export const SearchBar: React.FC = () => {
       );
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setSelectedSuggestionIndex((prev) => (prev > 0 ? prev - 1 : 0));
+      // This tricky behavior is working as intended:
+      // - When prev == 0, up arrow pushes to -1.
+      // - When prev == -1, up arrow pushes to 0.
+      // This makes it so that pressing up with nothing selected selects the top
+      // suggestion, but pressing up again deselects it. A little tricky, but it
+      // feels more ergonomic than having up do nothing at -1.
+      setSelectedSuggestionIndex((prev) => (prev > -1 ? prev - 1 : 0));
     } else if (
       e.key === "Tab" &&
       suggestions.length > 0 &&
-      suggestions[selectedSuggestionIndex]
+      suggestions[selectedOrFirstSuggestionIndex] &&
+      // Do not override tab if there is no input, otherwise tabbing the Hydrui
+      // UI becomes very annoying.
+      input.trim() !== ""
     ) {
       e.preventDefault();
-      addTag(suggestions[selectedSuggestionIndex]);
+      addTag(suggestions[selectedOrFirstSuggestionIndex]);
     } else if (e.key === "Enter") {
       e.preventDefault();
       if (
         suggestions.length > 0 &&
         showSuggestions &&
+        selectedSuggestionIndex > -1 &&
         suggestions[selectedSuggestionIndex]
       ) {
         addTag(suggestions[selectedSuggestionIndex]);
@@ -217,6 +228,15 @@ export const SearchBar: React.FC = () => {
       } else {
         setShowSuggestions(false);
       }
+    } else if (
+      e.key === "Escape" &&
+      editingTagIndex !== null &&
+      searchTags[editingTagIndex]
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
+      setEditingTagIndex(null);
+      setInput("");
     } else if (e.key === "Backspace") {
       if (input.length === 0 && searchTags.length > 0) {
         e.preventDefault();
