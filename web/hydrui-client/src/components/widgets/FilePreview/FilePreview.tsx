@@ -132,6 +132,18 @@ const FilePreview: React.FC = () => {
             <span>{formatDuration(Math.ceil(fileData.duration / 1000))}</span>
           </div>
         )}
+        <div className="file-preview-metadata-row">
+          <span className="file-preview-metadata-label">Status:</span>
+          <span>
+            {fileData.is_deleted
+              ? "Deleted"
+              : fileData.is_trashed
+                ? "Trashed"
+                : fileData.is_inbox
+                  ? "Inbox"
+                  : "Archived"}
+          </span>
+        </div>
 
         {/* Ratings section */}
         {ratings.length > 0 && (
