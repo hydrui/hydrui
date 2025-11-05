@@ -60,7 +60,7 @@ const TagLabel: React.FC<TagLabelProps> = React.memo(function TagLabel({
     }
 
     // Get the namespace (part before the colon)
-    const namespace = tag.substring(0, colonIndex);
+    const namespace = tag.substring(tag.startsWith("-") ? 1 : 0, colonIndex);
 
     // If empty namespace (tag starts with colon), remove the colon and treat as unnamespaced
     if (namespace === "") {
