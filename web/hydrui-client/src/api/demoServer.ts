@@ -18,7 +18,6 @@ import {
   FilesParam,
   Page,
   PageInfoResponse,
-  Service,
   ServicesObject,
   SetRatingRequest,
   UnarchiveFilesRequest,
