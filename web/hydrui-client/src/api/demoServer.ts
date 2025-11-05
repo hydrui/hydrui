@@ -9,14 +9,20 @@ import {
   AddFilesRequest,
   AddNotesRequest,
   AddTagsRequest,
+  ArchiveFilesRequest,
   AssociateUrlRequest,
+  DeleteFilesRequest,
   DeleteNotesRequest,
+  FileDomainParam,
   FileMetadata,
   FilesParam,
   Page,
   PageInfoResponse,
+  Service,
   ServicesObject,
   SetRatingRequest,
+  UnarchiveFilesRequest,
+  UndeleteFilesRequest,
 } from "./types";
 
 interface DemoFile {
@@ -713,10 +719,62 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
     return param;
   }
 
-  filesRequest(
-    files: FilesParam,
-  ): Array<{ file_id: number | null; hash: string }> {
-    const { file_id, file_ids, hash, hashes } = files;
+  fileDomainRequest({
+    file_service_key,
+    file_service_keys,
+    deleted_file_service_key,
+    deleted_file_service_keys,
+  }: FileDomainParam) {
+    const services: { key: string; deleted: boolean }[] = [];
+    if (file_service_key) {
+      const service = this.services[file_service_key];
+      if (!service) {
+        throw notFound(`Service key not found: ${file_service_key}`);
+      }
+      services.push({ key: file_service_key, deleted: false });
+    }
+    if (file_service_keys) {
+      services.splice(
+        services.length,
+        0,
+        ...file_service_keys.map((key) => {
+          const service = this.services[key];
+          if (!service) {
+            throw notFound(`Service key not found: ${key}`);
+          }
+          return { key, deleted: false };
+        }),
+      );
+    }
+    if (deleted_file_service_key) {
+      const service = this.services[deleted_file_service_key];
+      if (!service) {
+        throw notFound(`Service key not found: ${deleted_file_service_key}`);
+      }
+      services.push({ key: deleted_file_service_key, deleted: true });
+    }
+    if (deleted_file_service_keys) {
+      services.splice(
+        services.length,
+        0,
+        ...deleted_file_service_keys.map((key) => {
+          const service = this.services[key];
+          if (!service) {
+            throw notFound(`Service key not found: ${key}`);
+          }
+          return { key, deleted: false };
+        }),
+      );
+    }
+    return [];
+  }
+
+  filesRequest({
+    file_id,
+    file_ids,
+    hash,
+    hashes,
+  }: FilesParam): Array<{ file_id: number | null; hash: string }> {
     if (file_id) {
       const file = this.filesById[file_id];
       if (!file) {
@@ -756,6 +814,16 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
     throw badRequest(
       "Please include some files in your request--file_id or hash based!",
     );
+  }
+
+  fileMetadata(param: FilesParam) {
+    return this.filesRequest(param).map(({ file_id, hash }) => {
+      if (!file_id || !this.filesById[file_id]) {
+        // TODO: not sure what the hydrus error is for this case
+        throw notFound(`Hash not found: ${hash}`);
+      }
+      return this.filesById[file_id];
+    });
   }
 
   filesParam(
@@ -866,50 +934,61 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
     }
     let limit: number | undefined = undefined;
     let match: RegExpMatchArray | null = null;
-    const filter: Array<(f: FileMetadata) => boolean> = [];
-    for (const tag of new Set(tags)) {
+    const include: Array<(f: FileMetadata) => boolean> = [];
+    const exclude: Array<(f: FileMetadata) => boolean> = [];
+    for (const rawTag of new Set(tags)) {
+      const trimmedTag = rawTag.trim();
+      const negate = trimmedTag.startsWith("-");
+      const tag = trimmedTag.slice(negate ? 1 : 0);
+      const add: (n: (f: FileMetadata) => boolean) => void = negate
+        ? (n) => exclude.push(n)
+        : (n) => include.push(n);
       if (tag === "system:everything") {
         // Do nothing
+      } else if (tag === "system:inbox") {
+        add((f) => Boolean(f.is_inbox));
+      } else if (tag === "system:archive") {
+        add((f) => Boolean(!f.is_inbox));
       } else if (tag === "system:has audio") {
-        filter.push((f) => Boolean(f.has_audio));
+        add((f) => Boolean(f.has_audio));
       } else if (tag === "system:no audio") {
-        filter.push((f) => Boolean(!f.has_audio));
+        add((f) => Boolean(!f.has_audio));
       } else if (tag === "system:has duration") {
-        filter.push((f) => Boolean(f.duration));
+        add((f) => Boolean(f.duration));
       } else if (tag === "system:no duration") {
-        filter.push((f) => Boolean(!f.duration));
+        add((f) => Boolean(!f.duration));
       } else if (tag === "system:has tags") {
-        filter.push((f) => this.getFileTags(f).size !== 0);
+        add((f) => this.getFileTags(f).size !== 0);
       } else if (tag === "system:no tags" || tag === "system:untagged") {
-        filter.push((f) => this.getFileTags(f).size === 0);
+        add((f) => this.getFileTags(f).size === 0);
       } else if (tag === "system:has notes") {
-        filter.push((f) => Object.keys(f.notes ?? {}).length > 0);
+        add((f) => Object.keys(f.notes ?? {}).length > 0);
       } else if (
         tag === "system:no notes" ||
         tag === "system:does not have notes"
       ) {
-        filter.push((f) => Object.keys(f.notes ?? {}).length === 0);
+        add((f) => Object.keys(f.notes ?? {}).length === 0);
       } else if (tag.startsWith("system:has url matching regex ")) {
         const regex = new RegExp(tag.substring(30));
-        filter.push((f) => !!f.known_urls?.some((u) => regex.test(u)));
+        add((f) => !!f.known_urls?.some((u) => regex.test(u)));
       } else if (tag.startsWith("system:does not have a url matching regex ")) {
         const regex = new RegExp(tag.substring(42));
-        filter.push((f) => !f.known_urls?.some((u) => regex.test(u)));
+        add((f) => !f.known_urls?.some((u) => regex.test(u)));
       } else if (tag.startsWith("system:has url ")) {
         const url = tag.substring(15);
-        filter.push((f) => !!f.known_urls?.includes(url));
+        add((f) => !!f.known_urls?.includes(url));
       } else if (tag.startsWith("system:does not have url ")) {
         const url = tag.substring(25);
-        filter.push((f) => !f.known_urls?.includes(url));
+        add((f) => !f.known_urls?.includes(url));
       } else if (tag.startsWith("system:has domain ")) {
         const domain = tag.substring(18);
-        filter.push((f) => !!f.known_urls?.some((url) => url.includes(domain)));
+        add((f) => !!f.known_urls?.some((url) => url.includes(domain)));
       } else if (tag.startsWith("system:does not have domain ")) {
         const domain = tag.substring(28);
-        filter.push((f) => !f.known_urls?.some((url) => url.includes(domain)));
+        add((f) => !f.known_urls?.some((url) => url.includes(domain)));
       } else if (tag.startsWith("system:has note with name ")) {
         const noteName = tag.substring(26);
-        filter.push((f) => !!Object.keys(f.notes ?? {}).includes(noteName));
+        add((f) => !!Object.keys(f.notes ?? {}).includes(noteName));
       } else if (
         tag.startsWith("system:no note with name ") ||
         tag.startsWith("system:does not have note with name ")
@@ -917,7 +996,7 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
         const noteName = tag.startsWith("system:no note with name ")
           ? tag.substring(25)
           : tag.substring(36);
-        filter.push((f) => !Object.keys(f.notes ?? {}).includes(noteName));
+        add((f) => !Object.keys(f.notes ?? {}).includes(noteName));
       } else if ((match = tag.match(re.duration))) {
         const [, op, valueStr, unit] = match;
         let value = parseFloat(String(valueStr));
@@ -926,45 +1005,45 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
         else if (unit!.match(/m(in(ute)?s?)?/)) value *= 60000;
         else if (unit!.match(/h(ours?)?/)) value *= 3600000;
         else throw badRequest(`invalid duration unit ${unit}`);
-        filter.push((f) => this.cmpOp(f.duration ?? 0, op!, value));
+        add((f) => this.cmpOp(f.duration ?? 0, op!, value));
       } else if ((match = tag.match(re.numTags))) {
         const [, op, valueStr] = match;
         const value = parseInt(String(valueStr));
-        filter.push((f) => this.cmpOp(this.getFileTags(f).size, op!, value));
+        add((f) => this.cmpOp(this.getFileTags(f).size, op!, value));
       } else if ((match = tag.match(re.width))) {
         const [, op, valueStr] = match;
         const value = parseInt(String(valueStr));
-        filter.push((f) => !!f.width && this.cmpOp(f.width, op!, value));
+        add((f) => !!f.width && this.cmpOp(f.width, op!, value));
       } else if ((match = tag.match(re.height))) {
         const [, op, valueStr] = match;
         const value = parseInt(String(valueStr));
-        filter.push((f) => !!f.height && this.cmpOp(f.height, op!, value));
+        add((f) => !!f.height && this.cmpOp(f.height, op!, value));
       } else if ((match = tag.match(re.filesize))) {
         const [, op, valueStr, unit] = match;
         let value = parseFloat(String(valueStr));
         if (unit![0] == "k" || unit![0] == "K") value *= 0x400;
         else if (unit![0] == "m" || unit![0] == "M") value *= 0x100000;
         else if (unit![0] == "g" || unit![0] == "G") value *= 0x40000000;
-        filter.push((f) => !!f.size && this.cmpOp(f.size, op!, value));
+        add((f) => !!f.size && this.cmpOp(f.size, op!, value));
       } else if ((match = tag.match(re.filetype))) {
         const [, value] = match;
         const lowerValue = value?.toLowerCase();
-        filter.push((f) => !!f.mime && f.mime.toLowerCase() === lowerValue);
+        add((f) => !!f.mime && f.mime.toLowerCase() === lowerValue);
       } else if ((match = tag.match(re.hash))) {
         const [, value] = match;
         const lowerValue = value?.toLowerCase();
-        filter.push((f) => !!f.hash && f.hash.toLowerCase() === lowerValue);
+        add((f) => !!f.hash && f.hash.toLowerCase() === lowerValue);
       } else if ((match = tag.match(re.modTime))) {
         const [, op, dateStr] = match;
         const value = new Date(String(dateStr)).getTime() / 1000;
-        filter.push(
+        add(
           (f) => !!f.time_modified && this.cmpOp(f.time_modified, op!, value),
         );
       } else if ((match = tag.match(re.ratio))) {
         const [, comparison, width, height] = match;
         const r = parseInt(String(width)) / parseInt(String(height));
         if (comparison === "is") {
-          filter.push(
+          add(
             (f) =>
               !!(
                 f.width &&
@@ -973,14 +1052,14 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
               ),
           );
         } else if (comparison === "is wider than") {
-          filter.push((f) => !!(f.width && f.height && f.width / f.height > r));
+          add((f) => !!(f.width && f.height && f.width / f.height > r));
         } else if (comparison === "taller than") {
-          filter.push((f) => !!(f.width && f.height && f.width / f.height < r));
+          add((f) => !!(f.width && f.height && f.width / f.height < r));
         }
       } else if ((match = tag.match(re.tagAsNum))) {
         const [, tagPrefix, op, valueStr] = match;
         const value = parseInt(String(valueStr));
-        filter.push((f) =>
+        add((f) =>
           this.getTagAsNumber(f, tagPrefix!).some((num) =>
             this.cmpOp(num, op!, value),
           ),
@@ -988,9 +1067,7 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
       } else if ((match = tag.match(re.numNotes))) {
         const [, op, valueStr] = match;
         const value = parseInt(String(valueStr));
-        filter.push((f) =>
-          this.cmpOp(Object.keys(f.notes ?? {}).length, op!, value),
-        );
+        add((f) => this.cmpOp(Object.keys(f.notes ?? {}).length, op!, value));
       } else if ((match = tag.match(re.limit))) {
         limit = Number(match[1]);
       } else {
@@ -1002,15 +1079,22 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
       tags.delete(tag);
     }
     const file_ids: number[] = [];
-    const matchTags = [...tags];
-    for (const file of Object.values(this.filesById).filter((file) =>
-      filter.every((fn) => fn(file)),
+    const includeTags = [...tags].filter((tag) => !tag.startsWith("-"));
+    const excludeTags = [...tags]
+      .filter((tag) => tag.startsWith("-"))
+      .map((tag) => tag.slice(1));
+    for (const file of Object.values(this.filesById).filter(
+      (file) =>
+        include.every((fn) => fn(file)) && !exclude.some((fn) => fn(file)),
     )) {
       if (limit && file_ids.length >= limit) {
         break;
       }
       const fileTags = this.getFileTags(file);
-      if (matchTags.every(fileTags.has.bind(fileTags))) {
+      if (
+        includeTags.every(fileTags.has.bind(fileTags)) &&
+        !excludeTags.some(fileTags.has.bind(fileTags))
+      ) {
         file_ids.push(file.file_id);
       }
     }
@@ -1089,13 +1173,7 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
 
   private async associateUrl(body: Blob) {
     const request: AssociateUrlRequest = JSON.parse(await body.text());
-    const files = this.filesRequest(request).map(({ file_id, hash }) => {
-      if (!file_id || !this.filesById[file_id]) {
-        // TODO: not sure what the hydrus error is for this case
-        throw notFound(`Hash not found: ${hash}`);
-      }
-      return this.filesById[file_id];
-    });
+    const files = this.fileMetadata(request);
     const deleteSet = new Set(request.urls_to_delete);
     for (const file of files) {
       file.known_urls = [
@@ -1107,13 +1185,7 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
 
   private async deleteNotes(body: Blob) {
     const request: DeleteNotesRequest = JSON.parse(await body.text());
-    const files = this.filesRequest(request).map(({ file_id, hash }) => {
-      if (!file_id || !this.filesById[file_id]) {
-        // TODO: not sure what the hydrus error is for this case
-        throw notFound(`Hash not found: ${hash}`);
-      }
-      return this.filesById[file_id];
-    });
+    const files = this.fileMetadata(request);
     for (const file of files) {
       if (file.notes) {
         for (const name of request.note_names) {
@@ -1126,13 +1198,7 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
 
   private async addNotes(body: Blob) {
     const request: AddNotesRequest = JSON.parse(await body.text());
-    const files = this.filesRequest(request).map(({ file_id, hash }) => {
-      if (!file_id || !this.filesById[file_id]) {
-        // TODO: not sure what the hydrus error is for this case
-        throw notFound(`Hash not found: ${hash}`);
-      }
-      return this.filesById[file_id];
-    });
+    const files = this.fileMetadata(request);
     for (const file of files) {
       file.notes = Object.assign(file.notes ?? {}, request.notes);
     }
@@ -1221,6 +1287,38 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
     return jsonResponse({ status: 1, hash, note: "" });
   }
 
+  private async deleteFiles(body: Blob) {
+    const request: DeleteFilesRequest = JSON.parse(await body.text());
+    for (const file of this.fileMetadata(request)) {
+      file.is_deleted = true;
+    }
+    return emptyResponse();
+  }
+
+  private async undeleteFiles(body: Blob) {
+    const request: UndeleteFilesRequest = JSON.parse(await body.text());
+    for (const file of this.fileMetadata(request)) {
+      file.is_deleted = false;
+    }
+    return emptyResponse();
+  }
+
+  private async archiveFiles(body: Blob) {
+    const request: ArchiveFilesRequest = JSON.parse(await body.text());
+    for (const file of this.fileMetadata(request)) {
+      file.is_inbox = false;
+    }
+    return emptyResponse();
+  }
+
+  private async unarchiveFiles(body: Blob) {
+    const request: UnarchiveFilesRequest = JSON.parse(await body.text());
+    for (const file of this.fileMetadata(request)) {
+      file.is_inbox = true;
+    }
+    return emptyResponse();
+  }
+
   private async setRating(body: Blob) {
     const request: SetRatingRequest = JSON.parse(await body.text());
     const files = this.filesRequest(request);
@@ -1273,6 +1371,14 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
         return this.addNotes(body);
       case "/add_files/add_file":
         return this.addFile(body);
+      case "/add_files/delete_files":
+        return this.deleteFiles(body);
+      case "/add_files/undelete_files":
+        return this.undeleteFiles(body);
+      case "/add_files/archive_files":
+        return this.archiveFiles(body);
+      case "/add_files/unarchive_files":
+        return this.unarchiveFiles(body);
       case "/edit_ratings/set_rating":
         return this.setRating(body);
       case "/manage_pages/refresh_page":
