@@ -664,6 +664,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         id: "remove-files",
         label: "Remove files",
         icon: <MinusCircleIcon />,
+        disabled: pageType === "hydrus",
         onClick: () => {
           removeFilesFromPage(pageKey, pageType, selectedFiles);
         },
