@@ -453,7 +453,7 @@ export const SearchBar: React.FC = () => {
               setSearchSort(Number(e.target.value) as SortFilesBy)
             }
             className="page-sort-dropdown"
-            title={`Sort by: ${sortFilesByEnumToString.get(searchSort)}`}
+            title={`Sorting by: ${sortFilesByEnumToString.get(searchSort)}`}
           >
             <option disabled={true}>Sort by...</option>
             {Array.from(sortFilesByEnumToString.entries()).map(
@@ -468,6 +468,11 @@ export const SearchBar: React.FC = () => {
           <button
             onClick={toggleSearchDirection}
             className="page-sort-direction-button"
+            title={
+              searchAscending
+                ? "Currently sorting ascending (click to sort descending)"
+                : "Currently sorting descending (click to sort ascending)"
+            }
           >
             {searchAscending ? (
               <BarsArrowDownIcon className="page-sort-direction-icon" />
