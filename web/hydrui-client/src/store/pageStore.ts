@@ -71,6 +71,10 @@ interface PageState extends PersistedState {
     clearSelectedFiles: (pageKey: string) => void;
     setActiveFileId: (pageKey: string, fileId: number | null) => void;
     markActiveFileAsBetter: () => Promise<void>;
+    archiveFiles: (fileIds: number[]) => Promise<void>;
+    unarchiveFiles: (fileIds: number[]) => Promise<void>;
+    deleteFiles: (fileIds: number[]) => Promise<void>;
+    undeleteFiles: (fileIds: number[]) => Promise<void>;
     addFilesToPage: (
       pageKey: string,
       pageType: PageType,
@@ -840,6 +844,26 @@ export const usePageStore = create<PageState>()(
             }
             await client.setFileRelationships({ relationships });
             await get().actions.refreshFileMetadata(selectedFileIds);
+          },
+
+          archiveFiles: async (file_ids: number[]) => {
+            await client.archiveFiles({ file_ids });
+            await get().actions.refreshFileMetadata(file_ids);
+          },
+
+          unarchiveFiles: async (file_ids: number[]) => {
+            await client.unarchiveFiles({ file_ids });
+            await get().actions.refreshFileMetadata(file_ids);
+          },
+
+          deleteFiles: async (file_ids: number[]) => {
+            await client.deleteFiles({ file_ids });
+            await get().actions.refreshFileMetadata(file_ids);
+          },
+
+          undeleteFiles: async (file_ids: number[]) => {
+            await client.undeleteFiles({ file_ids });
+            await get().actions.refreshFileMetadata(file_ids);
           },
 
           addFilesToPage: async (

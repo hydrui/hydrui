@@ -15,7 +15,9 @@ import {
   AddUrlRequest,
   AddUrlResponse,
   AddUrlResponseSchema,
+  ArchiveFilesRequest,
   AssociateUrlRequest,
+  DeleteFilesRequest,
   DeleteNotesRequest,
   DismissPopupRequest,
   FileIdentifiersResponse,
@@ -29,7 +31,6 @@ import {
   HttpClient,
   HttpRequestOptions,
   HttpResponse,
-  HydrusApiClient,
   PageInfoParams,
   PageInfoResponse,
   PageInfoResponseSchema,
@@ -51,6 +52,8 @@ import {
   TagsResponse,
   TagsResponseSchema,
   TagsSearchParams,
+  UnarchiveFilesRequest,
+  UndeleteFilesRequest,
 } from "./types";
 
 type NoParams = Record<string, never>;
@@ -64,7 +67,7 @@ interface RequestOptions<Params, Request> {
 /**
  * Hydrus network client API
  */
-export class HydrusClient implements HydrusApiClient {
+export class HydrusClient {
   private baseUrl: string;
   private apiKey: string;
   private httpClient: HttpClient;
@@ -578,5 +581,21 @@ export class HydrusClient implements HydrusApiClient {
 
   async deleteNotes(body: DeleteNotesRequest): Promise<void> {
     return this.postEmpty("/add_notes/delete_notes", { body });
+  }
+
+  async archiveFiles(body: ArchiveFilesRequest): Promise<void> {
+    return this.postEmpty("/add_files/archive_files", { body });
+  }
+
+  async unarchiveFiles(body: UnarchiveFilesRequest): Promise<void> {
+    return this.postEmpty("/add_files/unarchive_files", { body });
+  }
+
+  async deleteFiles(body: DeleteFilesRequest): Promise<void> {
+    return this.postEmpty("/add_files/delete_files", { body });
+  }
+
+  async undeleteFiles(body: UndeleteFilesRequest): Promise<void> {
+    return this.postEmpty("/add_files/undelete_files", { body });
   }
 }
