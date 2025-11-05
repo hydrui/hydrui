@@ -187,7 +187,8 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({
               {fileData.width &&
                 fileData.height &&
                 `${fileData.width} × ${fileData.height} • `}
-              {fileData.duration && `${formatDuration(fileData.duration)} • `}
+              {fileData.duration &&
+                `${formatDuration(Math.ceil(fileData.duration / 1000))} • `}
               {`${formatFileSize(fileData.size)} • `}
               {`${fileData.mime}`}
             </div>

@@ -408,85 +408,13 @@ export interface DeleteNotesRequest {
   file_id?: number;
 }
 
-// API client interface
-export interface HydrusApiClient {
-  // Authentication
-  verifyAccessKey: (apiKey: string) => Promise<boolean>;
+export type ArchiveFilesRequest = FilesParam;
 
-  // Services
-  getServices: () => Promise<ServicesResponse>;
-  getService: (serviceKey: string) => Promise<Service>;
+export type UnarchiveFilesRequest = FilesParam;
 
-  // Search
-  searchFiles: (
-    params: SearchFilesParams,
-    signal?: AbortSignal,
-  ) => Promise<SearchFilesResponse>;
-  getFileMetadata: (
-    fileIds: number[],
-    signal?: AbortSignal,
-  ) => Promise<FileMetadataResponse>;
-  getFileIdsByHashes: (
-    hashes: string[],
-    signal?: AbortSignal,
-  ) => Promise<FileIdentifiersResponse>;
-  getFileMetadataByHashes: (
-    hashes: string[],
-    signal?: AbortSignal,
-  ) => Promise<FileMetadataResponse>;
+export interface DeleteFilesRequest extends FilesParam, FileDomainParam {}
 
-  // File operations
-  getFileUrl: (fileId: number) => string;
-  getBridgeUrl: (fileId: number) => Promise<string>;
-  getThumbnailUrl: (fileId: number) => string;
-
-  // Rating operations
-  setRating: (
-    fileId: number,
-    serviceKey: string,
-    rating: boolean | number | null,
-  ) => Promise<void>;
-
-  // Tag operations
-  searchTags: (
-    search: string,
-    serviceKey?: string,
-    signal?: AbortSignal,
-  ) => Promise<TagsResponse>;
-  editTags: (fileIds: number[], updates: TagUpdates) => Promise<void>;
-
-  // Page operations
-  getPages: () => Promise<PageResponse>;
-  getPageInfo: (pageKey: string) => Promise<PageInfoResponse>;
-  addFiles: (request: AddFilesRequest) => Promise<void>;
-  refreshPage: (pageKey: string) => Promise<void>;
-
-  // Popup operations
-  getPopups: () => Promise<PopupsResponse>;
-  dismissPopup: (jobKey: string) => Promise<void>;
-
-  // Upload file operation
-  uploadFile: (
-    file: File,
-    progressCallback?: (progress: number) => void,
-    signal?: AbortSignal,
-  ) => Promise<AddFileResponse>;
-
-  // URL operations
-  addUrl: (request: AddUrlRequest) => Promise<AddUrlResponse>;
-  associateUrl: (request: AssociateUrlRequest) => Promise<void>;
-
-  // File relationship operations
-  getFileRelationships: (
-    params: GetFileRelationshipsParams,
-  ) => Promise<GetFileRelationshipsResponse>;
-  setFileRelationships: (request: SetFileRelationshipsRequest) => Promise<void>;
-  setKings: (fileIds: number[]) => Promise<void>;
-
-  // Note operations
-  addNotes: (request: AddNotesRequest) => Promise<AddNotesResponse>;
-  deleteNotes: (request: DeleteNotesRequest) => Promise<void>;
-}
+export interface UndeleteFilesRequest extends FilesParam, FileDomainParam {}
 
 export interface HttpRequestOptions {
   body?: Blob | string | null;

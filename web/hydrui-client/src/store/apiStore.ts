@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import { HydrusClient } from "@/api/client";
-import { HydrusApiClient } from "@/api/types";
 import { isDemoMode, isServerMode } from "@/utils/modes";
 
 // Create client instance based on environment
@@ -23,7 +22,7 @@ interface ApiState {
 
 // Helper function to test authentication
 export const verifyAuthentication = async (
-  client: HydrusApiClient,
+  client: HydrusClient,
   apiKey: string,
   baseUrl: string,
 ): Promise<boolean> => {

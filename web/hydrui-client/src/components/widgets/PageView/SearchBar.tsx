@@ -4,7 +4,13 @@ import {
   MagnifyingGlassIcon,
   XMarkIcon,
 } from "@heroicons/react/24/solid";
-import React, { KeyboardEvent, useEffect, useRef, useState } from "react";
+import React, {
+  KeyboardEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import TagLabel from "@/components/widgets/TagLabel/TagLabel";
 import { client } from "@/store/apiStore";
@@ -102,6 +108,11 @@ const SYSTEM_SUGGESTIONS: TagSuggestion[] = [
   FileTypeTag("filetype"),
 ];
 
+enum Prefix {
+  Empty = "",
+  Negate = "-",
+}
+
 export const SearchBar: React.FC = () => {
   const {
     searchTags,
@@ -124,6 +135,13 @@ export const SearchBar: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
+  let trimmedInput = input.trim();
+  const isNegated = trimmedInput.startsWith(Prefix.Negate);
+  if (isNegated) {
+    trimmedInput = trimmedInput.slice(1);
+  }
+  const prefix = isNegated ? Prefix.Negate : Prefix.Empty;
+
   // Fetch tag suggestions when input changes
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -135,7 +153,6 @@ export const SearchBar: React.FC = () => {
         setShowSuggestions(false);
         return;
       }
-      const trimmedInput = input.trim();
       if (trimmedInput === "" || trimmedInput.startsWith("system:")) {
         setSuggestions([
           ...SYSTEM_SUGGESTIONS.filter(({ value }) =>
@@ -176,143 +193,172 @@ export const SearchBar: React.FC = () => {
       abortController.current?.abort();
       clearTimeout(timeoutId);
     };
-  }, [hasFocus, input, currentTagUI]);
+  }, [hasFocus, trimmedInput, currentTagUI]);
+
+  // Add a tag and reset input
+  const addTag = useCallback(
+    (tag: string | TagSuggestion) => {
+      if (typeof tag !== "string") {
+        if (tag.ui) {
+          setCurrentTagUI({ ui: tag.ui });
+          return;
+        } else {
+          tag = tag.value;
+        }
+      }
+      if (prefix) {
+        tag = prefix + tag;
+      }
+      if (editingTagIndex !== null) {
+        // Replace the tag at editingTagIndex
+        const newTags = [...searchTags];
+        newTags[editingTagIndex] = tag;
+        if (searchTags[editingTagIndex]) {
+          removeSearchTag(searchTags[editingTagIndex]);
+          addSearchTag(tag);
+        }
+        setEditingTagIndex(null);
+      } else {
+        addSearchTag(tag);
+      }
+
+      setInput("");
+      setShowSuggestions(false);
+    },
+    [addSearchTag, editingTagIndex, removeSearchTag, searchTags, prefix],
+  );
 
   // Handle keyboard navigation
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    const selectedOrFirstSuggestionIndex = Math.max(0, selectedSuggestionIndex);
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setSelectedSuggestionIndex((prev) =>
-        prev < suggestions.length - 1 ? prev + 1 : prev,
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>) => {
+      const selectedOrFirstSuggestionIndex = Math.max(
+        0,
+        selectedSuggestionIndex,
       );
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      // This tricky behavior is working as intended:
-      // - When prev == 0, up arrow pushes to -1.
-      // - When prev == -1, up arrow pushes to 0.
-      // This makes it so that pressing up with nothing selected selects the top
-      // suggestion, but pressing up again deselects it. A little tricky, but it
-      // feels more ergonomic than having up do nothing at -1.
-      setSelectedSuggestionIndex((prev) => (prev > -1 ? prev - 1 : 0));
-    } else if (
-      e.key === "Tab" &&
-      suggestions.length > 0 &&
-      suggestions[selectedOrFirstSuggestionIndex] &&
-      // Do not override tab if there is no input, otherwise tabbing the Hydrui
-      // UI becomes very annoying.
-      input.trim() !== ""
-    ) {
-      e.preventDefault();
-      addTag(suggestions[selectedOrFirstSuggestionIndex]);
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (
-        suggestions.length > 0 &&
-        showSuggestions &&
-        selectedSuggestionIndex > -1 &&
-        suggestions[selectedSuggestionIndex]
-      ) {
-        addTag(suggestions[selectedSuggestionIndex]);
-      } else if (input.trim() !== "") {
-        addTag(input.trim());
-      } else {
-        // If input is empty, just perform the search
-        performSearch();
-      }
-    } else if (e.key === "Escape" && showSuggestions) {
-      e.preventDefault();
-      e.stopPropagation();
-      if (currentTagUI) {
-        setCurrentTagUI(null);
-      } else {
-        setShowSuggestions(false);
-      }
-    } else if (
-      e.key === "Escape" &&
-      editingTagIndex !== null &&
-      searchTags[editingTagIndex]
-    ) {
-      e.preventDefault();
-      e.stopPropagation();
-      setEditingTagIndex(null);
-      setInput("");
-    } else if (e.key === "Backspace") {
-      if (input.length === 0 && searchTags.length > 0) {
+      if (e.key === "ArrowDown") {
         e.preventDefault();
-        if (editingTagIndex !== null && searchTags[editingTagIndex]) {
-          removeSearchTag(searchTags[editingTagIndex]);
-          setEditingTagIndex(null);
+        setSelectedSuggestionIndex((prev) =>
+          prev < suggestions.length - 1 ? prev + 1 : prev,
+        );
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        // This tricky behavior is working as intended:
+        // - When prev == 0, up arrow pushes to -1.
+        // - When prev == -1, up arrow pushes to 0.
+        // This makes it so that pressing up with nothing selected selects the top
+        // suggestion, but pressing up again deselects it. A little tricky, but it
+        // feels more ergonomic than having up do nothing at -1.
+        setSelectedSuggestionIndex((prev) => (prev > -1 ? prev - 1 : 0));
+      } else if (
+        e.key === "Tab" &&
+        suggestions.length > 0 &&
+        suggestions[selectedOrFirstSuggestionIndex] &&
+        // Do not override tab if there is no input, otherwise tabbing the Hydrui
+        // UI becomes very annoying.
+        trimmedInput !== ""
+      ) {
+        e.preventDefault();
+        addTag(suggestions[selectedOrFirstSuggestionIndex]);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (
+          suggestions.length > 0 &&
+          showSuggestions &&
+          selectedSuggestionIndex > -1 &&
+          suggestions[selectedSuggestionIndex]
+        ) {
+          addTag(suggestions[selectedSuggestionIndex]);
+        } else if (trimmedInput !== "") {
+          addTag(trimmedInput);
         } else {
-          const index = searchTags.length - 1;
-          if (searchTags[index]) {
-            setEditingTagIndex(index);
-            setInput(searchTags[index]);
-          }
-          if (inputRef.current) {
-            inputRef.current.focus();
+          // If input is empty, just perform the search
+          performSearch();
+        }
+      } else if (e.key === "Escape" && showSuggestions) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (currentTagUI) {
+          setCurrentTagUI(null);
+        } else {
+          setShowSuggestions(false);
+        }
+      } else if (
+        e.key === "Escape" &&
+        editingTagIndex !== null &&
+        searchTags[editingTagIndex]
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        setEditingTagIndex(null);
+        setInput("");
+      } else if (e.key === "Backspace") {
+        if (trimmedInput.length === 0 && searchTags.length > 0) {
+          e.preventDefault();
+          if (editingTagIndex !== null && searchTags[editingTagIndex]) {
+            removeSearchTag(searchTags[editingTagIndex]);
+            setEditingTagIndex(null);
+          } else {
+            const index = searchTags.length - 1;
+            if (searchTags[index]) {
+              setEditingTagIndex(index);
+              setInput(searchTags[index]);
+            }
+            if (inputRef.current) {
+              inputRef.current.focus();
+            }
           }
         }
       }
-    }
-  };
-
-  // Add a tag and reset input
-  const addTag = (tag: string | TagSuggestion) => {
-    if (typeof tag !== "string") {
-      if (tag.ui) {
-        setCurrentTagUI({ ui: tag.ui });
-        return;
-      } else {
-        tag = tag.value;
-      }
-    }
-    if (editingTagIndex !== null) {
-      // Replace the tag at editingTagIndex
-      const newTags = [...searchTags];
-      newTags[editingTagIndex] = tag;
-      if (searchTags[editingTagIndex]) {
-        removeSearchTag(searchTags[editingTagIndex]);
-        addSearchTag(tag);
-      }
-      setEditingTagIndex(null);
-    } else {
-      addSearchTag(tag);
-    }
-
-    setInput("");
-    setShowSuggestions(false);
-  };
+    },
+    [
+      addTag,
+      currentTagUI,
+      editingTagIndex,
+      trimmedInput,
+      performSearch,
+      removeSearchTag,
+      searchTags,
+      selectedSuggestionIndex,
+      showSuggestions,
+      suggestions,
+    ],
+  );
 
   // Remove a tag
-  const handleRemoveTag = (tag: string) => {
-    removeSearchTag(tag);
-  };
+  const handleRemoveTag = useCallback(
+    (tag: string) => {
+      removeSearchTag(tag);
+    },
+    [removeSearchTag],
+  );
 
   // Edit a tag
-  const handleEditTag = (index: number) => {
-    if (searchTags[index]) {
-      setEditingTagIndex(index);
-      setInput(searchTags[index]);
-      if (inputRef.current) {
-        inputRef.current.focus();
+  const handleEditTag = useCallback(
+    (index: number) => {
+      if (searchTags[index]) {
+        setEditingTagIndex(index);
+        setInput(searchTags[index]);
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
       }
-    }
-  };
+    },
+    [searchTags],
+  );
 
   // Execute the search
-  const handleSearch = () => {
+  const handleSearch = useCallback(() => {
     if (input.trim() !== "") {
       addTag(input.trim());
     } else {
       performSearch();
     }
-  };
+  }, [addTag, input, performSearch]);
 
   // Toggle auto-search
-  const toggleAutoSearch = () => {
+  const toggleAutoSearch = useCallback(() => {
     setAutoSearch(!autoSearch);
-  };
+  }, [autoSearch, setAutoSearch]);
 
   // Handle clicks outside the suggestions
   useEffect(() => {
@@ -434,7 +480,13 @@ export const SearchBar: React.FC = () => {
                   onClick={() => addTag(suggestion)}
                   onMouseEnter={() => setSelectedSuggestionIndex(index)}
                 >
-                  <TagLabel tag={suggestion.value} />
+                  <TagLabel
+                    tag={
+                      input.trim().startsWith("-")
+                        ? "-" + suggestion.value
+                        : suggestion.value
+                    }
+                  />
                   {suggestion.count && (
                     <span className="page-search-suggestion-count">
                       {suggestion.count}
