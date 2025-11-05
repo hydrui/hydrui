@@ -85,6 +85,7 @@
 
 .tab-close-button {
   color: var(--color-gray-400);
+  cursor: pointer;
 }
 
 .tab-close-button:hover {
@@ -94,6 +95,10 @@
 .tab-close-button:focus {
   color: var(--color-white);
   outline-style: none;
+}
+
+.tab-close-button:disabled {
+  cursor: not-allowed;
 }
 
 @media (forced-colors: active) {
@@ -106,7 +111,6 @@
 .tab-close-icon {
   height: 1rem;
   width: 1rem;
-  cursor: pointer;
 }
 
 .tab-content {

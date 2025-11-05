@@ -251,6 +251,12 @@ const TabRow: React.FC<TabRowProps> = ({ tabs }) => {
                 onClick={(e) => handleCloseTab(index, e)}
                 aria-label={`Close ${tab.name} tab`}
                 tabIndex={-1} // Exclude from tab sequence, accessible via delete key
+                disabled={tab.type === "hydrus"}
+                title={
+                  tab.type === "hydrus"
+                    ? "Hydrus tabs can not currently be closed from Hydrui."
+                    : undefined
+                }
               >
                 <XMarkIcon className="tab-close-icon" />
               </button>
