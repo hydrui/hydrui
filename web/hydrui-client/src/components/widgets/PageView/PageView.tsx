@@ -1,17 +1,22 @@
 import {
+  ArchiveBoxIcon,
+  ArchiveBoxXMarkIcon,
   ArrowPathIcon,
   ArrowTopRightOnSquareIcon,
   ArrowUpTrayIcon,
+  ArrowUturnDownIcon,
+  DocumentIcon,
   ExclamationCircleIcon,
   LinkIcon,
+  MagnifyingGlassIcon,
   MinusCircleIcon,
   PencilSquareIcon,
   PlusIcon,
+  ShareIcon,
   TagIcon,
+  TrashIcon,
   WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
-import { MagnifyingGlassIcon } from "@heroicons/react/24/solid";
-import { ShareIcon } from "@heroicons/react/24/solid";
 import React, {
   useCallback,
   useEffect,
@@ -24,6 +29,7 @@ import { ErrorBoundary } from "react-error-boundary";
 
 import { FileMetadata } from "@/api/types";
 import BatchAutoTagModal from "@/components/modals/BatchAutoTagModal/BatchAutoTagModal";
+import ConfirmModal from "@/components/modals/ConfirmModal/ConfirmModal";
 import EditNotesModal from "@/components/modals/EditNotesModal/EditNotesModal";
 import EditTagsModal from "@/components/modals/EditTagsModal/EditTagsModal";
 import EditUrlsModal from "@/components/modals/EditUrlsModal/EditUrlsModal";
@@ -53,6 +59,9 @@ import "./index.css";
 // expensive.
 const SCROLL_SLACK = 200;
 
+// Referentially stable empty array.
+const EMPTY_ARRAY: never[] = [];
+
 interface PageViewProps {
   pageKey: string;
 }
@@ -71,6 +80,10 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
       markActiveFileAsBetter,
       addFilesToPage,
       removeFilesFromPage,
+      archiveFiles,
+      unarchiveFiles,
+      deleteFiles,
+      undeleteFiles,
     },
     selectedFilesByPage,
     activeFileByPage,
@@ -110,12 +123,14 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
   const [showImportUrlsModal, setShowImportUrlsModal] = useState(false);
   const [showTokenPassingModal, setShowTokenPassingModal] = useState(false);
   const [showBatchAutotagModal, setShowBatchAutotagModal] = useState(false);
+  const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
   const [tagEditFiles, setTagEditFiles] = useState<FileMetadata[]>([]);
   const [urlEditFiles, setUrlEditFiles] = useState<FileMetadata[]>([]);
   const [batchAutotagFiles, setBatchAutotagFiles] = useState<FileMetadata[]>(
     [],
   );
   const [editNotesFile, setEditNotesFile] = useState<FileMetadata | null>(null);
+  const [deleteFileIds, setDeleteFileIds] = useState<number[]>([]);
   const inModal =
     modalIndex !== -1 ||
     showEditTagsModal ||
@@ -123,7 +138,8 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
     showEditNotesModal ||
     showImportUrlsModal ||
     showTokenPassingModal ||
-    showBatchAutotagModal;
+    showBatchAutotagModal ||
+    showConfirmDeleteModal;
   const [renderView, setRenderView] = useState({
     firstIndex: 0,
     lastIndex: fileIds.length,
@@ -131,6 +147,56 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
     bottomRows: 0,
     viewHeight: 0,
   });
+
+  const selectedFiles = selectedFilesByPage[pageKey] || EMPTY_ARRAY;
+  const activeFileId = activeFileByPage[pageKey];
+
+  const archiveFilesById = useCallback(
+    async (files: number[]) => {
+      try {
+        await archiveFiles(files);
+      } catch (e) {
+        addToast(`Error archiving files: ${e}`, "error");
+      }
+    },
+    [addToast, archiveFiles],
+  );
+
+  const unarchiveFilesById = useCallback(
+    async (files: number[]) => {
+      try {
+        await unarchiveFiles(files);
+      } catch (e) {
+        addToast(`Error unarchiving files: ${e}`, "error");
+      }
+    },
+    [addToast, unarchiveFiles],
+  );
+
+  const deleteFilesById = useCallback((files: number[]) => {
+    setDeleteFileIds(files);
+    setShowConfirmDeleteModal(true);
+  }, []);
+
+  const performDelete = useCallback(async () => {
+    setShowConfirmDeleteModal(false);
+    try {
+      await deleteFiles(deleteFileIds);
+    } catch (e) {
+      addToast(`Error deleting files: ${e}`, "error");
+    }
+  }, [addToast, deleteFileIds, deleteFiles]);
+
+  const undeleteFilesById = useCallback(
+    async (files: number[]) => {
+      try {
+        await undeleteFiles(files);
+      } catch (e) {
+        addToast(`Error undeleting files: ${e}`, "error");
+      }
+    },
+    [addToast, undeleteFiles],
+  );
 
   const selectAllFiles = useCallback(() => {
     const { fileIds } = usePageStore.getState();
@@ -191,8 +257,16 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
           ? {}
           : {
               "Control+a": selectAllFiles,
+              Delete: () => deleteFilesById(selectedFiles),
+              F7: () => archiveFilesById(selectedFiles),
             },
-      [inModal, selectAllFiles],
+      [
+        inModal,
+        selectAllFiles,
+        deleteFilesById,
+        archiveFilesById,
+        selectedFiles,
+      ],
     ),
   );
 
@@ -841,6 +915,37 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         },
       },
       {
+        id: "manage",
+        label: "Manage",
+        icon: <DocumentIcon />,
+        items: [
+          {
+            id: "archive",
+            label: "Archive",
+            icon: <ArchiveBoxIcon />,
+            onClick: () => archiveFilesById(selectedFiles),
+          },
+          {
+            id: "unarchive",
+            label: "Re-inbox",
+            icon: <ArchiveBoxXMarkIcon />,
+            onClick: () => unarchiveFilesById(selectedFiles),
+          },
+          {
+            id: "delete",
+            label: "Delete",
+            icon: <TrashIcon />,
+            onClick: () => deleteFilesById(selectedFiles),
+          },
+          {
+            id: "undelete",
+            label: "Undelete",
+            icon: <ArrowUturnDownIcon />,
+            onClick: () => undeleteFilesById(selectedFiles),
+          },
+        ],
+      },
+      {
         id: "divider3",
         divider: true,
         label: "",
@@ -970,9 +1075,6 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
       handleFileContextMenu(event, Number(fileId));
     }
   });
-
-  const selectedFiles = selectedFilesByPage[pageKey] || [];
-  const activeFileId = activeFileByPage[pageKey];
 
   // Modal navigation handlers
   const handleModalClose = () => {
@@ -1494,6 +1596,17 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
           files={batchAutotagFiles}
           onClose={() => setShowBatchAutotagModal(false)}
         ></BatchAutoTagModal>
+      )}
+
+      {showConfirmDeleteModal && (
+        <ConfirmModal
+          title="Delete files"
+          message={`Are you sure you want to send ${deleteFileIds.length} file(s) to trash?`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          onCancel={() => setShowConfirmDeleteModal(false)}
+          onConfirm={() => performDelete()}
+        />
       )}
     </div>
   );
