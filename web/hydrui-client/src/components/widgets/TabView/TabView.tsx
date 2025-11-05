@@ -254,7 +254,7 @@ const TabRow: React.FC<TabRowProps> = ({ tabs }) => {
                 disabled={tab.type === "hydrus"}
                 title={
                   tab.type === "hydrus"
-                    ? "Hydrus tabs can not currently be closed from Hydrui."
+                    ? "Hydrus tabs cannot currently be closed from Hydrui."
                     : undefined
                 }
               >
