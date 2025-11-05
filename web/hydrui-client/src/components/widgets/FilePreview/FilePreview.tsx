@@ -129,7 +129,7 @@ const FilePreview: React.FC = () => {
         {fileData.duration && (
           <div className="file-preview-metadata-row">
             <span className="file-preview-metadata-label">Duration:</span>
-            <span>{formatDuration(fileData.duration)}</span>
+            <span>{formatDuration(Math.ceil(fileData.duration / 1000))}</span>
           </div>
         )}
 
