@@ -1,3 +1,5 @@
+import { BarsArrowDownIcon } from "@heroicons/react/24/outline";
+import { BarsArrowUpIcon } from "@heroicons/react/24/outline";
 import {
   BoltIcon,
   ExclamationCircleIcon,
@@ -13,6 +15,7 @@ import React, {
 } from "react";
 
 import TagLabel from "@/components/widgets/TagLabel/TagLabel";
+import { SortFilesBy, sortFilesByEnumToString } from "@/constants/sort";
 import { client } from "@/store/apiStore";
 import { useSearchStore } from "@/store/searchStore";
 
@@ -116,10 +119,19 @@ enum Prefix {
 export const SearchBar: React.FC = () => {
   const {
     searchTags,
+    searchSort,
+    searchAscending,
     searchStatus,
     searchError,
     autoSearch,
-    actions: { addSearchTag, removeSearchTag, performSearch, setAutoSearch },
+    actions: {
+      addSearchTag,
+      removeSearchTag,
+      setSearchSort,
+      setSearchAscending,
+      performSearch,
+      setAutoSearch,
+    },
   } = useSearchStore();
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState<TagSuggestion[]>([]);
@@ -360,6 +372,10 @@ export const SearchBar: React.FC = () => {
     setAutoSearch(!autoSearch);
   }, [autoSearch, setAutoSearch]);
 
+  const toggleSearchDirection = useCallback(() => {
+    setSearchAscending(!searchAscending);
+  }, [searchAscending, setSearchAscending]);
+
   // Handle clicks outside the suggestions
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -425,9 +441,45 @@ export const SearchBar: React.FC = () => {
             onKeyDown={handleKeyDown}
             onFocus={() => setHasFocus(true)}
             onBlur={() => setHasFocus(false)}
-            placeholder={searchTags.length > 0 ? "" : "Search tags..."}
+            placeholder={
+              searchTags.length > 0 ? "Add tag..." : "Search tags..."
+            }
             className="page-search-input"
           />
+
+          <select
+            value={searchSort}
+            onChange={(e) =>
+              setSearchSort(Number(e.target.value) as SortFilesBy)
+            }
+            className="page-sort-dropdown"
+            title={`Sorting by: ${sortFilesByEnumToString.get(searchSort)}`}
+          >
+            <option disabled={true}>Sort by...</option>
+            {Array.from(sortFilesByEnumToString.entries()).map(
+              ([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ),
+            )}
+          </select>
+
+          <button
+            onClick={toggleSearchDirection}
+            className="page-sort-direction-button"
+            title={
+              searchAscending
+                ? "Currently sorting ascending (click to sort descending)"
+                : "Currently sorting descending (click to sort ascending)"
+            }
+          >
+            {searchAscending ? (
+              <BarsArrowDownIcon className="page-sort-direction-icon" />
+            ) : (
+              <BarsArrowUpIcon className="page-sort-direction-icon" />
+            )}
+          </button>
 
           <button
             onClick={toggleAutoSearch}

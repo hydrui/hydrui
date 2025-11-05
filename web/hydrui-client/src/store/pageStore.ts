@@ -1002,8 +1002,12 @@ const unsubscribe = useApiStore.subscribe((state) => {
   }
 });
 
-useSearchStore.subscribe(() => {
-  usePageStore.getState().actions.updatePageContents(SEARCH_PAGE_KEY, "search");
+useSearchStore.subscribe((state, prevState) => {
+  if (state.searchResults !== prevState.searchResults) {
+    usePageStore
+      .getState()
+      .actions.updatePageContents(SEARCH_PAGE_KEY, "search");
+  }
 });
 
 if (isDemoMode) {

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import { SearchFilesResponse } from "@/api/types";
+import { SortFilesBy } from "@/constants/sort";
 
 import { client } from "./apiStore";
 import { jsonStorage } from "./storage";
@@ -10,6 +11,8 @@ export type SearchStatus = "initial" | "loading" | "loaded";
 
 interface SearchState {
   searchTags: string[];
+  searchSort: SortFilesBy;
+  searchAscending: boolean;
   searchResults: number[];
   searchStatus: SearchStatus;
   searchError: string | null;
@@ -21,6 +24,8 @@ interface SearchState {
     addSearchTag: (tag: string) => void;
     removeSearchTag: (tag: string) => void;
     setSearchTags: (tags: string[]) => void;
+    setSearchSort: (sort: SortFilesBy) => void;
+    setSearchAscending: (ascending: boolean) => void;
     performSearch: () => Promise<void>;
     setAutoSearch: (autoSearch: boolean) => void;
   };
@@ -32,6 +37,8 @@ export const useSearchStore = create<SearchState>()(
   persist(
     (set, get) => ({
       searchTags: [],
+      searchSort: SortFilesBy.IMPORT_TIME,
+      searchAscending: false,
       searchResults: [],
       searchStatus: "initial",
       searchError: null,
@@ -72,12 +79,37 @@ export const useSearchStore = create<SearchState>()(
           }
         },
 
+        setSearchSort: (sort: SortFilesBy) => {
+          const {
+            autoSearch,
+            actions: { performSearch },
+          } = get();
+          set({ searchSort: sort });
+          // Auto-search if enabled
+          if (autoSearch) {
+            setTimeout(() => performSearch(), 0);
+          }
+        },
+
+        setSearchAscending: (ascending: boolean) => {
+          const {
+            autoSearch,
+            actions: { performSearch },
+          } = get();
+          set({ searchAscending: ascending });
+          // Auto-search if enabled
+          if (autoSearch) {
+            setTimeout(() => performSearch(), 0);
+          }
+        },
+
         setAutoSearch: (autoSearch: boolean) => {
           set({ autoSearch });
         },
 
         performSearch: async () => {
-          const { searchTags, cancelSearch } = get();
+          const { searchTags, searchSort, searchAscending, cancelSearch } =
+            get();
 
           // Abort existing request, if one exists.
           if (cancelSearch) {
@@ -118,7 +150,14 @@ export const useSearchStore = create<SearchState>()(
             promise = new Promise<SearchFilesResponse>((resolve, reject) => {
               rejectPromise = reject;
               client
-                .searchFiles({ tags: searchTags }, abortController?.signal)
+                .searchFiles(
+                  {
+                    tags: searchTags,
+                    file_sort_type: searchSort,
+                    file_sort_asc: searchAscending,
+                  },
+                  abortController?.signal,
+                )
                 .then(resolve, reject);
             });
             const response = await promise;
@@ -160,6 +199,8 @@ export const useSearchStore = create<SearchState>()(
       // Only persist specific keys
       partialize: (state) => ({
         searchTags: state.searchTags,
+        searchSort: state.searchSort,
+        searchAscending: state.searchAscending,
         autoSearch: state.autoSearch,
       }),
       storage: jsonStorage,

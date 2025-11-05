@@ -2,6 +2,7 @@ import * as z from "zod/mini";
 
 import { HydrusFileType } from "@/constants/filetypes";
 import { FileRelationship } from "@/constants/relationships";
+import { SortFilesBy } from "@/constants/sort";
 
 import { ServiceType } from "../constants/services";
 
@@ -127,7 +128,7 @@ export interface SearchFilesParams extends FileDomainParam {
   tag_service_key?: string;
   include_current_tags?: boolean;
   include_pending_tags?: boolean;
-  file_sort_type?: number;
+  file_sort_type?: SortFilesBy;
   file_sort_asc?: boolean;
   return_file_ids?: boolean;
   return_hashes?: boolean;

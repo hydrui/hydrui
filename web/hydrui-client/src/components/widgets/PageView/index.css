@@ -227,7 +227,7 @@
 .page-search-input {
   flex-grow: 1;
   background-color: transparent;
-  min-width: 100px;
+  width: 100px;
 }
 
 .page-search-input:focus {
@@ -259,6 +259,44 @@
 
 .page-auto-search-disabled:hover {
   color: var(--color-gray-400);
+}
+
+.page-sort-direction-button {
+  margin-left: 0.5rem;
+  padding: 0.25rem;
+  cursor: pointer;
+  color: var(--color-gray-300);
+}
+
+.page-sort-direction-button:hover {
+  color: var(--color-gray-200);
+}
+
+.page-sort-direction-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.page-sort-dropdown {
+  margin-left: 0.5rem;
+  max-width: 120px;
+  padding: 0.25rem 0.5rem;
+  background-color: var(--color-gray-600);
+  border: none;
+  border-radius: 0.25rem;
+  color: var(--color-white);
+  cursor: pointer;
+  font-size: var(--text-xs);
+}
+
+.page-sort-dropdown:hover {
+  background-color: var(--color-gray-500);
+}
+
+.page-sort-dropdown:focus {
+  outline: 2px solid var(--color-blue-400);
+  outline-offset: 0;
+  border-color: var(--color-blue-500);
 }
 
 .page-search-button {
