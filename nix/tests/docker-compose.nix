@@ -7,7 +7,7 @@
   nodes.machine = {
     virtualisation.docker.enable = true;
     environment.systemPackages = [ docker-compose ];
-    virtualisation.diskSize = 4 * 1024;
+    virtualisation.diskSize = 5 * 1024;
     virtualisation.memorySize = 4 * 1024;
   };
   testScript = ''
