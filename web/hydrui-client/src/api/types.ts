@@ -72,7 +72,7 @@ export const FileMetadataSchema = z.looseObject({
   height: z.optional(z.nullable(z.number())),
   duration: z.optional(z.nullable(z.number())),
   num_frames: z.optional(z.nullable(z.number())),
-  has_audio: z.optional(z.boolean()),
+  has_audio: z.optional(z.nullable(z.boolean())),
   thumbnail_width: z.optional(z.number()),
   thumbnail_height: z.optional(z.number()),
   is_inbox: z.optional(z.boolean()),
