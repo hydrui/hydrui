@@ -1,10 +1,9 @@
 {
-  nixosTest,
   k3s,
   kubernetes-helm,
   testers,
 }:
-(testers.invalidateFetcherByDrvHash nixosTest {
+(testers.invalidateFetcherByDrvHash testers.nixosTest {
   name = "hydrui-kubernetes";
   nodes.machine = {
     environment.systemPackages = [
