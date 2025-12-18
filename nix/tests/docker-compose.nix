@@ -1,9 +1,9 @@
 {
   nixosTest,
   docker-compose,
-  invalidateFetcherByDrvHash,
+  testers,
 }:
-(invalidateFetcherByDrvHash nixosTest {
+(testers.invalidateFetcherByDrvHash nixosTest {
   name = "hydrui-docker-compose";
   nodes.machine = {
     virtualisation.docker.enable = true;
