@@ -143,7 +143,7 @@ const ExprInput: React.FC<ExprInputProps> = ({
             acceptSuggestion(suggestions.replaceSpan, selectedSuggestion);
             return;
           }
-        } else if (e.key === "Escape" && showSuggestions) {
+        } else if (e.key === "Escape") {
           e.preventDefault();
           e.stopPropagation();
           setShowSuggestions(false);
