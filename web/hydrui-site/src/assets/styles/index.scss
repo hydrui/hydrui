@@ -332,6 +332,14 @@ footer {
   }
 }
 
+code {
+  background-color: var(--color-bg-code);
+  padding: 0.2rem;
+  border-radius: 5px;
+  overflow: auto;
+  font-size: 0.875rem;
+}
+
 pre > code {
   background-color: var(--color-bg-code);
   display: block;

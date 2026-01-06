@@ -1,0 +1,71 @@
+.expr-filter-modal-container {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  overflow-y: auto;
+}
+
+.expr-filter-modal-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+.expr-filter-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.expr-filter-modal-content {
+  position: relative;
+  background-color: var(--color-gray-800);
+  border-radius: var(--radius-lg);
+  max-width: var(--container-md);
+  width: 100%;
+}
+
+.expr-filter-modal-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-gray-700);
+}
+
+.expr-filter-modal-title {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.expr-filter-modal-body {
+  padding: 1rem;
+}
+
+.expr-filter-modal-help {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.expr-sort-modal-help h3 {
+  font-size: 1rem;
+}
+
+.expr-filter-modal-help ul {
+  list-style: square;
+  margin-left: 1rem;
+}
+
+.expr-filter-modal-help code {
+  background-color: var(--color-gray-900);
+  border-radius: var(--radius-sm);
+  padding: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.expr-filter-modal-footer {
+  padding: 1rem;
+  border-top: 1px solid var(--color-gray-700);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}

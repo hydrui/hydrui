@@ -1,0 +1,204 @@
+.expr-input-container {
+  position: relative;
+  display: flex;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  background-color: var(--color-gray-700);
+  border: 1px solid var(--color-gray-600);
+  gap: 0.5rem;
+}
+
+.expr-input {
+  flex: 1;
+  color: var(--color-white);
+  font-size: 0.875rem;
+  font-family: monospace;
+}
+
+.expr-input-container:has(.expr-input:focus) {
+  outline: 2px solid var(--color-blue-400);
+  outline-offset: 2px;
+}
+
+.expr-input:focus {
+  outline: none;
+}
+
+.expr-suggestions {
+  position: absolute;
+  margin-top: 0.25rem;
+  width: 200px;
+  max-height: 15rem;
+  overflow-y: auto;
+  background-color: var(--color-gray-700);
+  border-radius: var(--radius-sm);
+  z-index: 10;
+  font-size: 0.875rem;
+  font-family: monospace;
+}
+
+.expr-suggestion-item {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.expr-suggestion-item:hover {
+  background-color: var(--color-gray-600);
+}
+
+.expr-suggestion-item.selected {
+  background-color: var(--color-blue-600);
+}
+
+.expr-suggestion-count {
+  color: var(--color-gray-400);
+  font-size: var(--text-sm);
+}
+
+.expr-history-button {
+  cursor: pointer;
+  color: var(--color-gray-300);
+}
+
+.expr-history-button:hover {
+  color: var(--color-gray-200);
+}
+
+.expr-history-button.active {
+  color: var(--color-blue-400);
+}
+
+.expr-history-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.expr-save-button {
+  cursor: pointer;
+  color: var(--color-gray-300);
+}
+
+.expr-save-button:hover {
+  color: var(--color-gray-200);
+}
+
+.expr-save-button.active {
+  color: var(--color-blue-400);
+}
+
+.expr-save-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.expr-popup {
+  cursor: default;
+  position: absolute;
+  right: 0;
+  margin-top: 2rem;
+  padding: 0.5rem;
+  width: 300px;
+  max-height: 15rem;
+  overflow-y: auto;
+  background-color: var(--color-gray-800);
+  border: 1px solid var(--color-gray-600);
+  border-radius: var(--radius-sm);
+  z-index: 10;
+}
+
+.expr-popup-button {
+  padding: 0.25rem 0.5rem;
+}
+
+.expr-history-list {
+  height: 100px;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  overflow-y: auto;
+  background-color: var(--color-gray-900);
+  border-radius: var(--radius-sm);
+}
+
+.expr-history-entry {
+  display: block;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+  width: 100%;
+  text-align: left;
+  word-break: keep-all;
+  overflow-x: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.875rem;
+  font-family: monospace;
+}
+
+.expr-history-entry:hover {
+  background-color: var(--color-gray-800);
+}
+
+.expr-bookmark-list {
+  height: 100px;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  overflow-y: auto;
+  background-color: var(--color-gray-900);
+  border-radius: var(--radius-sm);
+}
+
+.expr-bookmark-entry {
+  display: flex;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+  width: 100%;
+  text-align: left;
+  word-break: keep-all;
+  overflow-x: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.875rem;
+}
+
+.expr-bookmark-entry:hover {
+  background-color: var(--color-gray-800);
+}
+
+.expr-bookmark-entry-item {
+  flex-grow: 1;
+  text-align: left;
+}
+
+.expr-delete-button {
+  cursor: pointer;
+  color: var(--color-gray-300);
+}
+
+.expr-delete-button:hover {
+  color: var(--color-gray-200);
+}
+
+.expr-delete-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.expr-bookmark-save {
+  display: flex;
+}
+
+.expr-bookmark-name-input {
+  margin-right: 0.5rem;
+  border-radius: 0.25rem;
+  background-color: var(--color-gray-700);
+  border: 1px solid var(--color-gray-600);
+  flex-grow: 1;
+}
+
+.expr-bookmark-name-input:focus {
+  outline: 2px solid var(--color-blue-400);
+  outline-offset: 2px;
+}
