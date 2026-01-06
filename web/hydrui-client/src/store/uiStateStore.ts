@@ -21,6 +21,14 @@ interface UIState {
   tagListHidden: boolean;
   previewHidden: boolean;
 
+  // Filter expressions
+  filterExpressionHistory: string[];
+  savedFilterExpressions: Record<string, string>;
+
+  // Sort expressions
+  sortExpressionHistory: string[];
+  savedSortExpressions: Record<string, string>;
+
   actions: {
     setLastActiveTagService: (serviceKey: string | null) => void;
     setScrollPosition: (pageKey: string, position: number) => void;
@@ -32,6 +40,14 @@ interface UIState {
     setTagListHeightPercent: (value: number) => void;
     setTagListHidden: (value: boolean) => void;
     setPreviewHidden: (value: boolean) => void;
+    recordFilterExpression: (expression: string) => void;
+    clearFilterExpressionHistory: () => void;
+    saveFilterExpression: (name: string, expression: string) => void;
+    deleteFilterExpression: (name: string) => void;
+    recordSortExpression: (expression: string) => void;
+    clearSortExpressionHistory: () => void;
+    saveSortExpression: (name: string, expression: string) => void;
+    deleteSortExpression: (name: string) => void;
   };
 }
 
@@ -52,6 +68,10 @@ export const useUIStateStore = create<UIState>()(
       tagListHeightPercent: 50,
       tagListHidden: false,
       previewHidden: false,
+      filterExpressionHistory: [],
+      savedFilterExpressions: {},
+      sortExpressionHistory: [],
+      savedSortExpressions: {},
 
       // Actions
       actions: {
@@ -95,6 +115,80 @@ export const useUIStateStore = create<UIState>()(
         setPreviewHidden(value: boolean) {
           set({ previewHidden: value });
         },
+
+        recordFilterExpression(expression: string) {
+          set((state) => {
+            if (state.filterExpressionHistory[0] === expression) {
+              return {};
+            }
+            return {
+              filterExpressionHistory: [
+                expression,
+                ...state.filterExpressionHistory,
+              ].slice(0, 100),
+            };
+          });
+        },
+
+        clearFilterExpressionHistory() {
+          set({ filterExpressionHistory: [] });
+        },
+
+        saveFilterExpression(name: string, expression: string) {
+          set((state) => ({
+            savedFilterExpressions: {
+              ...state.savedFilterExpressions,
+              [name]: expression,
+            },
+          }));
+        },
+
+        deleteFilterExpression(name: string) {
+          set((state) => ({
+            savedFilterExpressions: Object.fromEntries(
+              Object.entries(state.savedFilterExpressions).filter(
+                ([key]) => key !== name,
+              ),
+            ),
+          }));
+        },
+
+        recordSortExpression(expression: string) {
+          set((state) => {
+            if (state.sortExpressionHistory[0] === expression) {
+              return {};
+            }
+            return {
+              sortExpressionHistory: [
+                expression,
+                ...state.sortExpressionHistory,
+              ].slice(0, 100),
+            };
+          });
+        },
+
+        clearSortExpressionHistory() {
+          set({ sortExpressionHistory: [] });
+        },
+
+        saveSortExpression(name: string, expression: string) {
+          set((state) => ({
+            savedSortExpressions: {
+              ...state.savedSortExpressions,
+              [name]: expression,
+            },
+          }));
+        },
+
+        deleteSortExpression(name: string) {
+          set((state) => ({
+            savedSortExpressions: Object.fromEntries(
+              Object.entries(state.savedSortExpressions).filter(
+                ([key]) => key !== name,
+              ),
+            ),
+          }));
+        },
       },
     }),
     {
@@ -110,6 +204,10 @@ export const useUIStateStore = create<UIState>()(
         tagListHeightPercent: state.tagListHeightPercent,
         tagListHidden: state.tagListHidden,
         previewHidden: state.previewHidden,
+        filterExpressionHistory: state.filterExpressionHistory,
+        savedFilterExpressions: state.savedFilterExpressions,
+        sortExpressionHistory: state.sortExpressionHistory,
+        savedSortExpressions: state.savedSortExpressions,
       }),
     },
   ),

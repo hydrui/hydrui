@@ -85,6 +85,12 @@ interface PageState extends PersistedState {
       pageType: PageType,
       fileIds: number[],
     ) => Promise<void>;
+    filterFilesFromView: (
+      filter: (file: FileMetadata) => Promise<boolean>,
+    ) => Promise<void>;
+    sortFilesFromView: (
+      comparator: (a: number, b: number) => number,
+    ) => Promise<void>;
     refreshFileMetadata: (fileIds: number[]) => Promise<void>;
     cancelCurrentPageLoad: () => void;
     addFilesToView: (fileIds: number[]) => Promise<void>;
@@ -959,6 +965,101 @@ export const usePageStore = create<PageState>()(
                 await get().actions.updatePageContents(pageKey, "virtual");
                 break;
               }
+            }
+          },
+
+          filterFilesFromView: async (
+            filter: (fileId: FileMetadata) => Promise<boolean>,
+          ) => {
+            const {
+              activePageKey,
+              isLoadingFiles,
+              pageType,
+              pageName,
+              loadedFiles,
+            } = get();
+            if (!activePageKey) {
+              return;
+            }
+            if (isLoadingFiles) {
+              throw new Error("Can not filter partially loaded page.");
+            }
+            if (pageType === "hydrus") {
+              // Can't currently filter a hydrus view, so create a new one instead.
+              const fileIdsToKeep = [];
+              for (const file of loadedFiles) {
+                if (!file) continue;
+                if (await filter(file)) {
+                  fileIdsToKeep.push(file.file_id);
+                }
+              }
+              const newPageId = `filter-${Math.random().toString(36).substring(2)}`;
+              get().actions.addVirtualPage(newPageId, {
+                name: `${pageName} (filtered)`,
+                fileIds: fileIdsToKeep,
+              });
+              await get().actions.setPage(newPageId, "virtual");
+            } else {
+              const fileIdsToRemove = [];
+              for (const file of loadedFiles) {
+                if (!file) continue;
+                if (!(await filter(file))) {
+                  fileIdsToRemove.push(file.file_id);
+                }
+              }
+              get().actions.removeFilesFromPage(
+                activePageKey,
+                pageType,
+                fileIdsToRemove,
+              );
+            }
+          },
+
+          sortFilesFromView: async (
+            comparator: (a: number, b: number) => number,
+          ) => {
+            const {
+              activePageKey,
+              pageType,
+              pageName,
+              fileIds,
+              loadedFiles,
+              isLoadingFiles,
+            } = get();
+            if (!activePageKey) {
+              return;
+            }
+            if (isLoadingFiles) {
+              throw new Error("Can not sort partially loaded page.");
+            }
+            const indices = loadedFiles.map((_file, index) => index);
+            indices.sort((a, b) => comparator(a, b));
+            if (pageType === "hydrus") {
+              // Can't currently re-order a hydrus view, so create a new one instead.
+              const newPageId = `sort-${Math.random().toString(36).substring(2)}`;
+              get().actions.addVirtualPage(newPageId, {
+                name: `${pageName} (sorted)`,
+                fileIds: indices.map((i) => loadedFiles[i]!.file_id),
+              });
+              await get().actions.setPage(newPageId, "virtual");
+            } else if (pageType === "search") {
+              useSearchStore.setState({
+                searchResults: indices.map((i) => fileIds[i]!),
+              });
+              get().actions.updatePageContents(SEARCH_PAGE_KEY, "search");
+            } else if (pageType === "virtual") {
+              set((state) => {
+                const setState: Partial<PageState> = {
+                  virtualPages: { ...state.virtualPages },
+                };
+                const page = setState.virtualPages?.[activePageKey];
+                if (!page) {
+                  return {};
+                }
+                page.fileIds = indices.map((i) => fileIds[i]!);
+                return setState;
+              });
+              get().actions.updatePageContents(activePageKey, "virtual");
             }
           },
 

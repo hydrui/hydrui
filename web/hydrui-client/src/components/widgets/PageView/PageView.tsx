@@ -33,6 +33,8 @@ import ConfirmModal from "@/components/modals/ConfirmModal/ConfirmModal";
 import EditNotesModal from "@/components/modals/EditNotesModal/EditNotesModal";
 import EditTagsModal from "@/components/modals/EditTagsModal/EditTagsModal";
 import EditUrlsModal from "@/components/modals/EditUrlsModal/EditUrlsModal";
+import ExpressionFilterModal from "@/components/modals/ExpressionFilterModal/ExpressionFilterModal";
+import ExpressionSortModal from "@/components/modals/ExpressionSortModal/ExpressionSortModal";
 import FileViewerModal from "@/components/modals/FileViewerModal/FileViewerModal";
 import ImportUrlsModal from "@/components/modals/ImportUrlsModal/ImportUrlsModal";
 import TokenPassingModal from "@/components/modals/TokenPassingModal/TokenPassingModal";
@@ -124,6 +126,9 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
   const [showTokenPassingModal, setShowTokenPassingModal] = useState(false);
   const [showBatchAutotagModal, setShowBatchAutotagModal] = useState(false);
   const [showConfirmDeleteModal, setShowConfirmDeleteModal] = useState(false);
+  const [showExpressionFilterModal, setShowExpressionFilterModal] =
+    useState(false);
+  const [showExpressionSortModal, setShowExpressionSortModal] = useState(false);
   const [tagEditFiles, setTagEditFiles] = useState<FileMetadata[]>([]);
   const [urlEditFiles, setUrlEditFiles] = useState<FileMetadata[]>([]);
   const [batchAutotagFiles, setBatchAutotagFiles] = useState<FileMetadata[]>(
@@ -139,7 +144,9 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
     showImportUrlsModal ||
     showTokenPassingModal ||
     showBatchAutotagModal ||
-    showConfirmDeleteModal;
+    showConfirmDeleteModal ||
+    showExpressionFilterModal ||
+    showExpressionSortModal;
   const [renderView, setRenderView] = useState({
     firstIndex: 0,
     lastIndex: fileIds.length,
@@ -297,6 +304,38 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         refreshPage(pageKey, pageType);
       },
     },
+  ];
+
+  const viewUtilityMenuItems: MenuItem[] = [
+    {
+      id: "expr-filter",
+      label: "Filter View with Expression...",
+      onClick: () => {
+        setShowExpressionFilterModal(true);
+      },
+    },
+    {
+      id: "expr-sort",
+      label: "Sort View with Expression...",
+      onClick: () => {
+        setShowExpressionSortModal(true);
+      },
+    },
+  ];
+
+  const viewMenuWithUtilityItems: MenuItem[] = [
+    {
+      id: "utilities",
+      label: "Utilities",
+      icon: <WrenchScrewdriverIcon />,
+      items: [...viewUtilityMenuItems],
+    },
+    {
+      id: "divider6",
+      divider: true,
+      label: "",
+    },
+    ...viewMenuItems,
   ];
 
   const GAP_SIZE = 16;
@@ -608,7 +647,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
 
   const handleViewContextMenu = (event: React.MouseEvent) => {
     event.preventDefault();
-    showContextMenu(event, viewMenuItems);
+    showContextMenu(event, viewMenuWithUtilityItems);
   };
 
   const handleFileContextMenu = (event: React.MouseEvent, fileId: number) => {
@@ -1041,6 +1080,12 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
               setShowBatchAutotagModal(true);
             },
           },
+          {
+            id: "divider7",
+            divider: true,
+            label: "",
+          },
+          ...viewUtilityMenuItems,
         ],
       },
       {
@@ -1606,6 +1651,18 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
           cancelLabel="Cancel"
           onCancel={() => setShowConfirmDeleteModal(false)}
           onConfirm={() => performDelete()}
+        />
+      )}
+
+      {showExpressionFilterModal && (
+        <ExpressionFilterModal
+          onClose={() => setShowExpressionFilterModal(false)}
+        />
+      )}
+
+      {showExpressionSortModal && (
+        <ExpressionSortModal
+          onClose={() => setShowExpressionSortModal(false)}
         />
       )}
     </div>
