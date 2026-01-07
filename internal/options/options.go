@@ -157,6 +157,14 @@ func (v *Values) ServerConfig(ctx context.Context, log *slog.Logger) (server.Con
 		AllowBugReport: v.AllowBugReport,
 	}
 
+	if v.Listen != "" && v.Socket != "" {
+		log.Warn("UNIX domain socket listener will be preferred over TCP.")
+	}
+
+	if v.ListenTLS != "" && v.SocketTLS != "" {
+		log.Warn("UNIX domain socket TLS listener will be preferred over TCP.")
+	}
+
 	if v.ServerMode {
 		if v.HydrusURL == "" {
 			return server.Config{}, fmt.Errorf("hydrus client URL is required, e.g. http://localhost:45869")
