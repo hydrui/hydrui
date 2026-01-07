@@ -24,6 +24,7 @@ let
   ]
   ++ optionals (cfg.socket != null) [
     "-socket=${cfg.socket}"
+    "-listen="
   ]
   ++ optionals (cfg.hydrusUrl != null) [
     "-hydrus-url=${cfg.hydrusUrl}"
