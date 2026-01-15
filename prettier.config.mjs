@@ -8,4 +8,5 @@ export default {
   importOrderSortSpecifiers: true,
   tabWidth: 2,
   plugins: ["@trivago/prettier-plugin-sort-imports"],
+  endOfLine: "auto",
 };

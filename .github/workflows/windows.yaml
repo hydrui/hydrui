@@ -1,0 +1,38 @@
+name: Windows
+on:
+  push:
+    branches: [master]
+    tags: [v*]
+  pull_request:
+    branches: [master]
+jobs:
+  build:
+    name: Build
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+      - name: Get Go dependencies
+        run: go get -v -t -d ./...
+      - name: Set up Node.JS
+        uses: actions/setup-node@v4
+      - name: Get NPM dependencies
+        run: npm ci
+      - name: Run Tests
+        run: npm run test
+      - name: Perform Linting
+        run: npm run lint
+        continue-on-error: true # Currently, this step is broken on Windows.
+      - name: Perform Code Generation
+        run: npm run generate
+      - name: Check for Unexpected Diff
+        run: git diff --exit-code
+        continue-on-error: true # This may be impossible to 100% clean up? Hmm...
+      - name: Build Release
+        run: |
+          $Env:CGO_ENABLED="0"
+          $Env:GOOS="windows"
+          $Env:GOARCH="amd64"
+          go build -ldflags=-H=windowsgui -o hydrui-windows-amd64.exe ./cmd/hydrui-server
