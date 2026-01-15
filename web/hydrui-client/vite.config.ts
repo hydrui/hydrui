@@ -1,6 +1,6 @@
 import react from "@vitejs/plugin-react";
 import path from "path";
-import { defineConfig } from "vite";
+import { defineConfig, normalizePath } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 import { defineConfig as defineVitestConfig } from "vitest/config";
@@ -11,14 +11,15 @@ export default defineConfig({
     viteStaticCopy({
       targets: [
         {
-          src: path.resolve(
-            __dirname,
-            "../../node_modules/@ruffle-rs/ruffle/*",
+          src: normalizePath(
+            path.resolve(__dirname, "../../node_modules/@ruffle-rs/ruffle/*"),
           ),
           dest: "assets/ruffle",
         },
         {
-          src: path.resolve(__dirname, "../../node_modules/ogv/dist/*"),
+          src: normalizePath(
+            path.resolve(__dirname, "../../node_modules/ogv/dist/*"),
+          ),
           dest: "assets/ogv",
         },
       ],
@@ -54,7 +55,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": normalizePath(path.resolve(__dirname, "./src")),
     },
     dedupe: ["react", "react-dom", "pdfjs-dist"],
   },
