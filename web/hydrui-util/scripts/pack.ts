@@ -1,5 +1,5 @@
 import { readFile, readdir, stat, writeFile } from "fs/promises";
-import { dirname, join, relative, resolve } from "path";
+import { dirname, join, posix, relative, resolve } from "path";
 import { fileURLToPath } from "url";
 import { promisify } from "util";
 import { brotliCompress, constants } from "zlib";
@@ -62,7 +62,7 @@ async function processFile(
   }
 
   return {
-    path: relativePath,
+    path: posix.normalize(relativePath),
     data: originalData,
     compressed: false,
   };
