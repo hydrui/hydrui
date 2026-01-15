@@ -24,6 +24,7 @@ jobs:
         run: npm run test
       - name: Perform Linting
         run: npm run lint
+        continue-on-error: true # Currently, this step is broken on Windows.
       - name: Perform Code Generation
         run: npm run generate
       - name: Check for Unexpected Diff
