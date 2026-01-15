@@ -41,7 +41,9 @@ async function processFile(
   distPath: string,
 ): Promise<FileEntry> {
   const originalData = await readFile(filePath);
-  const relativePath = posix.normalize(relative(distPath, filePath));
+  const relativePath = posix.normalize(
+    relative(distPath, filePath).replace(/\\/g, "/"),
+  );
 
   try {
     const compressedData = await compress(originalData, {
