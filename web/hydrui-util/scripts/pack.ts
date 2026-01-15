@@ -41,7 +41,7 @@ async function processFile(
   distPath: string,
 ): Promise<FileEntry> {
   const originalData = await readFile(filePath);
-  const relativePath = relative(distPath, filePath);
+  const relativePath = posix.normalize(relative(distPath, filePath));
 
   try {
     const compressedData = await compress(originalData, {
@@ -62,7 +62,7 @@ async function processFile(
   }
 
   return {
-    path: posix.normalize(relativePath),
+    path: relativePath,
     data: originalData,
     compressed: false,
   };
