@@ -6,6 +6,14 @@ import (
 	"strings"
 )
 
+type ErrorHostNotAllowed struct {
+	Host string
+}
+
+func (e *ErrorHostNotAllowed) Error() string {
+	return fmt.Sprintf("host %s is not allowed", e.Host)
+}
+
 // Dialer mocks the net.Dialer interface for Wisp usage
 type Dialer interface {
 	Dial(network, addr string) (net.Conn, error)
@@ -20,7 +28,7 @@ type BuiltinDialer struct {
 // NewBuiltinDialer creates a new dialer.
 func NewBuiltinDialer(allowFunc func(host string) bool) *BuiltinDialer {
 	if allowFunc == nil {
-		allowFunc = func(string) bool { return false }
+		panic("allowFunc cannot be nil")
 	}
 	return &BuiltinDialer{
 		AllowFunc: allowFunc,
@@ -36,7 +44,7 @@ func (d *BuiltinDialer) Dial(network, addr string) (net.Conn, error) {
 	}
 
 	if !d.AllowFunc(host) {
-		return nil, fmt.Errorf("host %s is not allowed", host)
+		return nil, &ErrorHostNotAllowed{Host: host}
 	}
 
 	return d.netDialer.Dial(network, addr)

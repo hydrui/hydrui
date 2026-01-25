@@ -13,10 +13,9 @@ func TestDialer(t *testing.T) {
 	t.Run("Default Safe", func(t *testing.T) {
 		t.Parallel()
 
-		d := NewBuiltinDialer(nil)
-		_, err := d.Dial("tcp", "example.com:80")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not allowed")
+		assert.Panics(t, func() {
+			NewBuiltinDialer(nil)
+		})
 	})
 
 	t.Run("Whitelist Wildcard", func(t *testing.T) {

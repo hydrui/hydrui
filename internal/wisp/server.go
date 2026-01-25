@@ -2,13 +2,13 @@ package wisp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
 	"runtime/pprof"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -53,12 +53,8 @@ func NewServer(dialer Dialer, opts ...ServerOption) *Server {
 	s := &Server{
 		Dialer:        dialer,
 		WriteQueueLen: DefaultWriteQueueLen,
-		Upgrader: websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool {
-				return true // Default to allowing all origins.
-			},
-		},
-		Logger: slog.Default(),
+		Upgrader:      websocket.Upgrader{},
+		Logger:        slog.Default(),
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -178,8 +174,8 @@ func (h *connHandler) closePending() {
 		select {
 		case streamID := <-h.closeCh:
 			if stream, ok := h.streams[streamID]; ok {
-				close(stream.writeQueue)
 				delete(h.streams, streamID)
+				close(stream.writeQueue)
 			}
 		default:
 			return
@@ -222,7 +218,8 @@ func (h *connHandler) handleConnect(p Packet) {
 	conn, err := h.dialer.Dial(network, targetAddr)
 	if err != nil {
 		reason := CloseReasonUnreachable
-		if strings.Contains(err.Error(), "not allowed") {
+		var hostNotAllowed *ErrorHostNotAllowed
+		if errors.As(err, &hostNotAllowed) {
 			reason = CloseReasonBlocked
 		}
 		_ = h.writePacket(NewClosePacket(p.StreamID, reason))
@@ -267,6 +264,7 @@ func (h *connHandler) handleConnect(p Packet) {
 
 func (h *connHandler) handleData(p Packet) {
 	if stream, ok := h.streams[p.StreamID]; ok {
+		// SAFETY: writeQueue is closed before the stream is removed from the map.
 		stream.writeQueue <- p.Payload
 	}
 }
@@ -308,6 +306,7 @@ func (s *serverStream) peerReadLoop() {
 			return
 		}
 		if n > 0 {
+			// SAFETY: readQueue is only ever closed in the defer above.
 			s.readQueue <- buf1[:n]
 		}
 		buf1, buf2 = buf2, buf1
@@ -318,7 +317,10 @@ func (s *serverStream) clientReadLoop() {
 	for data := range s.readQueue {
 		err := s.handler.writePacket(NewDataPacket(s.streamID, data))
 		if err != nil {
-			return
+			_ = s.close(CloseReasonNetworkError)
+			// Can't exit until readQueue is closed, otherwise peerReadLoop may
+			// block.
+			continue
 		}
 	}
 }
@@ -338,6 +340,7 @@ func (s *serverStream) peerWriteLoop() {
 				return
 			}
 			s.counter++
+			// We don't actually use a queue. Just refill credits periodically.
 			if s.counter > s.handler.writeQueueLen/2 {
 				_ = s.handler.writePacket(NewContinuePacket(s.streamID, uint32(s.handler.writeQueueLen)))
 				s.counter = 0
