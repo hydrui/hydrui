@@ -1562,10 +1562,6 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
                   useVirtualViewport && i < gridDimensions.cols
                     ? renderView.topRows * (thumbnailSize + GAP_SIZE)
                     : 0,
-                marginBottom:
-                  useVirtualViewport && i === renderFiles.length - 1
-                    ? renderView.bottomRows * (thumbnailSize + GAP_SIZE)
-                    : 0,
               }}
               onClick={(e) => handleFileClick(fileId, e)}
               onDoubleClick={() => handleFileDoubleClick(fileId)}
@@ -1587,6 +1583,13 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
             </div>
           ))
         )}
+        <div
+          style={{
+            paddingBottom: useVirtualViewport
+              ? renderView.bottomRows * (thumbnailSize + GAP_SIZE)
+              : 0,
+          }}
+        ></div>
       </ScrollView>
 
       {modalIndex !== -1 && fileIds[modalIndex] && (
