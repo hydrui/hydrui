@@ -187,7 +187,7 @@ export class RemoteFile extends FileCursor implements File {
     }
     this.url = url;
     this.chunkSize = options.chunkSize ?? defaultChunkSize;
-    this.lastChunk = (fileSize / this.chunkSize) | 0;
+    this.lastChunk = ((fileSize - 1) / this.chunkSize) | 0;
     this.headers = options.headers;
 
     this.dataBuffer = new ArrayBuffer(this.fileSize);
@@ -213,9 +213,10 @@ export class RemoteFile extends FileCursor implements File {
 
   private blocksToFetch(offset: number, size: number): number[] {
     const blocksToFetch: number[] = [];
+    const lastIndex = size > 0 ? offset + size - 1 : offset;
     const firstBlock: number = (offset / this.chunkSize) | 0;
     const lastBlock: number = Math.min(
-      ((offset + size + this.chunkSize - 1) / this.chunkSize) | 0,
+      (lastIndex / this.chunkSize) | 0,
       this.lastChunk,
     );
     for (let i = firstBlock; i <= lastBlock; i++) {

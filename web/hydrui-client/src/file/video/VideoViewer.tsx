@@ -65,12 +65,12 @@ const VideoViewer: React.FC<VideoViewerProps> = ({
   // TODO: The ogv fallback doesn't happen when it sometimes should.
   // Need to debug this on Apple devices in particular, as they seem to throw up
   // on perfectly valid VP8 and VP9 WebM files.
-  if (useOgv) {
+  if (useOgv && fileData.size) {
     return (
       <Suspense fallback={<div>Loading OGV Viewer...</div>}>
         <OGVViewer
           fileUrl={fileUrl}
-          fileSize={fileData.size || 0}
+          fileSize={fileData.size}
           autoPlay={autoPlay}
           loop={loop}
         />

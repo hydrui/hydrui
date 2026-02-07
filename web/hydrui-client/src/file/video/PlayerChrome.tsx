@@ -73,21 +73,36 @@ export const PlayerChrome: React.FC<PlayerChrome> = ({ player }) => {
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
-      containerRef.current?.requestFullscreen();
-      setIsFullscreen(true);
+      containerRef.current
+        ?.requestFullscreen()
+        .then(() => setIsFullscreen(true));
     } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
+      document.exitFullscreen().then(() => setIsFullscreen(false));
     }
   }, []);
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        setIsFullscreen(false);
+      }
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  });
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const time = parseFloat(e.target.value);
     setIsLoading(true);
     seekingTime.current = time;
     setCurrentTime(time);
-    player.fastSeek(time);
-    Promise.resolve().then(() => player.fastSeek(time));
+    if (typeof player.fastSeek === "function") {
+      player.fastSeek(time);
+      Promise.resolve().then(() => player.fastSeek(time));
+    } else {
+      player.currentTime = time;
+    }
   };
 
   const handleVolume = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,10 +130,18 @@ export const PlayerChrome: React.FC<PlayerChrome> = ({ player }) => {
         setCurrentTime(player.currentTime);
       }
       // Calculate buffered percentage
-      if (player.buffered && player.buffered.length > 0) {
-        setBuffered(
-          player.buffered.end(player.buffered.length - 1) / player.duration,
+      if (
+        player.buffered &&
+        player.buffered.length > 0 &&
+        Number.isFinite(player.duration) &&
+        player.duration > 0
+      ) {
+        const bufferedEnd = player.buffered.end(player.buffered.length - 1);
+        const bufferedFraction = Math.min(
+          1,
+          Math.max(0, bufferedEnd / player.duration),
         );
+        setBuffered(bufferedFraction);
       }
     };
     const onDurationChange = () => setDuration(player.duration);
@@ -194,7 +217,7 @@ export const PlayerChrome: React.FC<PlayerChrome> = ({ player }) => {
       className={`player-chrome ${!showControls ? "player-chrome-hide-cursor" : ""}`}
       onPointerMove={resetIdleTimer}
       onPointerUp={resetIdleTimer}
-      onMouseOut={hideControlsSoon}
+      onMouseLeave={hideControlsSoon}
     >
       <div className="player-chrome-player" ref={playerRef} />
 
@@ -234,16 +257,18 @@ export const PlayerChrome: React.FC<PlayerChrome> = ({ player }) => {
           <div className="player-chrome-bottom-bar">
             <div className="player-chrome-left-group">
               <button
-                onClick={togglePlay}
                 className="player-chrome-control-btn"
+                onClick={togglePlay}
+                aria-label={isPlaying ? "Pause" : "Play"}
               >
                 {isPlaying ? <PauseIcon /> : <PlayIcon />}
               </button>
 
               <div className="player-chrome-volume-group">
                 <button
-                  onClick={() => (player.muted = !isMuted)}
                   className="player-chrome-control-btn"
+                  onClick={() => (player.muted = !isMuted)}
+                  aria-label={player.muted ? "Unmute" : "Mute"}
                 >
                   {isMuted || volume === 0 ? (
                     <SpeakerXMarkIcon />
@@ -270,6 +295,7 @@ export const PlayerChrome: React.FC<PlayerChrome> = ({ player }) => {
             <button
               onClick={toggleFullscreen}
               className="player-chrome-control-btn"
+              aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
             >
               {isFullscreen ? (
                 <ArrowsPointingInIcon />

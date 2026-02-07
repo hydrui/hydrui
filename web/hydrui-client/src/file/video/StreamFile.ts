@@ -43,6 +43,10 @@ export class StreamFile {
   }
 
   load(): Promise<void> {
+    // Note that this always returns immediately: ogv.js will wait until the
+    // promise is resolved, so we want to resolve it quickly. In the upstream
+    // library, the promise is resolved when we know the filesize, but here we
+    // always know the filesize ahead of time.
     if (this.loading) {
       throw new Error("cannot load when loading");
     }
@@ -88,7 +92,7 @@ export class StreamFile {
   async read(nbytes: number): Promise<ArrayBuffer> {
     const length = Math.min(nbytes, this.length - this._remoteFile.position);
     if (length === 0) {
-      return Promise.resolve(new ArrayBuffer());
+      return Promise.resolve(new ArrayBuffer(0));
     }
     this.waiting = true;
     try {
@@ -108,7 +112,7 @@ export class StreamFile {
   }
 
   readSync() {
-    return new ArrayBuffer();
+    return new ArrayBuffer(0);
   }
 
   readBytes() {
