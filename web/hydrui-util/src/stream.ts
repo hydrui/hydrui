@@ -163,6 +163,7 @@ export class MemoryFile extends FileCursor implements File {
 export class RemoteFile extends FileCursor implements File {
   private readonly url: string;
   private readonly chunkSize: number;
+  private readonly lastChunk: number;
   private readonly headers?: Record<string, string> | undefined;
 
   private dataBuffer: ArrayBuffer;
@@ -186,6 +187,7 @@ export class RemoteFile extends FileCursor implements File {
     }
     this.url = url;
     this.chunkSize = options.chunkSize ?? defaultChunkSize;
+    this.lastChunk = ((fileSize - 1) / this.chunkSize) | 0;
     this.headers = options.headers;
 
     this.dataBuffer = new ArrayBuffer(this.fileSize);
@@ -211,9 +213,12 @@ export class RemoteFile extends FileCursor implements File {
 
   private blocksToFetch(offset: number, size: number): number[] {
     const blocksToFetch: number[] = [];
+    const lastIndex = size > 0 ? offset + size - 1 : offset;
     const firstBlock: number = (offset / this.chunkSize) | 0;
-    const lastBlock: number =
-      ((offset + size + this.chunkSize - 1) / this.chunkSize) | 0;
+    const lastBlock: number = Math.min(
+      (lastIndex / this.chunkSize) | 0,
+      this.lastChunk,
+    );
     for (let i = firstBlock; i <= lastBlock; i++) {
       if (!this.chunksFetched.has(i)) {
         blocksToFetch.push(i);
