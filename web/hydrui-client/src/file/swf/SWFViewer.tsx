@@ -41,7 +41,9 @@ if (typeof window !== "undefined") {
   window.RufflePlayer = window.RufflePlayer || {};
   window.RufflePlayer.config = {
     autoplay: false,
-    publicPath: "/assets/ruffle",
+    publicPath: String(
+      new URL("assets/ruffle", new URL(import.meta.env.BASE_URL, document.URL)),
+    ),
     polyfills: false,
     showSwfDownload: true,
   };
