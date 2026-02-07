@@ -5,7 +5,9 @@ import { useEffect, useState } from "react";
 import { PlayerChrome } from "./PlayerChrome";
 import { StreamFile } from "./StreamFile";
 
-OGVLoader.base = "/assets/ogv";
+OGVLoader.base = String(
+  new URL("assets/ogv", new URL(import.meta.env.BASE_URL, document.URL)),
+);
 
 export interface OGVViewerProps {
   fileUrl: string;
