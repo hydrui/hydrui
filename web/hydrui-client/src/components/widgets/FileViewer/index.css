@@ -127,22 +127,6 @@
   margin-bottom: 0.5rem;
 }
 
-.pause-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  pointer-events: none;
-}
-
-.pause-icon {
-  width: 3rem;
-  height: 3rem;
-}
-
 .pdf-viewer-content {
   justify-content: normal;
 }

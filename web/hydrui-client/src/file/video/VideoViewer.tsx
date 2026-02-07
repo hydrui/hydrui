@@ -3,6 +3,8 @@ import React, { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { FileMetadata } from "@/api/types";
 import { client } from "@/store/apiStore";
 
+import "./index.css";
+
 const OGVViewer = lazy(() => import("./OGVViewer"));
 
 interface VideoViewerProps {
@@ -45,11 +47,20 @@ const VideoViewer: React.FC<VideoViewerProps> = ({
     setCanPlay(true);
   }, []);
 
-  const handleError = useCallback(() => {
-    if (!canPlay) {
-      setUseOgv(true);
-    }
-  }, [canPlay]);
+  const handleError = useCallback(
+    (event: React.SyntheticEvent<HTMLVideoElement>) => {
+      if (!canPlay) {
+        setUseOgv(true);
+      }
+      if (
+        event.currentTarget.error?.code ===
+        MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED
+      ) {
+        setUseOgv(true);
+      }
+    },
+    [canPlay],
+  );
 
   // TODO: The ogv fallback doesn't happen when it sometimes should.
   // Need to debug this on Apple devices in particular, as they seem to throw up
@@ -57,7 +68,12 @@ const VideoViewer: React.FC<VideoViewerProps> = ({
   if (useOgv) {
     return (
       <Suspense fallback={<div>Loading OGV Viewer...</div>}>
-        <OGVViewer fileUrl={fileUrl} autoPlay={autoPlay} loop={loop} />
+        <OGVViewer
+          fileUrl={fileUrl}
+          fileSize={fileData.size || 0}
+          autoPlay={autoPlay}
+          loop={loop}
+        />
       </Suspense>
     );
   }
