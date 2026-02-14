@@ -1585,6 +1585,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         )}
         <div
           style={{
+            pointerEvents: "none",
             paddingBottom: useVirtualViewport
               ? renderView.bottomRows * (thumbnailSize + GAP_SIZE)
               : 0,
