@@ -910,12 +910,12 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
             label: `Download${selectedFiles.length > 1 ? " all as ZIP" : ""}`,
             icon: <ArrowDownTrayIcon />,
             onClick: async () => {
-              if (selectedFiles.length > 1) {
-                const files = metadataLoadController
-                  ? await metadataLoadController.demandFetchMetadata(
-                      selectedFiles,
-                    )
-                  : selectedFileMetadata;
+              const files = metadataLoadController
+                ? await metadataLoadController.demandFetchMetadata(
+                    selectedFiles,
+                  )
+                : selectedFileMetadata;
+              if (files.length > 1) {
                 let abortController: AbortController | null = null;
                 if (typeof AbortController !== "undefined") {
                   abortController = new AbortController();
@@ -954,6 +954,11 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
                           ? { signal: abortController.signal }
                           : {},
                       );
+                      if (!response.ok) {
+                        throw new Error(
+                          `Failed to download file ${meta.file_id}: ${response.status} ${response.statusText}`,
+                        );
+                      }
                       const blob = await response.blob();
                       const filetype =
                         meta.filetype_enum ??
@@ -962,14 +967,14 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
                       await zipWriter.add(`${meta.hash}.${ext}`, blob.stream());
                       updateToastProgress(
                         toastId,
-                        (100 * filesDone++) / fileCount,
+                        (100 * ++filesDone) / fileCount,
                       );
                     }),
                   );
-                  abortController?.signal.throwIfAborted();
+                  abortController?.signal.throwIfAborted?.();
                   await zipWriter.close();
                   const zipBlob = await zipBlobWriter.getData();
-                  abortController?.signal.throwIfAborted();
+                  abortController?.signal.throwIfAborted?.();
                   let url: string | undefined = undefined;
                   try {
                     url = URL.createObjectURL(zipBlob);
@@ -978,7 +983,9 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
                     a.download = "files.zip";
                     a.click();
                   } finally {
-                    if (url) URL.revokeObjectURL(url);
+                    setTimeout(() => {
+                      if (url) URL.revokeObjectURL(url);
+                    }, 10);
                   }
                   addToast("Download as ZIP operation finished.", "success");
                 } catch (e: unknown) {
@@ -986,11 +993,8 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
                 } finally {
                   removeToast(toastId);
                 }
-              } else if (
-                selectedFileMetadata.length === 1 &&
-                selectedFileMetadata[0]
-              ) {
-                const meta = selectedFileMetadata[0];
+              } else if (files.length === 1 && files[0]) {
+                const meta = files[0];
                 const a = document.createElement("a");
                 a.href = client.getFileUrl(meta.file_id, true);
                 a.click();
