@@ -17,6 +17,7 @@ import {
   TrashIcon,
   WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
+import { ArrowDownTrayIcon } from "@heroicons/react/24/solid";
 import React, {
   useCallback,
   useEffect,
@@ -40,6 +41,7 @@ import ImportUrlsModal from "@/components/modals/ImportUrlsModal/ImportUrlsModal
 import TokenPassingModal from "@/components/modals/TokenPassingModal/TokenPassingModal";
 import Crash from "@/components/widgets/Crash/Crash";
 import ScrollView from "@/components/widgets/ScrollView/ScrollView";
+import { HydrusFileType, filetypeEnumToExt } from "@/constants/filetypes";
 import { renderDispatch } from "@/file/renderers";
 import { useContextMenu } from "@/hooks/useContextMenu";
 import useLongPress from "@/hooks/useLongPress";
@@ -901,6 +903,102 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
                   .map((f) => client.getFileUrl(f.file_id))
                   .join("\n"),
               );
+            },
+          },
+          {
+            id: "download",
+            label: `Download${selectedFiles.length > 1 ? " all as ZIP" : ""}`,
+            icon: <ArrowDownTrayIcon />,
+            onClick: async () => {
+              const files = metadataLoadController
+                ? await metadataLoadController.demandFetchMetadata(
+                    selectedFiles,
+                  )
+                : selectedFileMetadata;
+              if (files.length > 1) {
+                let abortController: AbortController | null = null;
+                if (typeof AbortController !== "undefined") {
+                  abortController = new AbortController();
+                }
+                const fileCount = selectedFiles.length;
+                const toastId = addToast(
+                  `Downloading ${fileCount} files...`,
+                  "info",
+                  {
+                    duration: false,
+                    actions: [
+                      {
+                        variant: "danger",
+                        label: "Cancel",
+                        callback: () => {
+                          abortController?.abort();
+                          removeToast(toastId);
+                        },
+                      },
+                    ],
+                  },
+                );
+                try {
+                  const { BlobWriter, ZipWriter } = await import(
+                    "@/utils/zipjs"
+                  );
+                  const zipBlobWriter = new BlobWriter("application/zip");
+                  const zipWriter = new ZipWriter(zipBlobWriter);
+                  let filesDone = 0;
+                  await Promise.all(
+                    files.map(async (meta) => {
+                      const url = client.getFileUrl(meta.file_id);
+                      const response = await fetch(
+                        url,
+                        abortController
+                          ? { signal: abortController.signal }
+                          : {},
+                      );
+                      if (!response.ok) {
+                        throw new Error(
+                          `Failed to download file ${meta.file_id}: ${response.status} ${response.statusText}`,
+                        );
+                      }
+                      const blob = await response.blob();
+                      const filetype =
+                        meta.filetype_enum ??
+                        HydrusFileType.APPLICATION_OCTET_STREAM;
+                      const ext = filetypeEnumToExt.get(filetype) || "bin";
+                      await zipWriter.add(`${meta.hash}.${ext}`, blob.stream());
+                      updateToastProgress(
+                        toastId,
+                        (100 * ++filesDone) / fileCount,
+                      );
+                    }),
+                  );
+                  abortController?.signal.throwIfAborted?.();
+                  await zipWriter.close();
+                  const zipBlob = await zipBlobWriter.getData();
+                  abortController?.signal.throwIfAborted?.();
+                  let url: string | undefined = undefined;
+                  try {
+                    url = URL.createObjectURL(zipBlob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "files.zip";
+                    a.click();
+                  } finally {
+                    setTimeout(() => {
+                      if (url) URL.revokeObjectURL(url);
+                    }, 10);
+                  }
+                  addToast("Download as ZIP operation finished.", "success");
+                } catch (e: unknown) {
+                  addToast(`Download as ZIP operation failed: ${e}`, "error");
+                } finally {
+                  removeToast(toastId);
+                }
+              } else if (files.length === 1 && files[0]) {
+                const meta = files[0];
+                const a = document.createElement("a");
+                a.href = client.getFileUrl(meta.file_id, true);
+                a.click();
+              }
             },
           },
         ],
