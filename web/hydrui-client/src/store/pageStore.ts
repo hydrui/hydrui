@@ -879,18 +879,17 @@ export const usePageStore = create<PageState>()(
           ) => {
             switch (pageType) {
               case "search": {
-                const currentFileIds = new Set(
-                  useSearchStore.getState().searchResults,
-                );
-                const newFileIds = fileIds.filter(
-                  (id) => !currentFileIds.has(id),
-                );
-                if (newFileIds.length === 0) return;
-                useSearchStore.setState({
-                  searchResults: [
-                    ...useSearchStore.getState().searchResults,
-                    ...newFileIds,
-                  ],
+                useSearchStore.setState((state) => {
+                  const currentFileIds = new Set(state.searchResults);
+                  const newFileIds = fileIds.filter(
+                    (id) => !currentFileIds.has(id),
+                  );
+                  if (newFileIds.length === 0) {
+                    return state;
+                  }
+                  return {
+                    searchResults: [...state.searchResults, ...newFileIds],
+                  };
                 });
                 await get().actions.updatePageContents(
                   SEARCH_PAGE_KEY,
