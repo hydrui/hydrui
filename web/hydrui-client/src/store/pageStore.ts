@@ -879,11 +879,17 @@ export const usePageStore = create<PageState>()(
           ) => {
             switch (pageType) {
               case "search": {
-                useSearchStore.setState({
-                  searchResults: [
-                    ...useSearchStore.getState().searchResults,
-                    ...fileIds,
-                  ],
+                useSearchStore.setState((state) => {
+                  const currentFileIds = new Set(state.searchResults);
+                  const newFileIds = fileIds.filter(
+                    (id) => !currentFileIds.has(id),
+                  );
+                  if (newFileIds.length === 0) {
+                    return state;
+                  }
+                  return {
+                    searchResults: [...state.searchResults, ...newFileIds],
+                  };
                 });
                 await get().actions.updatePageContents(
                   SEARCH_PAGE_KEY,
@@ -907,6 +913,12 @@ export const usePageStore = create<PageState>()(
                     );
                     return {};
                   }
+                  const currentFileIds = new Set(
+                    state.virtualPages[pageKey]?.fileIds,
+                  );
+                  const newFileIds = fileIds.filter(
+                    (id) => !currentFileIds.has(id),
+                  );
                   return {
                     virtualPages: {
                       ...state.virtualPages,
@@ -914,7 +926,7 @@ export const usePageStore = create<PageState>()(
                         ...state.virtualPages[pageKey],
                         fileIds: [
                           ...(state.virtualPages[pageKey]?.fileIds ?? []),
-                          ...fileIds,
+                          ...newFileIds,
                         ],
                       },
                     },
