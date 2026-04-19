@@ -39,6 +39,7 @@ export const Thumbnail: React.FC<ThumbnailProps> = React.memo(
                 setIsLoading(false);
               }
             }}
+            crossOrigin="anonymous"
           />
 
           {/* Loading overlay */}
