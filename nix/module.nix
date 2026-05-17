@@ -217,6 +217,14 @@ in
         RestrictRealtime = true;
         Restart = "on-failure";
         RestartSec = 10;
+        RuntimeDirectory = mkIf cfg.socket (
+          let
+            inherit (lib.strings) splitString concatStringsSep;
+            inherit (lib.lists) drop reverseList;
+            socketDir = "/${(concatStringsSep "/" (reverseList (drop 1 (reverseList (splitString "/" cfg.socket)))))}";
+          in
+          socketDir
+        );
         SystemCallArchitectures = "native";
         SystemCallFilter = [
           "@system-service"
