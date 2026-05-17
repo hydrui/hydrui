@@ -24,6 +24,7 @@ type Values struct {
 	ListenTLS      string
 	ListenInternal string
 	Socket         string
+	SocketPerms    string
 	SocketTLS      string
 	SocketInternal string
 	TLSCertFile    string
@@ -71,6 +72,7 @@ func (v *Values) ParseFlags(args []string) error {
 	set.StringVar(&v.ListenTLS, "listen-tls", v.ListenTLS, "Listen address for HTTPS (TLS)")
 	set.StringVar(&v.ListenInternal, "listen-internal", v.ListenInternal, "Internal listen address (metrics/healthcheck/etc.)")
 	set.StringVar(&v.Socket, "socket", v.Socket, "Listen on UNIX domain socket for HTTP")
+	set.StringVar(&v.SocketPerms, "socket-perms", v.SocketPerms, "Permissions for UNIX domain socket")
 	set.StringVar(&v.SocketTLS, "socket-tls", v.SocketTLS, "Listen on UNIX domain socket for HTTPS (TLS)")
 	set.StringVar(&v.SocketInternal, "socket-internal", v.SocketInternal, "Internal UNIX domain socket (metrics/healthcheck/etc.)")
 	set.StringVar(&v.TLSCertFile, "tls-cert-file", v.TLSCertFile, "TLS certificate file to use for TLS port (full chain, PEM-formatted)")
@@ -118,6 +120,7 @@ func (v *Values) ParseEnv() {
 	stringEnv(&v.ListenTLS, "HYDRUI_LISTEN_TLS")
 	stringEnv(&v.ListenInternal, "HYDRUI_LISTEN_INTERNAL")
 	stringEnv(&v.Socket, "HYDRUI_SOCKET")
+	stringEnv(&v.SocketPerms, "HYDRUI_SOCKET_PERMS")
 	stringEnv(&v.SocketTLS, "HYDRUI_SOCKET_TLS")
 	stringEnv(&v.SocketInternal, "HYDRUI_SOCKET_INTERNAL")
 	stringEnv(&v.TLSCertFile, "HYDRUI_TLS_CERT_FILE")
@@ -145,6 +148,7 @@ func (v *Values) ServerConfig(ctx context.Context, log *slog.Logger) (server.Con
 		ListenTLS:      v.ListenTLS,
 		ListenInternal: v.ListenInternal,
 		Socket:         v.Socket,
+		SocketPerms:    v.SocketPerms,
 		SocketTLS:      v.SocketTLS,
 		TLSCertFile:    v.TLSCertFile,
 		TLSKeyFile:     v.TLSKeyFile,
