@@ -19,28 +19,18 @@ let
     "-server-mode=${boolStr cfg.serverMode}"
     "-acme=${boolStr cfg.acme}"
   ]
-  ++ optionals (cfg.port != null) [
-    "-listen=${toString cfg.bindAddress}:${toString cfg.port}"
-  ]
+  ++ optionals (cfg.port != null) [ "-listen=${toString cfg.bindAddress}:${toString cfg.port}" ]
   ++ optionals (cfg.socket != null) [
     "-socket=${cfg.socket}"
     "-listen="
   ]
-  ++ optionals (cfg.hydrusUrl != null) [
-    "-hydrus-url=${cfg.hydrusUrl}"
-  ]
+  ++ optionals (cfg.hydrusUrl != null) [ "-hydrus-url=${cfg.hydrusUrl}" ]
   ++ optionals (cfg.hydrusApiKeyFile != null) [
     "-hydrus-api-key-file=$CREDENTIALS_DIRECTORY/hydrus-api-key"
   ]
-  ++ optionals (cfg.htpasswdFile != null) [
-    "-htpasswd=$CREDENTIALS_DIRECTORY/htpasswd"
-  ]
-  ++ optionals (cfg.allowReport != null) [
-    "-allow-bug-report=${boolStr cfg.allowReport}"
-  ]
-  ++ optionals cfg.noAuth [
-    "-no-auth=true"
-  ]
+  ++ optionals (cfg.htpasswdFile != null) [ "-htpasswd=$CREDENTIALS_DIRECTORY/htpasswd" ]
+  ++ optionals (cfg.allowReport != null) [ "-allow-bug-report=${boolStr cfg.allowReport}" ]
+  ++ optionals cfg.noAuth [ "-no-auth=true" ]
   # # Hydrui Server will create the secret file if it doesn't exist.
   # ++ optionals (cfg.serverMode && cfg.secretFile == null) [
   #   "-secret-file"
@@ -79,6 +69,18 @@ in
         default = "";
         example = "127.0.0.1";
         description = "Address to listen on; empty string for all interfaces.";
+      };
+      user = mkOption {
+        type = types.str;
+        default = "hydrui";
+        example = "hydrus";
+        description = "User under which the service is running on.";
+      };
+      group = mkOption {
+        type = types.str;
+        default = "hydrui";
+        example = "hydrus";
+        description = "Group under which the service is running on.";
       };
       port = mkOption {
         type = types.nullOr types.port;
@@ -191,22 +193,15 @@ in
       documentation = [ "https://hydrui.dev" ];
       wantedBy = [ "multi-user.target" ];
       wants = [ "network-online.target" ];
-      after = [
-        "network-online.target"
-      ];
+      after = [ "network-online.target" ];
       serviceConfig = {
         DynamicUser = true;
         ExecStart = "${cfg.package}/bin/hydrui-server ${lib.concatStringsSep " " args}";
+        Group = cfg.group;
         LoadCredential =
-          optionals (cfg.serverMode && cfg.secretFile != null) [
-            "secret:${cfg.secretFile}"
-          ]
-          ++ optionals (cfg.hydrusApiKeyFile != null) [
-            "hydrus-api-key:${cfg.hydrusApiKeyFile}"
-          ]
-          ++ optionals (cfg.htpasswdFile != null) [
-            "htpasswd:${cfg.htpasswdFile}"
-          ];
+          optionals (cfg.serverMode && cfg.secretFile != null) [ "secret:${cfg.secretFile}" ]
+          ++ optionals (cfg.hydrusApiKeyFile != null) [ "hydrus-api-key:${cfg.hydrusApiKeyFile}" ]
+          ++ optionals (cfg.htpasswdFile != null) [ "htpasswd:${cfg.htpasswdFile}" ];
         LockPersonality = true;
         MemoryDenyWriteExecute = true;
         ProtectClock = true;
@@ -229,7 +224,7 @@ in
         ];
         StateDirectory = "hydrui-server";
         StateDirectoryMode = "0700";
-        User = "hydrui";
+        User = cfg.user;
         UMask = "077";
       };
       unitConfig = {
