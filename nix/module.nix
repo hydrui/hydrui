@@ -24,6 +24,7 @@ let
     "-socket=${cfg.socket}"
     "-listen="
   ]
+  ++ optionals (cfg.socketPerms != null) [ "-socket-perms=${cfg.socketPerms}" ]
   ++ optionals (cfg.hydrusUrl != null) [ "-hydrus-url=${cfg.hydrusUrl}" ]
   ++ optionals (cfg.hydrusApiKeyFile != null) [
     "-hydrus-api-key-file=$CREDENTIALS_DIRECTORY/hydrus-api-key"
@@ -71,14 +72,14 @@ in
         description = "Address to listen on; empty string for all interfaces.";
       };
       user = mkOption {
-        type = types.str;
-        default = "hydrui";
+        type = types.nullOr types.str;
+        default = null;
         example = "hydrus";
-        description = "User under which the service is running on.";
+        description = "User under which the service is running on, or null for systemd DynamicUser.";
       };
       group = mkOption {
-        type = types.str;
-        default = "hydrui";
+        type = types.nullOr types.str;
+        default = null;
         example = "hydrus";
         description = "Group under which the service is running on.";
       };
@@ -92,6 +93,12 @@ in
         default = null;
         example = "/var/run/hydrui.sock";
         description = "UNIX domain socket path to bind, or null to disable listening on a UNIX domain socket.";
+      };
+      socketPerms = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        example = "0660";
+        description = "Permissions to set on the UNIX domain socket, or null to use Hydrui's default.";
       };
       hydrusUrl = mkOption {
         type = types.nullOr types.str;
@@ -138,6 +145,14 @@ in
       {
         assertion = (cfg.port == null) != (cfg.socket == null);
         message = "one and only one of services.hydrui.port and services.hydrui.socket may be set";
+      }
+      {
+        assertion = cfg.socketPerms == null || cfg.socket != null;
+        message = "services.hydrui.socketPerms can only be set when services.hydrui.socket is set";
+      }
+      {
+        assertion = cfg.group == null || cfg.user != null;
+        message = "services.hydrui.group can only be set when services.hydrui.user is set, since Group is ineffective with DynamicUser";
       }
       {
         assertion = cfg.serverMode == true || cfg.hydrusUrl == null;
@@ -195,7 +210,7 @@ in
       wants = [ "network-online.target" ];
       after = [ "network-online.target" ];
       serviceConfig = {
-        DynamicUser = true;
+        DynamicUser = cfg.user == null;
         ExecStart = "${cfg.package}/bin/hydrui-server ${lib.concatStringsSep " " args}";
         Group = cfg.group;
         LoadCredential =
@@ -217,13 +232,8 @@ in
         RestrictRealtime = true;
         Restart = "on-failure";
         RestartSec = 10;
-        RuntimeDirectory = mkIf cfg.socket (
-          let
-            inherit (lib.strings) splitString concatStringsSep;
-            inherit (lib.lists) drop reverseList;
-            socketDir = "/${(concatStringsSep "/" (reverseList (drop 1 (reverseList (splitString "/" cfg.socket)))))}";
-          in
-          socketDir
+        RuntimeDirectory = mkIf (cfg.socket != null && lib.hasPrefix "/run/" (toString cfg.socket)) (
+          lib.removePrefix "/run/" (builtins.dirOf (toString cfg.socket))
         );
         SystemCallArchitectures = "native";
         SystemCallFilter = [

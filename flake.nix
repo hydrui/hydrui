@@ -29,6 +29,8 @@
         gen-module-options = pkgs.callPackage ./nix/gen-module-options.nix { inherit self nixpkgs; };
         tests-docker-compose = pkgs.callPackage ./nix/tests/docker-compose.nix { };
         tests-kubernetes = pkgs.callPackage ./nix/tests/kubernetes.nix { };
+        tests-nixos-port = pkgs.callPackage ./nix/tests/nixos-port.nix { };
+        tests-nixos-socket-permissions = pkgs.callPackage ./nix/tests/nixos-socket-permissions.nix { };
       in
       {
         packages = {
@@ -39,6 +41,8 @@
             gen-module-options
             tests-docker-compose
             tests-kubernetes
+            tests-nixos-port
+            tests-nixos-socket-permissions
             ;
           default = hydrui-server;
         };
@@ -54,6 +58,8 @@
             hydrui-api
             tests-docker-compose
             tests-kubernetes
+            tests-nixos-port
+            tests-nixos-socket-permissions
             ;
         };
         devShells.default = pkgs.mkShell {
