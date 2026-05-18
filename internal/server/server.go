@@ -127,6 +127,7 @@ type Config struct {
 	ListenTLS      string
 	ListenInternal string
 	Socket         string
+	SocketPerms    string
 	SocketTLS      string
 	SocketInternal string
 	TLSCertFile    string

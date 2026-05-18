@@ -19,28 +19,19 @@ let
     "-server-mode=${boolStr cfg.serverMode}"
     "-acme=${boolStr cfg.acme}"
   ]
-  ++ optionals (cfg.port != null) [
-    "-listen=${toString cfg.bindAddress}:${toString cfg.port}"
-  ]
+  ++ optionals (cfg.port != null) [ "-listen=${toString cfg.bindAddress}:${toString cfg.port}" ]
   ++ optionals (cfg.socket != null) [
     "-socket=${cfg.socket}"
     "-listen="
   ]
-  ++ optionals (cfg.hydrusUrl != null) [
-    "-hydrus-url=${cfg.hydrusUrl}"
-  ]
+  ++ optionals (cfg.socketPerms != null) [ "-socket-perms=${cfg.socketPerms}" ]
+  ++ optionals (cfg.hydrusUrl != null) [ "-hydrus-url=${cfg.hydrusUrl}" ]
   ++ optionals (cfg.hydrusApiKeyFile != null) [
     "-hydrus-api-key-file=$CREDENTIALS_DIRECTORY/hydrus-api-key"
   ]
-  ++ optionals (cfg.htpasswdFile != null) [
-    "-htpasswd=$CREDENTIALS_DIRECTORY/htpasswd"
-  ]
-  ++ optionals (cfg.allowReport != null) [
-    "-allow-bug-report=${boolStr cfg.allowReport}"
-  ]
-  ++ optionals cfg.noAuth [
-    "-no-auth=true"
-  ]
+  ++ optionals (cfg.htpasswdFile != null) [ "-htpasswd=$CREDENTIALS_DIRECTORY/htpasswd" ]
+  ++ optionals (cfg.allowReport != null) [ "-allow-bug-report=${boolStr cfg.allowReport}" ]
+  ++ optionals cfg.noAuth [ "-no-auth=true" ]
   # # Hydrui Server will create the secret file if it doesn't exist.
   # ++ optionals (cfg.serverMode && cfg.secretFile == null) [
   #   "-secret-file"
@@ -80,6 +71,18 @@ in
         example = "127.0.0.1";
         description = "Address to listen on; empty string for all interfaces.";
       };
+      user = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        example = "hydrus";
+        description = "User under which the service is running on, or null for systemd DynamicUser.";
+      };
+      group = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        example = "hydrus";
+        description = "Group under which the service is running on.";
+      };
       port = mkOption {
         type = types.nullOr types.port;
         default = 8080;
@@ -90,6 +93,12 @@ in
         default = null;
         example = "/var/run/hydrui.sock";
         description = "UNIX domain socket path to bind, or null to disable listening on a UNIX domain socket.";
+      };
+      socketPerms = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        example = "0660";
+        description = "Permissions to set on the UNIX domain socket, or null to use Hydrui's default.";
       };
       hydrusUrl = mkOption {
         type = types.nullOr types.str;
@@ -136,6 +145,14 @@ in
       {
         assertion = (cfg.port == null) != (cfg.socket == null);
         message = "one and only one of services.hydrui.port and services.hydrui.socket may be set";
+      }
+      {
+        assertion = cfg.socketPerms == null || cfg.socket != null;
+        message = "services.hydrui.socketPerms can only be set when services.hydrui.socket is set";
+      }
+      {
+        assertion = cfg.group == null || cfg.user != null;
+        message = "services.hydrui.group can only be set when services.hydrui.user is set, since Group is ineffective with DynamicUser";
       }
       {
         assertion = cfg.serverMode == true || cfg.hydrusUrl == null;
@@ -191,22 +208,15 @@ in
       documentation = [ "https://hydrui.dev" ];
       wantedBy = [ "multi-user.target" ];
       wants = [ "network-online.target" ];
-      after = [
-        "network-online.target"
-      ];
+      after = [ "network-online.target" ];
       serviceConfig = {
-        DynamicUser = true;
+        DynamicUser = cfg.user == null;
         ExecStart = "${cfg.package}/bin/hydrui-server ${lib.concatStringsSep " " args}";
+        Group = cfg.group;
         LoadCredential =
-          optionals (cfg.serverMode && cfg.secretFile != null) [
-            "secret:${cfg.secretFile}"
-          ]
-          ++ optionals (cfg.hydrusApiKeyFile != null) [
-            "hydrus-api-key:${cfg.hydrusApiKeyFile}"
-          ]
-          ++ optionals (cfg.htpasswdFile != null) [
-            "htpasswd:${cfg.htpasswdFile}"
-          ];
+          optionals (cfg.serverMode && cfg.secretFile != null) [ "secret:${cfg.secretFile}" ]
+          ++ optionals (cfg.hydrusApiKeyFile != null) [ "hydrus-api-key:${cfg.hydrusApiKeyFile}" ]
+          ++ optionals (cfg.htpasswdFile != null) [ "htpasswd:${cfg.htpasswdFile}" ];
         LockPersonality = true;
         MemoryDenyWriteExecute = true;
         ProtectClock = true;
@@ -222,6 +232,9 @@ in
         RestrictRealtime = true;
         Restart = "on-failure";
         RestartSec = 10;
+        RuntimeDirectory = mkIf (cfg.socket != null && lib.hasPrefix "/run/" (toString cfg.socket)) (
+          lib.removePrefix "/run/" (builtins.dirOf (toString cfg.socket))
+        );
         SystemCallArchitectures = "native";
         SystemCallFilter = [
           "@system-service"
@@ -229,7 +242,7 @@ in
         ];
         StateDirectory = "hydrui-server";
         StateDirectoryMode = "0700";
-        User = "hydrui";
+        User = cfg.user;
         UMask = "077";
       };
       unitConfig = {

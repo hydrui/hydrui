@@ -77,7 +77,7 @@ func NewManager(ctx context.Context, log *slog.Logger, clientData *pack.Pack) *M
 		startedMessage := StatusStarted{}
 
 		// Configure listeners
-		httpListener, err := newListener(config.Listen, config.Socket)
+		httpListener, err := newListener(config.Listen, config.Socket, config.SocketPerms)
 		if err != nil {
 			s.statusCh <- StatusError{Error: fmt.Errorf("error listening for HTTP connections: %w", err)}
 			return
@@ -85,7 +85,7 @@ func NewManager(ctx context.Context, log *slog.Logger, clientData *pack.Pack) *M
 		if httpListener != nil {
 			startedMessage.Address = httpListener.Addr()
 		}
-		httpsListener, err := newListener(config.ListenTLS, config.SocketTLS)
+		httpsListener, err := newListener(config.ListenTLS, config.SocketTLS, config.SocketPerms)
 		if err != nil {
 			s.statusCh <- StatusError{Error: fmt.Errorf("error listening for HTTPS connections: %w", err)}
 			return
@@ -95,7 +95,7 @@ func NewManager(ctx context.Context, log *slog.Logger, clientData *pack.Pack) *M
 		}
 		var internalListener net.Listener
 		if config.ListenInternal != "" {
-			internalListener, err = newListener(config.ListenInternal, config.SocketInternal)
+			internalListener, err = newListener(config.ListenInternal, config.SocketInternal, config.SocketPerms)
 			if err != nil {
 				s.statusCh <- StatusError{Error: fmt.Errorf("error listening for internal connections: %w", err)}
 				return
