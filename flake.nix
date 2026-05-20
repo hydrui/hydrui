@@ -31,6 +31,7 @@
         tests-kubernetes = pkgs.callPackage ./nix/tests/kubernetes.nix { };
         tests-nixos-port = pkgs.callPackage ./nix/tests/nixos-port.nix { };
         tests-nixos-socket-permissions = pkgs.callPackage ./nix/tests/nixos-socket-permissions.nix { };
+        tests-nixos-tls = pkgs.callPackage ./nix/tests/nixos-tls.nix { };
       in
       {
         packages = {
@@ -43,6 +44,7 @@
             tests-kubernetes
             tests-nixos-port
             tests-nixos-socket-permissions
+            tests-nixos-tls
             ;
           default = hydrui-server;
         };
@@ -60,6 +62,7 @@
             tests-kubernetes
             tests-nixos-port
             tests-nixos-socket-permissions
+            tests-nixos-tls
             ;
         };
         devShells.default = pkgs.mkShell {

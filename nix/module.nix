@@ -20,10 +20,14 @@ let
     "-acme=${boolStr cfg.acme}"
   ]
   ++ optionals (cfg.port != null) [ "-listen=${toString cfg.bindAddress}:${toString cfg.port}" ]
-  ++ optionals (cfg.socket != null) [
-    "-socket=${cfg.socket}"
-    "-listen="
+  ++ optionals (cfg.port == null && cfg.socket == null) [ "-listen=" ]
+  ++ optionals (cfg.socket != null) [ "-socket=${cfg.socket}" ]
+  ++ optionals (cfg.portTLS != null) [
+    "-listen-tls=${toString cfg.bindAddress}:${toString cfg.portTLS}"
   ]
+  ++ optionals (cfg.socketTLS != null) [ "-socket-tls=${cfg.socketTLS}" ]
+  ++ optionals (cfg.tlsCertFile != null) [ "-tls-cert-file=$CREDENTIALS_DIRECTORY/tls-cert" ]
+  ++ optionals (cfg.tlsKeyFile != null) [ "-tls-key-file=$CREDENTIALS_DIRECTORY/tls-key" ]
   ++ optionals (cfg.socketPerms != null) [ "-socket-perms=${cfg.socketPerms}" ]
   ++ optionals (cfg.hydrusUrl != null) [ "-hydrus-url=${cfg.hydrusUrl}" ]
   ++ optionals (cfg.hydrusApiKeyFile != null) [
@@ -94,6 +98,30 @@ in
         example = "/var/run/hydrui.sock";
         description = "UNIX domain socket path to bind, or null to disable listening on a UNIX domain socket.";
       };
+      portTLS = mkOption {
+        type = types.nullOr types.port;
+        default = null;
+        example = 8443;
+        description = "Port to listen on for HTTPS (TLS), or null to disable listening on TCP TLS.";
+      };
+      socketTLS = mkOption {
+        type = types.nullOr types.path;
+        default = null;
+        example = "/var/run/hydrui-tls.sock";
+        description = "UNIX domain socket path to bind for HTTPS (TLS), or null to disable listening on a UNIX domain socket TLS.";
+      };
+      tlsCertFile = mkOption {
+        type = types.nullOr types.path;
+        default = null;
+        example = "/var/lib/hydrui/cert.pem";
+        description = "Path to the TLS certificate file (full chain, PEM-formatted).";
+      };
+      tlsKeyFile = mkOption {
+        type = types.nullOr types.path;
+        default = null;
+        example = "/var/lib/hydrui/key.pem";
+        description = "Path to the TLS private key file (PEM-formatted).";
+      };
       socketPerms = mkOption {
         type = types.nullOr types.str;
         default = null;
@@ -143,12 +171,24 @@ in
   config = mkIf cfg.enable {
     assertions = [
       {
-        assertion = (cfg.port == null) != (cfg.socket == null);
-        message = "one and only one of services.hydrui.port and services.hydrui.socket may be set";
+        assertion = cfg.port == null || cfg.socket == null;
+        message = "at most one of services.hydrui.port and services.hydrui.socket may be set";
       }
       {
-        assertion = cfg.socketPerms == null || cfg.socket != null;
-        message = "services.hydrui.socketPerms can only be set when services.hydrui.socket is set";
+        assertion = cfg.portTLS == null || cfg.socketTLS == null;
+        message = "at most one of services.hydrui.portTLS and services.hydrui.socketTLS may be set";
+      }
+      {
+        assertion = cfg.port != null || cfg.socket != null || cfg.portTLS != null || cfg.socketTLS != null;
+        message = "at least one listener (port, socket, portTLS, or socketTLS) must be configured";
+      }
+      {
+        assertion = cfg.socketPerms == null || cfg.socket != null || cfg.socketTLS != null;
+        message = "services.hydrui.socketPerms can only be set when services.hydrui.socket or services.hydrui.socketTLS is set";
+      }
+      {
+        assertion = (cfg.tlsCertFile == null) == (cfg.tlsKeyFile == null);
+        message = "both services.hydrui.tlsCertFile and services.hydrui.tlsKeyFile must be set, or neither";
       }
       {
         assertion = cfg.group == null || cfg.user != null;
@@ -216,7 +256,9 @@ in
         LoadCredential =
           optionals (cfg.serverMode && cfg.secretFile != null) [ "secret:${cfg.secretFile}" ]
           ++ optionals (cfg.hydrusApiKeyFile != null) [ "hydrus-api-key:${cfg.hydrusApiKeyFile}" ]
-          ++ optionals (cfg.htpasswdFile != null) [ "htpasswd:${cfg.htpasswdFile}" ];
+          ++ optionals (cfg.htpasswdFile != null) [ "htpasswd:${cfg.htpasswdFile}" ]
+          ++ optionals (cfg.tlsCertFile != null) [ "tls-cert:${cfg.tlsCertFile}" ]
+          ++ optionals (cfg.tlsKeyFile != null) [ "tls-key:${cfg.tlsKeyFile}" ];
         LockPersonality = true;
         MemoryDenyWriteExecute = true;
         ProtectClock = true;
@@ -232,9 +274,19 @@ in
         RestrictRealtime = true;
         Restart = "on-failure";
         RestartSec = 10;
-        RuntimeDirectory = mkIf (cfg.socket != null && lib.hasPrefix "/run/" (toString cfg.socket)) (
-          lib.removePrefix "/run/" (builtins.dirOf (toString cfg.socket))
-        );
+        RuntimeDirectory =
+          let
+            socketPath =
+              if cfg.socket != null then
+                toString cfg.socket
+              else if cfg.socketTLS != null then
+                toString cfg.socketTLS
+              else
+                "";
+          in
+          mkIf (socketPath != "" && lib.hasPrefix "/run/" socketPath) (
+            lib.removePrefix "/run/" (builtins.dirOf socketPath)
+          );
         SystemCallArchitectures = "native";
         SystemCallFilter = [
           "@system-service"
@@ -249,8 +301,9 @@ in
         StartLimitBurst = 5;
       };
     };
-    networking.firewall = mkIf (cfg.openFirewall && cfg.port != null) {
-      allowedTCPPorts = [ cfg.port ];
+    networking.firewall = mkIf cfg.openFirewall {
+      allowedTCPPorts =
+        optionals (cfg.port != null) [ cfg.port ] ++ optionals (cfg.portTLS != null) [ cfg.portTLS ];
     };
   };
 }

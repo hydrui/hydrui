@@ -2,9 +2,15 @@ package server
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"net"
 	"net/http"
 	"strconv"
@@ -44,7 +50,7 @@ func NewManager(ctx context.Context, log *slog.Logger, clientData *pack.Pack) *M
 		}
 		if httpsServer != nil {
 			group.Go(func() error {
-				err := httpServer.Shutdown(shutdownCtx)
+				err := httpsServer.Shutdown(shutdownCtx)
 				if err != nil && err != http.ErrServerClosed {
 					log.LogAttrs(ctx, slog.LevelError, "Failed to shutdown HTTPS server.", slog.Any("error", err))
 				}
@@ -168,15 +174,38 @@ func NewManager(ctx context.Context, log *slog.Logger, clientData *pack.Pack) *M
 		}
 		if httpsListener != nil {
 			go func() {
-				if err := newHttpsServer.Serve(httpListener); err != nil && err != http.ErrServerClosed {
-					s.statusCh <- StatusError{Error: fmt.Errorf("error in HTTP server: %w", err)}
+				var tlsConfig *tls.Config
+				if config.TLSCertFile != "" && config.TLSKeyFile != "" {
+					log.Info("Loading TLS keypair from filesystem.", "cert", config.TLSCertFile, "key", config.TLSKeyFile)
+					tlsConfig = &tls.Config{}
+					cert, err := tls.LoadX509KeyPair(config.TLSCertFile, config.TLSKeyFile)
+					if err != nil {
+						s.statusCh <- StatusError{Error: fmt.Errorf("error loading static TLS keypair: %w", err)}
+						return
+					}
+					tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
+				} else if config.ACME != nil {
+					tlsConfig = config.ACME.TLSConfig()
+				} else {
+					log.Info("Generating self-signed TLS certificate. This should only be used for testing purposes.")
+					log.Info("It is recommended to use ACME or provide TLS certificates via -tls-cert-file and -tls-key-file.")
+					tlsConfig = &tls.Config{}
+					cert, err := generateSelfSignedCert()
+					if err != nil {
+						s.statusCh <- StatusError{Error: fmt.Errorf("error generating self-signed TLS keypair: %w", err)}
+						return
+					}
+					tlsConfig.Certificates = append(tlsConfig.Certificates, cert)
+				}
+				if err := newHttpsServer.Serve(tls.NewListener(httpsListener, tlsConfig)); err != nil && err != http.ErrServerClosed {
+					s.statusCh <- StatusError{Error: fmt.Errorf("error in HTTPS server: %w", err)}
 				}
 			}()
 		}
 		if internalListener != nil {
 			go func() {
 				if err := newInternalServer.Serve(internalListener); err != nil && err != http.ErrServerClosed {
-					s.statusCh <- StatusError{Error: fmt.Errorf("error in HTTP server: %w", err)}
+					s.statusCh <- StatusError{Error: fmt.Errorf("error in internal HTTP server: %w", err)}
 				}
 			}()
 		}
@@ -250,3 +279,33 @@ func (commandConfigureServer) isCommandMessage() {}
 type commandStopServer struct{}
 
 func (commandStopServer) isCommandMessage() {}
+
+func generateSelfSignedCert() (tls.Certificate, error) {
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Organization: []string{"Hydrui"},
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(365 * 24 * time.Hour),
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		DNSNames:              []string{"localhost"},
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		return tls.Certificate{}, err
+	}
+
+	return tls.Certificate{
+		Certificate: [][]byte{derBytes},
+		PrivateKey:  priv,
+	}, nil
+}
