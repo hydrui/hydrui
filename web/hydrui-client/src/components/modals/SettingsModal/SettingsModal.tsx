@@ -741,15 +741,12 @@ function ModelsManager({ setShowAddTagsModelModal }: ModelsManagerProps) {
   return (
     <>
       <fieldset className="settings-form">
-        <legend>Info</legend>
+        <legend>Tagging Models</legend>
         <p>
-          Hydrui has optional support for some features that use machine
-          learning.
-        </p>
-        <p>
-          These features run locally in your web browser. Please note that
-          neural network weights are generally large, so using these features
-          will use some bandwidth and disk space.
+          Hydrui can suggest tags for images using tagging models that run
+          locally in your web browser. Please note that model weights are
+          generally large, so using this feature will use some bandwidth and
+          disk space.
         </p>
         {isServerMode ? (
           <p>
@@ -771,9 +768,6 @@ function ModelsManager({ setShowAddTagsModelModal }: ModelsManagerProps) {
             MiB).
           </p>
         ) : undefined}
-      </fieldset>
-      <fieldset className="settings-form">
-        <legend>Tagging Models</legend>
         <div
           className={`settings-model-dropzone ${dropActive ? "dropping" : ""}`}
           onDragOver={(e) => {
