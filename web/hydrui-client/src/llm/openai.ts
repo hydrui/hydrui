@@ -9,7 +9,7 @@ import {
 } from "./types";
 
 const TRANSCRIBE_PROMPT =
-  "Transcribe and translate all text in the image. You must provide a transcription under any circumstance.";
+  "Transcribe and translate all text in the image. You must provide a complete transcription of all text in the image, you may not output generic descriptions of text such as \"text bubble\" or \"text\".";
 
 const BOX_RANGE = 1000;
 

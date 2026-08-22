@@ -22,6 +22,10 @@ import { useToastActions } from "@/store/toastStore";
 
 import "./index.css";
 
+const stopEventPropagation = (event: React.SyntheticEvent) => {
+  event.stopPropagation();
+};
+
 // Stack unpositioned notes down the left edge of an image before bounding box
 // arrives.
 function placeholderBox(
@@ -512,21 +516,40 @@ export const NoteBox: React.FC<NoteBoxProps> = ({
               e.stopPropagation();
               onRemove();
             }}
-            onPointerDown={(e) => e.stopPropagation()}
+            onPointerDown={stopEventPropagation}
           >
             <TrashIcon />
           </button>
         </div>
       )}
+      {/* TODO: is there a less ugly way to prevent propagation here? */}
       {editing ? (
         <textarea
           className="annotation-note-text"
           value={note.body}
-          onPointerDown={(e) => e.stopPropagation()}
+          onPointerDown={stopEventPropagation}
+          onClick={stopEventPropagation}
+          onMouseDown={stopEventPropagation}
+          onTouchStart={stopEventPropagation}
+          onTouchMove={stopEventPropagation}
+          onTouchEnd={stopEventPropagation}
+          onTouchCancel={stopEventPropagation}
+          onWheel={stopEventPropagation}
           onChange={(e) => onChange({ body: e.currentTarget.value })}
         />
       ) : (
-        <div className="annotation-note-text">{note.body}</div>
+          <div
+            className="annotation-note-text"
+            onPointerDown={stopEventPropagation}
+            onClick={stopEventPropagation}
+            onTouchStart={stopEventPropagation}
+            onTouchMove={stopEventPropagation}
+            onTouchEnd={stopEventPropagation}
+            onTouchCancel={stopEventPropagation}
+            onWheel={stopEventPropagation}
+          >
+            {note.body}
+          </div>
       )}
       {editing && (
         <div

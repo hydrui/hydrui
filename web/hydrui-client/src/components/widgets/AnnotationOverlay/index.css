@@ -92,13 +92,9 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  pointer-events: none;
+  pointer-events: auto;
   backdrop-filter: blur(1px);
   text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.5);
-}
-
-.annotation-overlay.editing .annotation-note {
-  pointer-events: auto;
 }
 
 /* Streamed note whose bounding box hasn't arrived yet. */
