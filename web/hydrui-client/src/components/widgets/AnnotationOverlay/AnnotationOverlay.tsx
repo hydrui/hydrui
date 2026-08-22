@@ -4,7 +4,13 @@ import {
   SparklesIcon,
   TrashIcon,
 } from "@heroicons/react/24/solid";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { FileMetadata } from "@/api/types";
 import {
@@ -20,6 +26,7 @@ import { useSelectedLLMProvider } from "@/store/llmStore";
 import { usePageActions } from "@/store/pageStore";
 import { useToastActions } from "@/store/toastStore";
 
+import { fitAnnotationFontSize } from "./fitText";
 import "./index.css";
 
 const stopEventPropagation = (event: React.SyntheticEvent) => {
@@ -438,6 +445,13 @@ export const NoteBox: React.FC<NoteBoxProps> = ({
 }) => {
   const scaleX = note.imageWidth ? displayWidth / note.imageWidth : 1;
   const scaleY = note.imageHeight ? displayHeight / note.imageHeight : 1;
+  const textRef = useRef<HTMLElement | null>(null);
+  const setTextRef = useCallback(
+    (element: HTMLDivElement | HTMLTextAreaElement | null) => {
+      textRef.current = element;
+    },
+    [],
+  );
 
   const dragRef = useRef<{
     mode: DragMode;
@@ -445,6 +459,12 @@ export const NoteBox: React.FC<NoteBoxProps> = ({
     startY: number;
     orig: Annotation;
   } | null>(null);
+
+  useLayoutEffect(() => {
+    const element = textRef.current;
+    if (!element) return;
+    fitAnnotationFontSize(element, note.body);
+  }, [editing, note.body, note.height, note.width, scaleX, scaleY]);
 
   const onPointerDown =
     (mode: DragMode) => (e: React.PointerEvent<HTMLDivElement>) => {
@@ -525,6 +545,7 @@ export const NoteBox: React.FC<NoteBoxProps> = ({
       {/* TODO: is there a less ugly way to prevent propagation here? */}
       {editing ? (
         <textarea
+          ref={setTextRef}
           className="annotation-note-text"
           value={note.body}
           onPointerDown={stopEventPropagation}
@@ -539,6 +560,7 @@ export const NoteBox: React.FC<NoteBoxProps> = ({
         />
       ) : (
         <div
+          ref={setTextRef}
           className="annotation-note-text"
           onPointerDown={stopEventPropagation}
           onClick={stopEventPropagation}
