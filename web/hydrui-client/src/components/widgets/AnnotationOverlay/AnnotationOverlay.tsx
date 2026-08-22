@@ -538,18 +538,18 @@ export const NoteBox: React.FC<NoteBoxProps> = ({
           onChange={(e) => onChange({ body: e.currentTarget.value })}
         />
       ) : (
-          <div
-            className="annotation-note-text"
-            onPointerDown={stopEventPropagation}
-            onClick={stopEventPropagation}
-            onTouchStart={stopEventPropagation}
-            onTouchMove={stopEventPropagation}
-            onTouchEnd={stopEventPropagation}
-            onTouchCancel={stopEventPropagation}
-            onWheel={stopEventPropagation}
-          >
-            {note.body}
-          </div>
+        <div
+          className="annotation-note-text"
+          onPointerDown={stopEventPropagation}
+          onClick={stopEventPropagation}
+          onTouchStart={stopEventPropagation}
+          onTouchMove={stopEventPropagation}
+          onTouchEnd={stopEventPropagation}
+          onTouchCancel={stopEventPropagation}
+          onWheel={stopEventPropagation}
+        >
+          {note.body}
+        </div>
       )}
       {editing && (
         <div
