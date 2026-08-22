@@ -1,11 +1,19 @@
+import { useEffect } from "react";
+
+import { type UpdateAnnotationStateFn } from "@/components/widgets/FileViewer/FileViewer";
 import { HydrusFileType, categoryFromFiletype } from "@/constants/filetypes";
 import { usePreferencesStore } from "@/store/preferencesStore";
 import { isDemoMode } from "@/utils/modes";
 
+import { fileHasAnnotations } from "./annotation";
 import { ViewerName, ViewerProps } from "./types";
 import { viewers } from "./viewers";
 
-export function ViewDispatcher(props: ViewerProps) {
+export interface ViewDispatcherProps extends ViewerProps {
+  onUpdateAnnotationState?: UpdateAnnotationStateFn | undefined;
+}
+
+export function ViewDispatcher(props: ViewDispatcherProps) {
   const fileTypeViewerOverride = usePreferencesStore(
     (state) => state.fileTypeViewerOverride,
   );
@@ -52,6 +60,14 @@ export function ViewDispatcher(props: ViewerProps) {
     // Can't use Hydrus renderer without Hydrus, after all...
     viewerName = undefined;
   }
+  const { onUpdateAnnotationState, fileData } = props;
+  useEffect(() => {
+    onUpdateAnnotationState?.({
+      viewerCanShowAnnotations:
+        (viewerName && viewers.get(viewerName)?.hasAnnotationSupport) || false,
+      fileHasAnnotations: fileHasAnnotations(fileData),
+    });
+  }, [viewerName, fileData, onUpdateAnnotationState]);
   if (!viewerName) {
     return <div>Unsupported file type</div>;
   }

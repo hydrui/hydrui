@@ -10,6 +10,7 @@ import { renderMergedImage } from "./renderMerged";
 export function MergedPSDViewer({
   fileId,
   fileData,
+  showAnnotations,
   navigateLeft,
   navigateRight,
 }: ViewerProps) {
@@ -38,6 +39,7 @@ export function MergedPSDViewer({
       fileId={fileId}
       fileData={fileData}
       fileUrl={mergedUrl}
+      showAnnotations={showAnnotations}
       navigateLeft={navigateLeft}
       navigateRight={navigateRight}
     />

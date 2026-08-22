@@ -1,16 +1,19 @@
 import {
   ArrowDownTrayIcon,
   ArrowTopRightOnSquareIcon,
+  ChatBubbleBottomCenterTextIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { FocusTrap } from "focus-trap-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { FileMetadata } from "@/api/types";
 import BrokenImageModal from "@/components/modals/BrokenImageModal/BrokenImageModal";
-import FileViewer from "@/components/widgets/FileViewer/FileViewer";
+import FileViewer, {
+  UpdateAnnotationStateFn,
+} from "@/components/widgets/FileViewer/FileViewer";
 import PushButton from "@/components/widgets/PushButton/PushButton";
 import { ContentUpdateAction } from "@/constants/contentUpdates";
 import { useShortcut } from "@/hooks/useShortcut";
@@ -27,6 +30,16 @@ interface FileViewerModalProps {
   onNext: () => void;
   hasPrevious: boolean;
   hasNext: boolean;
+}
+
+function nextAnnotationVisibility(
+  currentVisibility: boolean,
+  isNewFile: boolean,
+  viewerCanShowAnnotations: boolean,
+  fileHasAnnotations: boolean,
+): boolean {
+  if (!viewerCanShowAnnotations) return false;
+  return isNewFile ? fileHasAnnotations : currentVisibility;
 }
 
 function generateFileName(file: FileMetadata): string {
@@ -155,6 +168,26 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({
   hasNext,
 }) => {
   const [isBrokenImageModalOpen, setIsBrokenImageModalOpen] = useState(false);
+  const [canShowAnnotations, setCanShowAnnotations] = useState(false);
+  const [showAnnotations, setShowAnnotations] = useState(false);
+  const annotationStateFileId = useRef<number | null>(null);
+
+  const handleUpdateAnnotationState = useCallback<UpdateAnnotationStateFn>(
+    ({ viewerCanShowAnnotations, fileHasAnnotations }) => {
+      const isNewFile = annotationStateFileId.current !== fileId;
+      annotationStateFileId.current = fileId;
+      setCanShowAnnotations(viewerCanShowAnnotations);
+      setShowAnnotations((currentVisibility) =>
+        nextAnnotationVisibility(
+          currentVisibility,
+          isNewFile,
+          viewerCanShowAnnotations,
+          fileHasAnnotations,
+        ),
+      );
+    },
+    [fileId],
+  );
 
   // Handle keyboard navigation
   useShortcut({
@@ -206,6 +239,20 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({
                 Broken image?
               </PushButton>
             )}
+            {canShowAnnotations && (
+              <button
+                type="button"
+                onClick={() => setShowAnnotations((shown) => !shown)}
+                title={
+                  showAnnotations
+                    ? "Hide annotations"
+                    : "Show or edit annotations"
+                }
+                className="file-viewer-modal-action-button"
+              >
+                <ChatBubbleBottomCenterTextIcon className="file-viewer-modal-small-icon" />
+              </button>
+            )}
             <a
               href={client.getFileUrl(fileId)}
               target="_blank"
@@ -253,6 +300,8 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({
               fileId={fileId}
               fileData={fileData}
               autoActivate={true}
+              showAnnotations={showAnnotations}
+              onUpdateAnnotationState={handleUpdateAnnotationState}
               navigateLeft={hasPrevious ? onPrevious : undefined}
               navigateRight={hasNext ? onNext : undefined}
             />

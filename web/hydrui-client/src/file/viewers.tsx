@@ -15,13 +15,20 @@ const SWFViewer = lazy(() => import("./swf/SWFViewer"));
 export const viewers = new Map<ViewerName, FileViewer>();
 
 viewers.set(ViewerName.HydruiImageViewer, {
-  renderView({ fileId, fileData, navigateLeft, navigateRight }) {
+  renderView({
+    fileId,
+    fileData,
+    showAnnotations,
+    navigateLeft,
+    navigateRight,
+  }) {
     const fileUrl = client.getFileUrl(fileData.file_id);
     return (
       <ImageViewer
         fileId={fileId}
         fileData={fileData}
         fileUrl={fileUrl}
+        showAnnotations={showAnnotations}
         navigateLeft={navigateLeft}
         navigateRight={navigateRight}
       />
@@ -35,6 +42,7 @@ viewers.set(ViewerName.HydruiImageViewer, {
       fileType !== HydrusFileType.ANIMATION_UGOIRA
     );
   },
+  hasAnnotationSupport: true,
 });
 
 viewers.set(ViewerName.HydruiVideoViewer, {
@@ -82,6 +90,7 @@ viewers.set(ViewerName.HydruiPSDMergedImageViewer, {
   canHandle(fileType) {
     return fileType === HydrusFileType.APPLICATION_PSD;
   },
+  hasAnnotationSupport: true,
 });
 
 viewers.set(ViewerName.PDFjs, {
@@ -113,13 +122,20 @@ viewers.set(ViewerName.Ruffle, {
 });
 
 viewers.set(ViewerName.HydrusRenderer, {
-  renderView({ fileId, fileData, navigateLeft, navigateRight }) {
+  renderView({
+    fileId,
+    fileData,
+    showAnnotations,
+    navigateLeft,
+    navigateRight,
+  }) {
     const renderUrl = client.getFileRenderUrl(fileData.file_id);
     return (
       <ImageViewer
         fileId={fileId}
         fileData={fileData}
         fileUrl={renderUrl}
+        showAnnotations={showAnnotations}
         navigateLeft={navigateLeft}
         navigateRight={navigateRight}
       />
@@ -128,4 +144,5 @@ viewers.set(ViewerName.HydrusRenderer, {
   canHandle() {
     return true;
   },
+  hasAnnotationSupport: true,
 });

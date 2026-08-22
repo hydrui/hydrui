@@ -144,6 +144,30 @@ describe("useShortcut", () => {
     window.removeEventListener = removeEventListenerMock;
   });
 
+  it("should not trigger shortcuts from contenteditable elements", () => {
+    window.addEventListener = originalAddEventListener;
+    window.removeEventListener = originalRemoveEventListener;
+
+    const callback = vi.fn();
+    const hook = renderHook(() => useShortcut({ ArrowLeft: callback }));
+    const editor = document.createElement("div");
+    Object.defineProperty(editor, "isContentEditable", { value: true });
+    document.body.append(editor);
+
+    act(() => {
+      editor.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }),
+      );
+    });
+
+    expect(callback).not.toHaveBeenCalled();
+
+    editor.remove();
+    hook.unmount();
+    window.addEventListener = addEventListenerMock;
+    window.removeEventListener = removeEventListenerMock;
+  });
+
   it("should only add one global listener for multiple hook instances", () => {
     const callback1 = vi.fn();
     const callback2 = vi.fn();

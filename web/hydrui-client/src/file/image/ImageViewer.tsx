@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { FileMetadata } from "@/api/types";
+import AnnotationOverlay from "@/components/widgets/AnnotationOverlay/AnnotationOverlay";
 
 // NOTE: This code is cursed. It's just not very good. I'm sorry. It needs to
 // be scrapped and rewritten from the ground up, but I have not had a chance.
@@ -18,6 +19,8 @@ interface ImageViewerProps {
   fileId: number;
   fileData: FileMetadata;
   fileUrl: string;
+
+  showAnnotations: boolean;
 
   navigateLeft?: (() => void) | undefined;
   navigateRight?: (() => void) | undefined;
@@ -45,6 +48,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
   fileId,
   fileData,
   fileUrl,
+  showAnnotations,
   navigateLeft,
   navigateRight,
 }) => {
@@ -651,6 +655,18 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
           draggable={false}
           crossOrigin="anonymous"
         />
+        {isImageLoaded && imageDimensions && showAnnotations && (
+          <AnnotationOverlay
+            fileId={fileId}
+            fileData={fileData}
+            sourceUrl={fileUrl}
+            displayWidth={imageDimensions.width}
+            displayHeight={imageDimensions.height}
+            translateX={translateX + edgeTranslationX}
+            translateY={translateY}
+            scale={scale}
+          />
+        )}
       </div>
     </>
   );

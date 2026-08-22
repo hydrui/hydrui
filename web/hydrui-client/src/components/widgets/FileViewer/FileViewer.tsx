@@ -14,6 +14,11 @@ import { usePreferencesStore } from "@/store/preferencesStore";
 import Crash from "../Crash/Crash";
 import "./index.css";
 
+export type UpdateAnnotationStateFn = (props: {
+  viewerCanShowAnnotations: boolean;
+  fileHasAnnotations: boolean;
+}) => void;
+
 export interface FileViewerProps {
   fileId: number;
   fileData?: FileMetadata | undefined;
@@ -30,6 +35,12 @@ export interface FileViewerProps {
   // Whether or not the file is in preview mode
   isPreview?: boolean;
 
+  // Whether or not to show annotations
+  showAnnotations?: boolean;
+
+  // A callback to report information about file/viewer annotations.
+  onUpdateAnnotationState?: UpdateAnnotationStateFn;
+
   navigateLeft?: (() => void) | undefined;
   navigateRight?: (() => void) | undefined;
 }
@@ -41,6 +52,8 @@ const FileViewerImpl: React.FC<FileViewerProps> = ({
   autoPlay = true,
   loop = true,
   isPreview = false,
+  showAnnotations = false,
+  onUpdateAnnotationState,
   navigateLeft,
   navigateRight,
 }) => {
@@ -71,6 +84,8 @@ const FileViewerImpl: React.FC<FileViewerProps> = ({
         autoPlay={autoPlay}
         loop={loop}
         isPreview={isPreview}
+        showAnnotations={showAnnotations}
+        onUpdateAnnotationState={onUpdateAnnotationState}
         navigateLeft={navigateLeft}
         navigateRight={navigateRight}
       />

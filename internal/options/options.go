@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -33,6 +34,11 @@ type Values struct {
 	HydrusURL      string
 	HydrusSecure   bool
 	HydrusAPIKey   string
+	LLMURL         string
+	LLMSecure      bool
+	LLMAPIKey      string
+	LLMModel       string
+	LLMName        string
 	HtpasswdFile   string
 	UseACME        bool
 	ACMEEmail      string
@@ -49,9 +55,10 @@ type Values struct {
 
 func NewDefault() *Values {
 	return &Values{
-		Listen:  ":8080",
-		Secure:  true,
-		ACMEURL: acme.LetsEncryptURL,
+		Listen:    ":8080",
+		Secure:    true,
+		LLMSecure: true,
+		ACMEURL:   acme.LetsEncryptURL,
 
 		AllowBugReport: true,
 	}
@@ -81,6 +88,11 @@ func (v *Values) ParseFlags(args []string) error {
 	set.StringVar(&v.HydrusURL, "hydrus-url", v.HydrusURL, "Hydrus URL")
 	set.BoolVar(&v.HydrusSecure, "hydrus-secure", v.HydrusSecure, "Enable validating the TLS certificate of the Hydrus server")
 	SecretVar(set, &v.HydrusAPIKey, "hydrus-api-key", v.HydrusAPIKey, "Hydrus API key")
+	set.StringVar(&v.LLMURL, "llm-url", v.LLMURL, "OpenAI-compatible language model provider URL (server mode only)")
+	set.BoolVar(&v.LLMSecure, "llm-secure", v.LLMSecure, "Enable validating the TLS certificate of the language model provider")
+	SecretVar(set, &v.LLMAPIKey, "llm-api-key", v.LLMAPIKey, "Language model provider API key")
+	set.StringVar(&v.LLMModel, "llm-model", v.LLMModel, "Language model used for server-side model requests")
+	set.StringVar(&v.LLMName, "llm-name", v.LLMName, "Display name for the server-configured language model provider")
 	set.StringVar(&v.HtpasswdFile, "htpasswd", v.HtpasswdFile, "Path to htpasswd file for authentication")
 	set.BoolVar(&v.UseACME, "acme", v.UseACME, "Enable ACME, acquire TLS certificate")
 	set.StringVar(&v.ACMEEmail, "acme-email", v.ACMEEmail, "E-mail address to use for ACME account")
@@ -129,6 +141,11 @@ func (v *Values) ParseEnv() {
 	stringEnv(&v.HydrusURL, "HYDRUI_HYDRUS_URL")
 	boolEnv(&v.HydrusSecure, "HYDRUI_HYDRUS_SECURE")
 	stringEnv(&v.HydrusAPIKey, "HYDRUI_HYDRUS_API_KEY")
+	stringEnv(&v.LLMURL, "HYDRUI_LLM_URL")
+	boolEnv(&v.LLMSecure, "HYDRUI_LLM_SECURE")
+	stringEnv(&v.LLMAPIKey, "HYDRUI_LLM_API_KEY")
+	stringEnv(&v.LLMModel, "HYDRUI_LLM_MODEL")
+	stringEnv(&v.LLMName, "HYDRUI_LLM_NAME")
 	stringEnv(&v.HtpasswdFile, "HYDRUI_HTPASSWD")
 	boolEnv(&v.UseACME, "HYDRUI_ACME")
 	stringEnv(&v.ACMEEmail, "HYDRUI_ACME_EMAIL")
@@ -155,6 +172,11 @@ func (v *Values) ServerConfig(ctx context.Context, log *slog.Logger) (server.Con
 		Secret:         v.Secret,
 		HydrusURL:      v.HydrusURL,
 		HydrusAPIKey:   v.HydrusAPIKey,
+		LLMURL:         strings.TrimRight(strings.TrimSpace(v.LLMURL), "/"),
+		LLMSecure:      v.LLMSecure,
+		LLMAPIKey:      strings.TrimSpace(v.LLMAPIKey),
+		LLMModel:       strings.TrimSpace(v.LLMModel),
+		LLMName:        strings.TrimSpace(v.LLMName),
 		Secure:         v.Secure,
 		ServerMode:     v.ServerMode,
 		NoAuth:         v.NoAuth,
@@ -182,6 +204,23 @@ func (v *Values) ServerConfig(ctx context.Context, log *slog.Logger) (server.Con
 
 		if v.HydrusAPIKey == "" {
 			return server.Config{}, fmt.Errorf("hydrus client API key is required, but not specified")
+		}
+
+		llmConfigured := result.LLMURL != "" || result.LLMAPIKey != "" || result.LLMModel != "" || result.LLMName != ""
+		if llmConfigured {
+			if result.LLMURL == "" {
+				return server.Config{}, fmt.Errorf("language model provider URL is required when language model options are configured")
+			}
+			providerURL, err := url.Parse(result.LLMURL)
+			if err != nil || (providerURL.Scheme != "http" && providerURL.Scheme != "https") || providerURL.Host == "" {
+				return server.Config{}, fmt.Errorf("invalid language model provider URL %q", result.LLMURL)
+			}
+			if result.LLMModel == "" {
+				return server.Config{}, fmt.Errorf("language model is required when a language model provider URL is configured")
+			}
+			if result.LLMName == "" {
+				result.LLMName = "Server Language Model"
+			}
 		}
 
 		if v.Secret == "" {
@@ -238,6 +277,10 @@ func (v *Values) ServerConfig(ctx context.Context, log *slog.Logger) (server.Con
 			log.LogAttrs(ctx, slog.LevelInfo, "Hint: Disable bug reporting in CLI with -allow-bug-report=false.")
 		}
 	} else {
+		if v.LLMURL != "" || v.LLMAPIKey != "" || v.LLMModel != "" || v.LLMName != "" {
+			log.LogAttrs(ctx, slog.LevelWarn, "Language model server options are not used in client-only mode.")
+		}
+
 		if v.HydrusURL != "" {
 			log.LogAttrs(ctx, slog.LevelWarn, "Hydrus client URL is not used in client-only mode.")
 		}

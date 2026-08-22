@@ -10,7 +10,7 @@
     <script type="module" crossorigin src="{{.JSPath}}" integrity="{{.JSIntegrity}}"></script>
     <link rel="stylesheet" href="{{.CSSPath}}" integrity="{{.CSSIntegrity}}">
   </head>
-  <body{{if .ServerMode}} data-server-mode="true"{{end}}{{if .NoAuth}} data-no-auth="true"{{end}}>
+  <body{{if .ServerMode}} data-server-mode="true"{{end}}{{if .NoAuth}} data-no-auth="true"{{end}}{{if .LLMEnabled}} data-llm-provider-name="{{.LLMName}}" data-llm-model="{{.LLMModel}}"{{end}}>
     <div id="root"></div>
   </body>
 </html>

@@ -335,6 +335,17 @@ func runMainWindow(ctx context.Context) {
 									fileField(tr("Htpasswd File"), tr("Apache httpd-style .htpasswd Files (*.htpasswd,*.txt)|*.htpasswd;*.txt|All Files (*.*)|*.*"), &newOpts.HtpasswdFile),
 								},
 							},
+							GroupBox{
+								Title:  tr("Language Model (Server Mode)"),
+								Layout: VBox{},
+								Children: []Widget{
+									textField(tr("Provider Name"), &newOpts.LLMName),
+									textField(tr("Provider URL"), &newOpts.LLMURL),
+									textField(tr("Provider API key"), &newOpts.LLMAPIKey),
+									textField(tr("Model"), &newOpts.LLMModel),
+									checkboxField(tr("Validate Provider TLS Certificate"), &newOpts.LLMSecure),
+								},
+							},
 							VSpacer{},
 						},
 					},

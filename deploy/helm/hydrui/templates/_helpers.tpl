@@ -98,6 +98,22 @@ hydrus-api-key
 {{- end -}}
 {{- end }}
 
+{{- define "hydrui.llmApiKeySecretName" -}}
+{{- if .Values.serverMode.llm.existingApiKeySecret -}}
+{{- .Values.serverMode.llm.existingApiKeySecret -}}
+{{- else -}}
+{{- include "hydrui.fullname" . -}}-secrets
+{{- end -}}
+{{- end }}
+
+{{- define "hydrui.llmApiKeySecretKey" -}}
+{{- if .Values.serverMode.llm.existingApiKeySecret -}}
+{{- .Values.serverMode.llm.existingApiKeySecretKey -}}
+{{- else -}}
+llm-api-key
+{{- end -}}
+{{- end }}
+
 {{- define "hydrui.sessionSecretName" -}}
 {{- if .Values.serverMode.existingSessionSecret -}}
 {{- .Values.serverMode.existingSessionSecret -}}

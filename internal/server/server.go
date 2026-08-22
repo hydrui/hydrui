@@ -40,6 +40,9 @@ type TemplateData struct {
 	CSSIntegrity string
 	ServerMode   bool
 	NoAuth       bool
+	LLMEnabled   bool
+	LLMName      string
+	LLMModel     string
 }
 
 // LoginRequest represents the JSON request for login
@@ -136,6 +139,11 @@ type Config struct {
 	HydrusURL      string
 	HydrusSecure   bool
 	HydrusAPIKey   string
+	LLMURL         string
+	LLMSecure      bool
+	LLMAPIKey      string
+	LLMModel       string
+	LLMName        string
 	HtpasswdFile   *HtpasswdFile
 	Secure         bool
 	ServerMode     bool
@@ -198,6 +206,9 @@ func New(config Config, clientData *pack.Pack) *Server {
 		CSSIntegrity: cssIntegrity,
 		ServerMode:   config.ServerMode,
 		NoAuth:       config.NoAuth,
+		LLMEnabled:   config.ServerMode && config.LLMURL != "",
+		LLMName:      config.LLMName,
+		LLMModel:     config.LLMModel,
 	}
 
 	proxyClient := &http.Client{
@@ -209,6 +220,10 @@ func New(config Config, clientData *pack.Pack) *Server {
 	}
 
 	if config.ServerMode {
+		if config.LLMURL != "" {
+			externalMux.Handle("/llm/", requireSession(config, newLLMProxy(config)))
+		}
+
 		if config.AllowBugReport {
 			// Bug report proxy handler
 			wsUpgrader := websocket.Upgrader{

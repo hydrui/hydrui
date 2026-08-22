@@ -92,6 +92,11 @@ interface PageState extends PersistedState {
       comparator: (a: number, b: number) => number,
     ) => Promise<void>;
     refreshFileMetadata: (fileIds: number[]) => Promise<void>;
+    updateFileNotes: (
+      fileId: number,
+      notes: Record<string, string>,
+      noteNamesToDelete: string[],
+    ) => void;
     cancelCurrentPageLoad: () => void;
     addFilesToView: (fileIds: number[]) => Promise<void>;
     removeFilesFromView: (fileIds: number[]) => void;
@@ -824,6 +829,22 @@ export const usePageStore = create<PageState>()(
             } catch (error) {
               console.error("Failed to refresh file metadata:", error);
             }
+          },
+
+          updateFileNotes: (fileId, notes, noteNamesToDelete) => {
+            set((state) => ({
+              loadedFiles: state.loadedFiles.map((file) => {
+                if (!file || file.file_id !== fileId) return file;
+
+                const updatedNotes = { ...file.notes };
+                for (const name of noteNamesToDelete) {
+                  delete updatedNotes[name];
+                }
+                Object.assign(updatedNotes, notes);
+
+                return { ...file, notes: updatedNotes };
+              }),
+            }));
           },
 
           markActiveFileAsBetter: async () => {

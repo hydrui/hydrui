@@ -4,6 +4,7 @@ import { HydrusFileType } from "@/constants/filetypes";
 export interface ViewerProps {
   fileId: number;
   fileData: FileMetadata;
+  showAnnotations: boolean;
   autoPlay: boolean;
   loop: boolean;
   isPreview: boolean;
@@ -15,6 +16,7 @@ export interface ViewerProps {
 export interface FileViewer {
   renderView(props: ViewerProps): React.ReactNode;
   canHandle(fileType: HydrusFileType): boolean;
+  hasAnnotationSupport?: boolean;
 }
 
 export interface FileRenderer {

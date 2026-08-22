@@ -69,6 +69,21 @@ serverMode:
 helm install my-hydrui hydrui/ -f values-server-external.yaml
 ```
 
+### Language Model Proxy
+
+To use features that require an LLM in server mode, you can enable the LLM proxy. In client mode, the client accesses an OpenAI-compatible API directly, so this is not necessary for client mode.
+
+```yaml
+mode: server-external
+serverMode:
+  llm:
+    url: "http://llama-server:9931"
+    model: "unsloth/gemma-4-31B-it-GGUF:Q8_0"
+    name: "llama.cpp server"
+    existingApiKeySecret: "hydrui-llm"
+    existingApiKeySecretKey: "api-key"
+```
+
 ### With Ingress and cert-manager
 
 ```yaml
