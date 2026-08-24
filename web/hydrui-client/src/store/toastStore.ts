@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 export type ToastType = "error" | "warning" | "info" | "success";
+export type ToastProgress = number | "indeterminate";
 
 const DEFAULT_TOAST_DURATION = 10000;
 
@@ -12,7 +13,7 @@ export interface Toast {
   createdAt: number;
   remainingTime: number | false;
   isPaused: boolean;
-  progress?: number | undefined;
+  progress?: ToastProgress | undefined;
   actions: ToastAction[];
 }
 
@@ -31,13 +32,15 @@ interface ToastState {
       options?: {
         duration?: number | false;
         actions?: ToastAction[];
+        progress?: ToastProgress;
       },
     ) => string;
     removeToast: (id: string) => void;
     pauseToast: (id: string) => void;
     resumeToast: (id: string) => void;
+    updateToastMessage: (id: string, message: string) => void;
     updateToastTime: (id: string, remainingTime: number) => void;
-    updateToastProgress: (id: string, progress: number) => void;
+    updateToastProgress: (id: string, progress: ToastProgress) => void;
   };
 }
 
@@ -49,7 +52,7 @@ export const useToastStore = create<ToastState>((set) => ({
     addToast: (
       message,
       type,
-      { duration = DEFAULT_TOAST_DURATION, actions = [] } = {},
+      { duration = DEFAULT_TOAST_DURATION, actions = [], progress } = {},
     ) => {
       const id = Math.random().toString(36).substring(2);
       set((state) => ({
@@ -64,6 +67,7 @@ export const useToastStore = create<ToastState>((set) => ({
             createdAt: Date.now(),
             remainingTime: duration,
             isPaused: false,
+            ...(progress === undefined ? {} : { progress }),
           },
         ],
       }));
@@ -88,6 +92,14 @@ export const useToastStore = create<ToastState>((set) => ({
       set((state) => ({
         toasts: state.toasts.map((toast) =>
           toast.id === id ? { ...toast, isPaused: false } : toast,
+        ),
+      }));
+    },
+
+    updateToastMessage: (id, message) => {
+      set((state) => ({
+        toasts: state.toasts.map((toast) =>
+          toast.id === id ? { ...toast, message } : toast,
         ),
       }));
     },

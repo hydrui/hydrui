@@ -11,13 +11,29 @@ export interface TranscribedNote extends NoteBox {
   body: string;
 }
 
+export type TranscriptionPhase = "initializing" | "reasoning" | "output";
+
+export interface TranscriptionTimings {
+  promptTokensPerSecond?: number;
+  generatedTokensPerSecond?: number;
+}
+
+export interface TranscriptionCompletion {
+  finishReason?: string;
+  timings?: TranscriptionTimings;
+}
+
 export type TranscribeEvent =
+  // The current phase of the model request.
+  | { type: "progress"; phase: TranscriptionPhase }
   // The note's bounding box is known (already denormalized to image pixels).
   | { type: "box"; index: number; box: NoteBox }
   // The note's label text so far.
   | { type: "text"; index: number; body: string }
   // The note finished parsing. `note` is null if it had no usable box.
-  | { type: "end"; index: number; note: TranscribedNote | null };
+  | { type: "end"; index: number; note: TranscribedNote | null }
+  // The request completed normally. Provider-specific metadata is optional.
+  | ({ type: "complete" } & TranscriptionCompletion);
 
 export type LLMProviderKind = "openai";
 

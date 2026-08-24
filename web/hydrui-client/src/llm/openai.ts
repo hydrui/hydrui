@@ -7,11 +7,23 @@ import {
   TranscribeEvent,
   TranscribeOptions,
   TranscribedNote,
+  TranscriptionTimings,
 } from "./types";
 
 interface BoundingBoxDefinition {
   key: "box_2d";
   range: number;
+}
+
+interface OpenAIChatCompletionDelta {
+  content?: unknown;
+  reasoning?: unknown;
+  reasoning_content?: unknown;
+}
+
+interface OpenAIChatCompletionChunk {
+  choices?: { finish_reason?: unknown; delta?: OpenAIChatCompletionDelta }[];
+  timings?: unknown;
 }
 
 function getBoundingBoxDefinition(
@@ -44,6 +56,43 @@ function authHeaders(config: OpenAIProviderConfig): Record<string, string> {
 
 function joinUrl(base: string, path: string): string {
   return base.replace(/\/+$/, "") + path;
+}
+
+function finiteNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : undefined;
+}
+
+function parseTimings(value: unknown): TranscriptionTimings | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const raw = value as Record<string, unknown>;
+  const promptTokensPerSecond = finiteNumber(raw["prompt_per_second"]);
+  const generatedTokensPerSecond = finiteNumber(raw["predicted_per_second"]);
+  if (
+    promptTokensPerSecond === undefined &&
+    generatedTokensPerSecond === undefined
+  ) {
+    return undefined;
+  }
+  return {
+    ...(promptTokensPerSecond === undefined ? {} : { promptTokensPerSecond }),
+    ...(generatedTokensPerSecond === undefined
+      ? {}
+      : { generatedTokensPerSecond }),
+  };
+}
+
+function hasReasoningDelta(
+  delta: OpenAIChatCompletionDelta | undefined,
+): boolean {
+  if (!delta) return false;
+  for (const value of [delta.reasoning_content, delta.reasoning]) {
+    if (typeof value === "string" ? value.length > 0 : value != null) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function buildTranscriptionRequestBody(
@@ -199,7 +248,12 @@ export class OpenAIProvider implements LLMProvider {
         });
 
         (async () => {
+          let reasoningStarted = false;
+          let outputStarted = false;
+          let finishReason: string | undefined;
+          let timings: TranscriptionTimings | undefined;
           try {
+            emit({ type: "progress", phase: "initializing" });
             const dataUrl = await blobToDataUrl(opts.blob);
             const body = buildTranscriptionRequestBody(config, opts, dataUrl);
             const res = await fetch(
@@ -230,16 +284,44 @@ export class OpenAIProvider implements LLMProvider {
                 const payload = line.slice(5).trim();
                 if (!payload || payload === "[DONE]") continue;
                 try {
-                  const event = JSON.parse(payload) as {
-                    choices?: { delta?: { content?: string } }[];
-                  };
-                  const delta = event.choices?.[0]?.delta?.content;
-                  if (delta) parser.push(delta);
+                  const event = JSON.parse(
+                    payload,
+                  ) as OpenAIChatCompletionChunk;
+                  const choice = event.choices?.[0];
+                  const delta = choice?.delta;
+                  if (
+                    !outputStarted &&
+                    !reasoningStarted &&
+                    hasReasoningDelta(delta)
+                  ) {
+                    reasoningStarted = true;
+                    emit({ type: "progress", phase: "reasoning" });
+                  }
+                  const content = delta?.content;
+                  if (typeof content === "string" && content.length > 0) {
+                    if (!outputStarted) {
+                      outputStarted = true;
+                      emit({ type: "progress", phase: "output" });
+                    }
+                    parser.push(content);
+                  }
+                  if (typeof choice?.finish_reason === "string") {
+                    finishReason = choice.finish_reason;
+                  }
+                  const eventTimings = parseTimings(event.timings);
+                  if (eventTimings) {
+                    timings = { ...timings, ...eventTimings };
+                  }
                 } catch {
                   // Ignore malformed SSE chunks.
                 }
               }
             }
+            emit({
+              type: "complete",
+              ...(finishReason === undefined ? {} : { finishReason }),
+              ...(timings === undefined ? {} : { timings }),
+            });
           } catch (e) {
             error = e;
           } finally {

@@ -23,6 +23,7 @@ import {
 } from "@/file/annotation";
 import {
   ProviderConfig,
+  TranscriptionCompletion,
   TranscriptionRequestSettings,
   createProvider,
 } from "@/llm";
@@ -32,6 +33,10 @@ import { useToastActions } from "@/store/toastStore";
 
 import { fitAnnotationFontSize } from "./fitText";
 import "./index.css";
+import {
+  formatTranscriptionCompletion,
+  formatTranscriptionProgress,
+} from "./transcriptionStatus";
 
 const stopEventPropagation = (event: React.SyntheticEvent) => {
   event.stopPropagation();
@@ -81,7 +86,7 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
   scale,
 }) => {
   const { updateFileNotes } = usePageActions();
-  const { addToast } = useToastActions();
+  const { addToast, removeToast, updateToastMessage } = useToastActions();
 
   const [visible, setVisible] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -195,6 +200,21 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
       const controller = new AbortController();
       transcribeAbort.current = controller;
       setTranscribing(true);
+      const progressToast = addToast(
+        formatTranscriptionProgress("initializing"),
+        "info",
+        {
+          duration: false,
+          progress: "indeterminate",
+          actions: [
+            {
+              label: "Cancel",
+              variant: "danger",
+              callback: () => controller.abort(),
+            },
+          ],
+        },
+      );
       try {
         const res = await fetch(sourceUrl, {
           signal: controller.signal,
@@ -207,6 +227,15 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
         // Stream index -> local note id for this transcription run.
         const idByIndex = new Map<number, string>();
         let placeholderCount = 0;
+        let annotationsCreated = 0;
+        let completion: TranscriptionCompletion | undefined;
+        const recordCreatedAnnotation = () => {
+          annotationsCreated += 1;
+          updateToastMessage(
+            progressToast,
+            formatTranscriptionProgress("output", annotationsCreated),
+          );
+        };
         for await (const ev of impl.transcribe({
           blob: imgBlob,
           width: imgW,
@@ -214,7 +243,15 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
           signal: controller.signal,
           ...settings,
         })) {
+          let annotationsChanged = false;
           switch (ev.type) {
+            case "progress": {
+              updateToastMessage(
+                progressToast,
+                formatTranscriptionProgress(ev.phase, annotationsCreated),
+              );
+              break;
+            }
             case "box": {
               const id = idByIndex.get(ev.index);
               if (!id) {
@@ -228,6 +265,7 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
                   fileData.height,
                 );
                 idByIndex.set(ev.index, note.$id);
+                recordCreatedAnnotation();
                 setAnnotations((prev) => [...prev, note]);
               } else {
                 setAnnotations((prev) =>
@@ -236,6 +274,7 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
                   ),
                 );
               }
+              annotationsChanged = true;
               break;
             }
             case "text": {
@@ -254,19 +293,22 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
                 );
                 idByIndex.set(ev.index, note.$id);
                 note.$pending = true;
+                recordCreatedAnnotation();
                 setAnnotations((prev) => [...prev, note]);
               } else {
                 setAnnotations((prev) =>
                   prev.map((n) => (n.$id === id ? { ...n, body: ev.body } : n)),
                 );
               }
+              annotationsChanged = true;
               break;
             }
             case "end": {
               const id = idByIndex.get(ev.index);
               const note = ev.note;
               if (!id) {
-                if (note)
+                if (note) {
+                  recordCreatedAnnotation();
                   setAnnotations((prev) => [
                     ...prev,
                     newAnnotation(
@@ -279,6 +321,8 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
                       fileData.height!,
                     ),
                   ]);
+                  annotationsChanged = true;
+                }
                 break;
               }
               setAnnotations((prev) =>
@@ -294,24 +338,35 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
                     : n,
                 ),
               );
+              annotationsChanged = true;
+              break;
+            }
+            case "complete": {
+              completion = ev;
               break;
             }
           }
-          setDirty(true);
+          if (annotationsChanged) setDirty(true);
         }
-        addToast("Transcription complete.", "success");
+        removeToast(progressToast);
+        addToast(
+          formatTranscriptionCompletion(annotationsCreated, completion),
+          "success",
+        );
       } catch (e) {
+        removeToast(progressToast);
         if ((e as Error).name === "AbortError") {
           addToast("Transcription cancelled.", "info");
         } else {
           addToast(`Transcription failed: ${e}`, "error");
         }
       } finally {
+        removeToast(progressToast);
         setTranscribing(false);
         transcribeAbort.current = null;
       }
     },
-    [fileData, sourceUrl, addToast],
+    [fileData, sourceUrl, addToast, removeToast, updateToastMessage],
   );
 
   const cancelTranscribe = useCallback(() => {
