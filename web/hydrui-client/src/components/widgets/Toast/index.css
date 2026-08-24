@@ -1,7 +1,7 @@
 .toast-container {
   position: fixed;
-  top: 1rem;
-  right: 1rem;
+  top: 5rem;
+  right: 1.5rem;
   z-index: 100;
   display: flex;
   flex-direction: column;
@@ -94,6 +94,29 @@
   transition-property: all;
   transition-duration: 100ms;
   transition-timing-function: linear;
+}
+
+.toast-progress-bar-indeterminate {
+  width: 50%;
+  animation: toast-progress-indeterminate 5s ease-in-out infinite;
+}
+
+@keyframes toast-progress-indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(200%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-progress-bar-indeterminate {
+    width: 50%;
+    transform: translateX(50%);
+    animation: none;
+  }
 }
 
 .toast-progress-bar-error {

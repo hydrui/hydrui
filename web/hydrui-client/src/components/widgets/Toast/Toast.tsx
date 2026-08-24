@@ -148,11 +148,15 @@ export const Toast: React.FC<ToastProps> = ({
             style={{ width: `${progress}%` }}
           />
         </div>
-      ) : toast.progress ? (
+      ) : toast.progress !== undefined ? (
         <div className="toast-progress-container">
           <div
-            className={`toast-progress-bar ${getProgressBarClass(toast.type)}`}
-            style={{ width: `${toast.progress}%` }}
+            className={`toast-progress-bar ${getProgressBarClass(toast.type)} ${toast.progress === "indeterminate" ? "toast-progress-bar-indeterminate" : ""}`}
+            style={
+              typeof toast.progress === "number"
+                ? { width: `${toast.progress}%` }
+                : undefined
+            }
           />
         </div>
       ) : null}
