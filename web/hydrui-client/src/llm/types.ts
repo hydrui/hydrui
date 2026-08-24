@@ -1,3 +1,5 @@
+import type { TranscriptionRequestSettings } from "./transcription";
+
 export interface NoteBox {
   x: number;
   y: number;
@@ -36,7 +38,7 @@ export interface OpenAIProviderConfig extends BaseProviderConfig {
 
 export type ProviderConfig = OpenAIProviderConfig;
 
-export interface TranscribeOptions {
+export interface TranscribeOptions extends TranscriptionRequestSettings {
   // Raw image data (encoded; will be sent as base64 data URL).
   blob: Blob;
   // Original image pixel dimensions, used to denormalize box coordinates.

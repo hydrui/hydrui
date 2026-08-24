@@ -13,6 +13,7 @@ import React, {
 } from "react";
 
 import { FileMetadata } from "@/api/types";
+import TranscribeAnnotationsModal from "@/components/modals/TranscribeAnnotationsModal/TranscribeAnnotationsModal";
 import {
   Annotation,
   LocalAnnotation,
@@ -20,9 +21,12 @@ import {
   deserializeAnnotations,
   newAnnotation,
 } from "@/file/annotation";
-import { createProvider } from "@/llm";
+import {
+  ProviderConfig,
+  TranscriptionRequestSettings,
+  createProvider,
+} from "@/llm";
 import { client } from "@/store/apiStore";
-import { useSelectedLLMProvider } from "@/store/llmStore";
 import { usePageActions } from "@/store/pageStore";
 import { useToastActions } from "@/store/toastStore";
 
@@ -78,7 +82,6 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
 }) => {
   const { updateFileNotes } = usePageActions();
   const { addToast } = useToastActions();
-  const provider = useSelectedLLMProvider();
 
   const [visible, setVisible] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -89,6 +92,7 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
+  const [showTranscribeModal, setShowTranscribeModal] = useState(false);
   const transcribeAbort = useRef<AbortController | null>(null);
 
   // Load notes from current metadata.
@@ -98,6 +102,7 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
     setOriginalNoteNames(new Set(annotations.map((note) => note.$hydrusNote)));
     setDirty(false);
     setEditing(false);
+    setShowTranscribeModal(false);
   }, [fileId, fileData]);
 
   // Cancel any active transcription when unmounting / file changes.
@@ -174,140 +179,140 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
     }
   }, [fileId, annotations, originalNoteNames, updateFileNotes, addToast]);
 
-  const startTranscribe = useCallback(async () => {
-    if (!provider) {
-      addToast(
-        "No model provider configured. You can add one in the Models tab of the settings.",
-        "error",
-      );
-      return;
-    }
-    if (!fileData.width || !fileData.height) {
-      addToast("Image dimensions unknown.", "error");
-      return;
-    }
-    if (!provider.model) {
-      addToast("The selected model provider has no model set.", "error");
-      return;
-    }
-    const controller = new AbortController();
-    transcribeAbort.current = controller;
-    setTranscribing(true);
-    try {
-      const res = await fetch(sourceUrl, {
-        signal: controller.signal,
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const imgBlob = await res.blob();
-      const impl = createProvider(provider);
-      const imgW = fileData.width;
-      const imgH = fileData.height;
-      // Stream index -> local note id for this transcription run.
-      const idByIndex = new Map<number, string>();
-      let placeholderCount = 0;
-      for await (const ev of impl.transcribe({
-        blob: imgBlob,
-        width: imgW,
-        height: imgH,
-        signal: controller.signal,
-      })) {
-        switch (ev.type) {
-          case "box": {
-            const id = idByIndex.get(ev.index);
-            if (!id) {
-              const note = newAnnotation(
-                ev.box.x,
-                ev.box.y,
-                ev.box.width,
-                ev.box.height,
-                "",
-                fileData.width,
-                fileData.height,
-              );
-              idByIndex.set(ev.index, note.$id);
-              setAnnotations((prev) => [...prev, note]);
-            } else {
-              setAnnotations((prev) =>
-                prev.map((n) =>
-                  n.$id === id ? { ...n, ...ev.box, $pending: false } : n,
-                ),
-              );
-            }
-            break;
-          }
-          case "text": {
-            const id = idByIndex.get(ev.index);
-            if (!id) {
-              // No box yet: calculate placeholder
-              const box = placeholderBox(placeholderCount++, imgW, imgH);
-              const note = newAnnotation(
-                box.x,
-                box.y,
-                box.width,
-                box.height,
-                ev.body,
-                fileData.width,
-                fileData.height,
-              );
-              idByIndex.set(ev.index, note.$id);
-              note.$pending = true;
-              setAnnotations((prev) => [...prev, note]);
-            } else {
-              setAnnotations((prev) =>
-                prev.map((n) => (n.$id === id ? { ...n, body: ev.body } : n)),
-              );
-            }
-            break;
-          }
-          case "end": {
-            const id = idByIndex.get(ev.index);
-            const note = ev.note;
-            if (!id) {
-              if (note)
-                setAnnotations((prev) => [
-                  ...prev,
-                  newAnnotation(
-                    note.x,
-                    note.y,
-                    note.width,
-                    note.height,
-                    note.body,
-                    fileData.width!,
-                    fileData.height!,
+  const startTranscribe = useCallback(
+    async (
+      provider: ProviderConfig,
+      settings: TranscriptionRequestSettings,
+    ) => {
+      if (!fileData.width || !fileData.height) {
+        addToast("Image dimensions unknown.", "error");
+        return;
+      }
+      if (!settings.model && !provider.model) {
+        addToast("The selected model provider has no model set.", "error");
+        return;
+      }
+      const controller = new AbortController();
+      transcribeAbort.current = controller;
+      setTranscribing(true);
+      try {
+        const res = await fetch(sourceUrl, {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const imgBlob = await res.blob();
+        const impl = createProvider(provider);
+        const imgW = fileData.width;
+        const imgH = fileData.height;
+        // Stream index -> local note id for this transcription run.
+        const idByIndex = new Map<number, string>();
+        let placeholderCount = 0;
+        for await (const ev of impl.transcribe({
+          blob: imgBlob,
+          width: imgW,
+          height: imgH,
+          signal: controller.signal,
+          ...settings,
+        })) {
+          switch (ev.type) {
+            case "box": {
+              const id = idByIndex.get(ev.index);
+              if (!id) {
+                const note = newAnnotation(
+                  ev.box.x,
+                  ev.box.y,
+                  ev.box.width,
+                  ev.box.height,
+                  "",
+                  fileData.width,
+                  fileData.height,
+                );
+                idByIndex.set(ev.index, note.$id);
+                setAnnotations((prev) => [...prev, note]);
+              } else {
+                setAnnotations((prev) =>
+                  prev.map((n) =>
+                    n.$id === id ? { ...n, ...ev.box, $pending: false } : n,
                   ),
-                ]);
+                );
+              }
               break;
             }
-            setAnnotations((prev) =>
-              prev.map((n) =>
-                n.$id === id
-                  ? note
-                    ? {
-                        ...n,
-                        ...note,
-                        $pending: false,
-                      }
-                    : { ...n, $pending: false }
-                  : n,
-              ),
-            );
-            break;
+            case "text": {
+              const id = idByIndex.get(ev.index);
+              if (!id) {
+                // No box yet: calculate placeholder
+                const box = placeholderBox(placeholderCount++, imgW, imgH);
+                const note = newAnnotation(
+                  box.x,
+                  box.y,
+                  box.width,
+                  box.height,
+                  ev.body,
+                  fileData.width,
+                  fileData.height,
+                );
+                idByIndex.set(ev.index, note.$id);
+                note.$pending = true;
+                setAnnotations((prev) => [...prev, note]);
+              } else {
+                setAnnotations((prev) =>
+                  prev.map((n) => (n.$id === id ? { ...n, body: ev.body } : n)),
+                );
+              }
+              break;
+            }
+            case "end": {
+              const id = idByIndex.get(ev.index);
+              const note = ev.note;
+              if (!id) {
+                if (note)
+                  setAnnotations((prev) => [
+                    ...prev,
+                    newAnnotation(
+                      note.x,
+                      note.y,
+                      note.width,
+                      note.height,
+                      note.body,
+                      fileData.width!,
+                      fileData.height!,
+                    ),
+                  ]);
+                break;
+              }
+              setAnnotations((prev) =>
+                prev.map((n) =>
+                  n.$id === id
+                    ? note
+                      ? {
+                          ...n,
+                          ...note,
+                          $pending: false,
+                        }
+                      : { ...n, $pending: false }
+                    : n,
+                ),
+              );
+              break;
+            }
           }
+          setDirty(true);
         }
-        setDirty(true);
+        addToast("Transcription complete.", "success");
+      } catch (e) {
+        if ((e as Error).name === "AbortError") {
+          addToast("Transcription cancelled.", "info");
+        } else {
+          addToast(`Transcription failed: ${e}`, "error");
+        }
+      } finally {
+        setTranscribing(false);
+        transcribeAbort.current = null;
       }
-      addToast("Transcription complete.", "success");
-    } catch (e) {
-      if ((e as Error).name === "AbortError") {
-        addToast("Transcription cancelled.", "info");
-      } else {
-        addToast(`Transcription failed: ${e}`, "error");
-      }
-    } finally {
-      setTranscribing(false);
-      transcribeAbort.current = null;
-    }
-  }, [fileData, provider, sourceUrl, addToast]);
+    },
+    [fileData, sourceUrl, addToast],
+  );
 
   const cancelTranscribe = useCallback(() => {
     transcribeAbort.current?.abort();
@@ -352,10 +357,9 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
             ) : (
               <button
                 type="button"
-                onClick={startTranscribe}
+                onClick={() => setShowTranscribeModal(true)}
                 title="Transcribe text in image"
                 className="annotation-toolbar-button"
-                disabled={!provider}
               >
                 <SparklesIcon />
               </button>
@@ -417,6 +421,15 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
             />
           ))}
         </div>
+      )}
+      {showTranscribeModal && (
+        <TranscribeAnnotationsModal
+          onClose={() => setShowTranscribeModal(false)}
+          onStart={(provider, settings) => {
+            setShowTranscribeModal(false);
+            void startTranscribe(provider, settings);
+          }}
+        />
       )}
     </>
   );

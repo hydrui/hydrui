@@ -1,4 +1,5 @@
 import { StreamingArrayParser } from "./streamJson";
+import { BoundingBoxFormat } from "./transcription";
 import {
   LLMProvider,
   NoteBox,
@@ -8,10 +9,19 @@ import {
   TranscribedNote,
 } from "./types";
 
-const TRANSCRIBE_PROMPT =
-  'Transcribe and translate all text in the image. You must provide a complete transcription of all text in the image, you may not output generic descriptions of text such as "text bubble" or "text".';
+interface BoundingBoxDefinition {
+  key: "box_2d";
+  range: number;
+}
 
-const BOX_RANGE = 1000;
+function getBoundingBoxDefinition(
+  format: BoundingBoxFormat,
+): BoundingBoxDefinition {
+  switch (format) {
+    case "gemini-bbox-2d":
+      return { key: "box_2d", range: 1000 };
+  }
+}
 
 async function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -34,6 +44,62 @@ function authHeaders(config: OpenAIProviderConfig): Record<string, string> {
 
 function joinUrl(base: string, path: string): string {
   return base.replace(/\/+$/, "") + path;
+}
+
+export function buildTranscriptionRequestBody(
+  config: OpenAIProviderConfig,
+  opts: Pick<
+    TranscribeOptions,
+    | "additionalParameters"
+    | "boundingBoxFormat"
+    | "model"
+    | "reasoningEffort"
+    | "systemPrompt"
+  >,
+  dataUrl: string,
+): Record<string, unknown> {
+  const box = getBoundingBoxDefinition(opts.boundingBoxFormat);
+  return {
+    ...(config.extra ?? {}),
+    ...(opts.additionalParameters ?? {}),
+    model: opts.model ?? config.model,
+    ...(opts.reasoningEffort !== undefined
+      ? { reasoning_effort: opts.reasoningEffort }
+      : {}),
+    stream: true,
+    messages: [
+      { role: "system", content: opts.systemPrompt },
+      {
+        role: "user",
+        content: [{ type: "image_url", image_url: { url: dataUrl } }],
+      },
+    ],
+    response_format: {
+      type: "json_schema",
+      json_schema: {
+        name: "TranscriptionArray",
+        strict: true,
+        schema: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              [box.key]: {
+                type: "array",
+                items: { type: "number" },
+                minItems: 4,
+                maxItems: 4,
+              },
+              label: { type: "string" },
+              label_en: { type: "string" },
+            },
+            required: [box.key, "label", "label_en"],
+            additionalProperties: false,
+          },
+        },
+      },
+    },
+  };
 }
 
 export class OpenAIProvider implements LLMProvider {
@@ -62,6 +128,7 @@ export class OpenAIProvider implements LLMProvider {
 
   transcribe(opts: TranscribeOptions): AsyncIterable<TranscribeEvent> {
     const { config } = this;
+    const boxFormat = getBoundingBoxDefinition(opts.boundingBoxFormat);
     return {
       [Symbol.asyncIterator]: () => {
         const pending: TranscribeEvent[] = [];
@@ -104,8 +171,13 @@ export class OpenAIProvider implements LLMProvider {
         const labels: string[] = [];
         const parser = new StreamingArrayParser({
           onItemValue: (index, key, value) => {
-            if (key === "box_2d") {
-              const box = denormalizeBox(value, opts.width, opts.height);
+            if (key === boxFormat.key) {
+              const box = denormalizeBox(
+                value,
+                opts.width,
+                opts.height,
+                boxFormat.range,
+              );
               if (box) emit({ type: "box", index, box });
             } else if (key === "label_en" && typeof value === "string") {
               labels[index] = value;
@@ -121,7 +193,7 @@ export class OpenAIProvider implements LLMProvider {
             emit({
               type: "end",
               index,
-              note: denormalizeNote(raw, opts.width, opts.height),
+              note: denormalizeNote(raw, opts.width, opts.height, boxFormat),
             });
           },
         });
@@ -129,46 +201,7 @@ export class OpenAIProvider implements LLMProvider {
         (async () => {
           try {
             const dataUrl = await blobToDataUrl(opts.blob);
-            const body = {
-              ...(config.extra ?? {}),
-              model: config.model,
-              reasoning_effort: "none",
-              stream: true,
-              messages: [
-                {
-                  role: "user",
-                  content: [
-                    { type: "image_url", image_url: { url: dataUrl } },
-                    { type: "text", text: TRANSCRIBE_PROMPT },
-                  ],
-                },
-              ],
-              response_format: {
-                type: "json_schema",
-                json_schema: {
-                  name: "TranscriptionArray",
-                  strict: true,
-                  schema: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        box_2d: {
-                          type: "array",
-                          items: { type: "number" },
-                          minItems: 4,
-                          maxItems: 4,
-                        },
-                        label: { type: "string" },
-                        label_en: { type: "string" },
-                      },
-                      required: ["box_2d", "label", "label_en"],
-                      additionalProperties: false,
-                    },
-                  },
-                },
-              },
-            };
+            const body = buildTranscriptionRequestBody(config, opts, dataUrl);
             const res = await fetch(
               joinUrl(config.baseUrl, "/v1/chat/completions"),
               {
@@ -235,16 +268,17 @@ function denormalizeBox(
   raw: unknown,
   imgWidth: number,
   imgHeight: number,
+  range: number,
 ): NoteBox | null {
   if (!Array.isArray(raw) || raw.length !== 4) return null;
   const nums = raw.map((v) => Number(v));
   if (nums.some((n) => !Number.isFinite(n))) return null;
   const [yMin, xMin, yMax, xMax] = nums as [number, number, number, number];
   return {
-    x: (Math.min(xMin, xMax) / BOX_RANGE) * imgWidth,
-    y: (Math.min(yMin, yMax) / BOX_RANGE) * imgHeight,
-    width: (Math.abs(xMax - xMin) / BOX_RANGE) * imgWidth,
-    height: (Math.abs(yMax - yMin) / BOX_RANGE) * imgHeight,
+    x: (Math.min(xMin, xMax) / range) * imgWidth,
+    y: (Math.min(yMin, yMax) / range) * imgHeight,
+    width: (Math.abs(xMax - xMin) / range) * imgWidth,
+    height: (Math.abs(yMax - yMin) / range) * imgHeight,
   };
 }
 
@@ -252,14 +286,20 @@ function denormalizeNote(
   raw: unknown,
   imgWidth: number,
   imgHeight: number,
+  format: BoundingBoxDefinition,
 ): TranscribedNote | null {
   if (!raw || typeof raw !== "object") return null;
-  const obj = raw as { box_2d?: unknown; label_en?: unknown };
-  const box = denormalizeBox(obj.box_2d, imgWidth, imgHeight);
+  const obj = raw as Record<string, unknown>;
+  const box = denormalizeBox(
+    obj[format.key],
+    imgWidth,
+    imgHeight,
+    format.range,
+  );
   if (!box) return null;
   const text =
-    typeof obj.label_en === "string"
-      ? obj.label_en
-      : String(obj.label_en ?? "");
+    typeof obj["label_en"] === "string"
+      ? obj["label_en"]
+      : String(obj["label_en"] ?? "");
   return { ...box, body: text };
 }

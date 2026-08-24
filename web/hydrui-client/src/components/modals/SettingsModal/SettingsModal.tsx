@@ -11,10 +11,17 @@ import { ErrorBoundary } from "react-error-boundary";
 import EditColorModal from "@/components/modals/EditColorModal/EditColorModal";
 import FileTypeInput from "@/components/widgets/FileTypeInput/FileTypeInput";
 import ModelInput from "@/components/widgets/ModelInput/ModelInput";
+import ProviderTranscriptionOptions from "@/components/widgets/ProviderTranscriptionOptions/ProviderTranscriptionOptions";
 import PushButton from "@/components/widgets/PushButton/PushButton";
+import SystemPromptInput from "@/components/widgets/SystemPromptInput/SystemPromptInput";
 import { HydrusFileType, filetypeEnumToString } from "@/constants/filetypes";
 import { useShortcut } from "@/hooks/useShortcut";
-import { ProviderConfig, createProvider, serverLLMProvider } from "@/llm";
+import {
+  ProviderConfig,
+  createProvider,
+  resolveProviderTranscriptionDefaults,
+  serverLLMProvider,
+} from "@/llm";
 import { useApiStore } from "@/store/apiStore";
 import { useLLMStore } from "@/store/llmStore";
 import { useModelMetaStore } from "@/store/modelMetaStore";
@@ -924,8 +931,16 @@ function ModelsManager({ setShowAddTagsModelModal }: ModelsManagerProps) {
 function LanguageModelProviderSettings() {
   const providers = useLLMStore((s) => s.providers);
   const selectedId = useLLMStore((s) => s.selectedProviderId);
-  const { addProvider, updateProvider, removeProvider, selectProvider } =
-    useLLMStore((s) => s.actions);
+  const defaultsByProvider = useLLMStore(
+    (s) => s.providerTranscriptionDefaults,
+  );
+  const {
+    addProvider,
+    removeProvider,
+    selectProvider,
+    updateProvider,
+    updateProviderTranscriptionDefaults,
+  } = useLLMStore((s) => s.actions);
   const { addToast } = useToastActions();
 
   const handleAdd = () => {
@@ -963,35 +978,54 @@ function LanguageModelProviderSettings() {
   if (isServerMode) {
     const provider = serverLLMProvider;
     return (
-      <fieldset className="settings-form">
-        <legend>Language Model Provider</legend>
-        <p>
-          In server mode, language model connection settings and credentials are
-          managed by Hydrui Server. Browser requests always use the same-origin
-          server proxy.
-        </p>
-        {provider ? (
-          <fieldset className="settings-llm-provider">
-            <legend>{provider.name}</legend>
-            <div className="settings-row">
-              <label>Model</label>
-              <span>{provider.model}</span>
-              <PushButton onClick={() => fetchModels(provider)} variant="muted">
-                Test
-              </PushButton>
-            </div>
-          </fieldset>
-        ) : (
+      <>
+        <GlobalTranscriptionSettings />
+        <fieldset className="settings-form">
+          <legend>Language Model Provider</legend>
           <p>
-            <em>No language model provider is configured on the server.</em>
+            In server mode, language model connection settings and credentials
+            are managed by Hydrui Server.
           </p>
-        )}
-      </fieldset>
+          {provider ? (
+            <fieldset className="settings-llm-provider">
+              <legend>{provider.name}</legend>
+              <div className="settings-row">
+                <label>Model</label>
+                <span>{provider.model}</span>
+                <PushButton
+                  onClick={() => fetchModels(provider)}
+                  variant="secondary"
+                >
+                  Test
+                </PushButton>
+              </div>
+              <details className="settings-llm-transcription">
+                <summary>Overrides</summary>
+                <ProviderTranscriptionOptions
+                  provider={provider}
+                  value={resolveProviderTranscriptionDefaults(
+                    defaultsByProvider[provider.id],
+                  )}
+                  onChange={(patch) =>
+                    updateProviderTranscriptionDefaults(provider.id, patch)
+                  }
+                  allowModelOverride={false}
+                />
+              </details>
+            </fieldset>
+          ) : (
+            <p>
+              <em>No language model provider is configured on the server.</em>
+            </p>
+          )}
+        </fieldset>
+      </>
     );
   }
 
   return (
     <>
+      <GlobalTranscriptionSettings />
       <fieldset className="settings-form">
         <legend>Language Model Providers</legend>
         <p>
@@ -1056,10 +1090,25 @@ function LanguageModelProviderSettings() {
                     value={p.model}
                     onChange={(model) => updateProvider(p.id, { model })}
                   />
-                  <PushButton onClick={() => fetchModels(p)} variant="muted">
+                  <PushButton
+                    onClick={() => fetchModels(p)}
+                    variant="secondary"
+                  >
                     Test
                   </PushButton>
                 </div>
+                <details className="settings-llm-transcription">
+                  <summary>Overrides</summary>
+                  <ProviderTranscriptionOptions
+                    provider={p}
+                    value={resolveProviderTranscriptionDefaults(
+                      defaultsByProvider[p.id],
+                    )}
+                    onChange={(patch) =>
+                      updateProviderTranscriptionDefaults(p.id, patch)
+                    }
+                  />
+                </details>
                 <div className="settings-llm-actions">
                   <PushButton
                     onClick={() => removeProvider(p.id)}
@@ -1077,5 +1126,22 @@ function LanguageModelProviderSettings() {
         </div>
       </fieldset>
     </>
+  );
+}
+
+function GlobalTranscriptionSettings() {
+  const systemPrompt = useLLMStore((s) => s.transcriptionSystemPrompt);
+  const { setTranscriptionSystemPrompt } = useLLMStore((s) => s.actions);
+
+  return (
+    <fieldset className="settings-form settings-transcription-global">
+      <legend>Image Transcription</legend>
+      <SystemPromptInput
+        id="settings-transcription-system-prompt"
+        value={systemPrompt}
+        onChange={setTranscriptionSystemPrompt}
+        rows={5}
+      />
+    </fieldset>
   );
 }

@@ -473,3 +473,21 @@
   gap: 0.75rem;
   padding-top: 0.5rem;
 }
+
+.settings-llm-transcription > summary {
+  padding: 0.625rem 0;
+  color: var(--color-gray-300);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  user-select: none;
+}
+
+.settings-llm-transcription[open] > summary {
+  margin-bottom: 0.625rem;
+  color: var(--color-white);
+}
+
+.settings-llm-transcription .provider-transcription-options {
+  padding-bottom: 0.25rem;
+}

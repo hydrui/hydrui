@@ -1,7 +1,15 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-import { ProviderConfig, serverLLMProvider } from "@/llm";
+import {
+  DEFAULT_TRANSCRIPTION_SYSTEM_PROMPT,
+  ProviderConfig,
+  ProviderTranscriptionDefaults,
+  TranscriptionPromptHistoryEntry,
+  recordPromptHistory,
+  resolveProviderTranscriptionDefaults,
+  serverLLMProvider,
+} from "@/llm";
 import { isServerMode } from "@/utils/modes";
 
 import { jsonStorage } from "./storage";
@@ -9,11 +17,21 @@ import { jsonStorage } from "./storage";
 interface LLMState {
   providers: ProviderConfig[];
   selectedProviderId: string | null;
+  transcriptionSystemPrompt: string;
+  transcriptionPromptHistory: TranscriptionPromptHistoryEntry[];
+  providerTranscriptionDefaults: Record<string, ProviderTranscriptionDefaults>;
   actions: {
     addProvider: (provider: ProviderConfig) => void;
     updateProvider: (id: string, patch: Partial<ProviderConfig>) => void;
     removeProvider: (id: string) => void;
     selectProvider: (id: string | null) => void;
+    setTranscriptionSystemPrompt: (prompt: string) => void;
+    resetTranscriptionSystemPrompt: () => void;
+    recordTranscriptionSystemPrompt: (prompt: string) => void;
+    updateProviderTranscriptionDefaults: (
+      id: string,
+      patch: Partial<ProviderTranscriptionDefaults>,
+    ) => void;
   };
 }
 
@@ -22,6 +40,9 @@ export const useLLMStore = create<LLMState>()(
     (set) => ({
       providers: [],
       selectedProviderId: null,
+      transcriptionSystemPrompt: DEFAULT_TRANSCRIPTION_SYSTEM_PROMPT,
+      transcriptionPromptHistory: [],
+      providerTranscriptionDefaults: {},
       actions: {
         addProvider: (provider) =>
           set((state) => ({
@@ -37,8 +58,13 @@ export const useLLMStore = create<LLMState>()(
         removeProvider: (id) =>
           set((state) => {
             const providers = state.providers.filter((p) => p.id !== id);
+            const providerTranscriptionDefaults = {
+              ...state.providerTranscriptionDefaults,
+            };
+            delete providerTranscriptionDefaults[id];
             return {
               providers,
+              providerTranscriptionDefaults,
               selectedProviderId:
                 state.selectedProviderId === id
                   ? (providers[0]?.id ?? null)
@@ -46,6 +72,32 @@ export const useLLMStore = create<LLMState>()(
             };
           }),
         selectProvider: (id) => set({ selectedProviderId: id }),
+        setTranscriptionSystemPrompt: (transcriptionSystemPrompt) =>
+          set({ transcriptionSystemPrompt }),
+        resetTranscriptionSystemPrompt: () =>
+          set({
+            transcriptionSystemPrompt: DEFAULT_TRANSCRIPTION_SYSTEM_PROMPT,
+          }),
+        recordTranscriptionSystemPrompt: (prompt) =>
+          set((state) => ({
+            transcriptionSystemPrompt: prompt,
+            transcriptionPromptHistory: recordPromptHistory(
+              state.transcriptionPromptHistory,
+              prompt,
+            ),
+          })),
+        updateProviderTranscriptionDefaults: (id, patch) =>
+          set((state) => ({
+            providerTranscriptionDefaults: {
+              ...state.providerTranscriptionDefaults,
+              [id]: {
+                ...resolveProviderTranscriptionDefaults(
+                  state.providerTranscriptionDefaults[id],
+                ),
+                ...patch,
+              },
+            },
+          })),
       },
     }),
     {
@@ -55,10 +107,22 @@ export const useLLMStore = create<LLMState>()(
       partialize: (state) => ({
         providers: state.providers,
         selectedProviderId: state.selectedProviderId,
+        transcriptionSystemPrompt: state.transcriptionSystemPrompt,
+        transcriptionPromptHistory: state.transcriptionPromptHistory,
+        providerTranscriptionDefaults: state.providerTranscriptionDefaults,
       }),
     },
   ),
 );
+
+export const useAvailableLLMProviders = (): ProviderConfig[] => {
+  const providers = useLLMStore((s) => s.providers);
+  return resolveAvailableLLMProviders(
+    isServerMode,
+    serverLLMProvider,
+    providers,
+  );
+};
 
 export const useSelectedLLMProvider = (): ProviderConfig | null => {
   const providers = useLLMStore((s) => s.providers);
@@ -81,4 +145,13 @@ export function resolveSelectedLLMProvider(
   return (
     browserProviders.find((p) => p.id === selectedBrowserProviderId) ?? null
   );
+}
+
+export function resolveAvailableLLMProviders(
+  serverMode: boolean,
+  serverProvider: ProviderConfig | null,
+  browserProviders: ProviderConfig[],
+): ProviderConfig[] {
+  if (serverMode) return serverProvider ? [serverProvider] : [];
+  return browserProviders;
 }
