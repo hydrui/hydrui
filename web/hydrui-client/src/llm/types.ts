@@ -31,9 +31,17 @@ export interface TranscriptionCompletion {
   timings?: TranscriptionTimings;
 }
 
+export type TranscriptionTranscriptChannel = "reasoning" | "output";
+
 export type TranscribeEvent =
   // The current phase of the model request.
   | { type: "progress"; phase: TranscriptionPhase }
+  // Raw text emitted by the model, to store in the transcripts.
+  | {
+      type: "transcript";
+      channel: TranscriptionTranscriptChannel;
+      content: string;
+    }
   // The note's bounding box is known (already denormalized to image pixels).
   | { type: "box"; index: number; box: NoteBox }
   // The note's label text so far.

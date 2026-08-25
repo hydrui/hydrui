@@ -1,5 +1,6 @@
 import {
   ChatBubbleBottomCenterTextIcon,
+  DocumentTextIcon,
   PlusIcon,
   SparklesIcon,
   TrashIcon,
@@ -26,11 +27,17 @@ import {
   ProviderConfig,
   TranscriptionCompletion,
   TranscriptionRequestSettings,
+  buildTranscriptionSystemPrompt,
+  canonicalizeLanguageTag,
   createProvider,
 } from "@/llm";
 import { client } from "@/store/apiStore";
 import { usePageActions } from "@/store/pageStore";
 import { useToastActions } from "@/store/toastStore";
+import {
+  useTranscriptionTranscriptActions,
+  useTranscriptionTranscriptStore,
+} from "@/store/transcriptionTranscriptStore";
 
 import { fitAnnotationFontSize } from "./fitText";
 import "./index.css";
@@ -90,6 +97,17 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
 }) => {
   const { updateFileNotes } = usePageActions();
   const { addToast, removeToast, updateToastMessage } = useToastActions();
+  const {
+    fail: failTranscript,
+    finish: finishTranscript,
+    open: openTranscript,
+    recordEvent: recordTranscriptEvent,
+    setAnnotationsCreated,
+    start: startTranscript,
+  } = useTranscriptionTranscriptActions();
+  const hasTranscript = useTranscriptionTranscriptStore(
+    (state) => state.transcript !== null,
+  );
 
   const [visible, setVisible] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -247,6 +265,34 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
       const controller = new AbortController();
       transcribeAbort.current = controller;
       setTranscribing(true);
+      const translationLanguage =
+        canonicalizeLanguageTag(settings.translationLanguage) ??
+        settings.translationLanguage;
+      const requestParameters = {
+        ...(provider.extra ?? {}),
+        ...(settings.additionalParameters ?? {}),
+      } as Record<string, unknown>;
+      const transcriptId = startTranscript({
+        fileId,
+        imageWidth: fileData.width,
+        imageHeight: fileData.height,
+        providerName: provider.name,
+        providerKind: provider.kind,
+        providerBaseUrl: provider.baseUrl,
+        model: settings.model ?? provider.model,
+        systemPrompt: buildTranscriptionSystemPrompt(
+          settings.systemPrompt,
+          translationLanguage,
+        ),
+        translationLanguage,
+        boundingBoxFormat: settings.boundingBoxFormat,
+        ...(settings.reasoningEffort === undefined
+          ? {}
+          : { reasoningEffort: settings.reasoningEffort }),
+        ...(Object.keys(requestParameters).length === 0
+          ? {}
+          : { parameters: requestParameters }),
+      });
       const progressToast = addToast(
         formatTranscriptionProgress("initializing"),
         "info",
@@ -259,9 +305,15 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
               variant: "danger",
               callback: () => controller.abort(),
             },
+            {
+              label: "Transcript",
+              variant: "primary",
+              callback: openTranscript,
+            },
           ],
         },
       );
+      let annotationsCreated = 0;
       try {
         const res = await fetch(sourceUrl, {
           signal: controller.signal,
@@ -274,10 +326,10 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
         // Stream index -> local note id for this transcription run.
         const idByIndex = new Map<number, string>();
         let placeholderCount = 0;
-        let annotationsCreated = 0;
         let completion: TranscriptionCompletion | undefined;
         const recordCreatedAnnotation = () => {
           annotationsCreated += 1;
+          setAnnotationsCreated(transcriptId, annotationsCreated);
           updateToastMessage(
             progressToast,
             formatTranscriptionProgress("output", annotationsCreated),
@@ -290,6 +342,7 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
           signal: controller.signal,
           ...settings,
         })) {
+          recordTranscriptEvent(transcriptId, ev);
           let annotationsChanged = false;
           switch (ev.type) {
             case "progress": {
@@ -297,6 +350,9 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
                 progressToast,
                 formatTranscriptionProgress(ev.phase, annotationsCreated),
               );
+              break;
+            }
+            case "transcript": {
               break;
             }
             case "box": {
@@ -396,17 +452,51 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
           }
           if (annotationsChanged) setDirty(true);
         }
+        finishTranscript(transcriptId, annotationsCreated);
         removeToast(progressToast);
         addToast(
           formatTranscriptionCompletion(annotationsCreated, completion),
           "success",
+          {
+            actions: [
+              {
+                label: "Transcript",
+                variant: "primary",
+                callback: openTranscript,
+              },
+            ],
+          },
         );
       } catch (e) {
         removeToast(progressToast);
         if ((e as Error).name === "AbortError") {
-          addToast("Transcription cancelled.", "info");
+          failTranscript(
+            transcriptId,
+            "cancelled",
+            undefined,
+            annotationsCreated,
+          );
+          addToast("Transcription cancelled.", "info", {
+            actions: [
+              {
+                label: "Transcript",
+                variant: "primary",
+                callback: openTranscript,
+              },
+            ],
+          });
         } else {
-          addToast(`Transcription failed: ${e}`, "error");
+          const error = String(e);
+          failTranscript(transcriptId, "failed", error, annotationsCreated);
+          addToast(`Transcription failed: ${error}`, "error", {
+            actions: [
+              {
+                label: "Transcript",
+                variant: "primary",
+                callback: openTranscript,
+              },
+            ],
+          });
         }
       } finally {
         removeToast(progressToast);
@@ -414,7 +504,20 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
         transcribeAbort.current = null;
       }
     },
-    [fileData, sourceUrl, addToast, removeToast, updateToastMessage],
+    [
+      addToast,
+      failTranscript,
+      fileData,
+      fileId,
+      finishTranscript,
+      openTranscript,
+      recordTranscriptEvent,
+      removeToast,
+      setAnnotationsCreated,
+      sourceUrl,
+      startTranscript,
+      updateToastMessage,
+    ],
   );
 
   const cancelTranscribe = useCallback(() => {
@@ -479,6 +582,16 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
                 className="annotation-toolbar-button"
               >
                 <SparklesIcon />
+              </button>
+            )}
+            {hasTranscript && (
+              <button
+                type="button"
+                onClick={openTranscript}
+                title="View latest transcription transcript"
+                className="annotation-toolbar-button"
+              >
+                <DocumentTextIcon />
               </button>
             )}
             <button

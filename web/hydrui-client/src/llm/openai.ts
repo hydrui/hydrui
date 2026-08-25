@@ -88,16 +88,27 @@ function parseTimings(value: unknown): TranscriptionTimings | undefined {
   };
 }
 
-function hasReasoningDelta(
-  delta: OpenAIChatCompletionDelta | undefined,
-): boolean {
-  if (!delta) return false;
-  for (const value of [delta.reasoning_content, delta.reasoning]) {
-    if (typeof value === "string" ? value.length > 0 : value != null) {
-      return true;
-    }
+function transcriptContent(value: unknown): string | null {
+  if (typeof value === "string") return value || null;
+  if (value == null) return null;
+  try {
+    const serialized = JSON.stringify(value);
+    return serialized ? `${serialized}\n` : null;
+  } catch {
+    return String(value);
   }
-  return false;
+}
+
+function reasoningTranscriptDeltas(
+  delta: OpenAIChatCompletionDelta | undefined,
+): string[] {
+  if (!delta) return [];
+  const result: string[] = [];
+  for (const value of [delta.reasoning_content, delta.reasoning]) {
+    const content = transcriptContent(value);
+    if (content && !result.includes(content)) result.push(content);
+  }
+  return result;
 }
 
 export function buildTranscriptionRequestBody(
@@ -334,21 +345,33 @@ export class OpenAIProvider implements LLMProvider {
                   ) as OpenAIChatCompletionChunk;
                   const choice = event.choices?.[0];
                   const delta = choice?.delta;
-                  if (
-                    !outputStarted &&
-                    !reasoningStarted &&
-                    hasReasoningDelta(delta)
-                  ) {
-                    reasoningStarted = true;
-                    emit({ type: "progress", phase: "reasoning" });
+                  const reasoningDeltas = reasoningTranscriptDeltas(delta);
+                  if (reasoningDeltas.length > 0) {
+                    if (!outputStarted && !reasoningStarted) {
+                      reasoningStarted = true;
+                      emit({ type: "progress", phase: "reasoning" });
+                    }
+                    for (const content of reasoningDeltas) {
+                      emit({
+                        type: "transcript",
+                        channel: "reasoning",
+                        content,
+                      });
+                    }
                   }
                   const content = delta?.content;
-                  if (typeof content === "string" && content.length > 0) {
+                  const outputDelta = transcriptContent(content);
+                  if (outputDelta) {
                     if (!outputStarted) {
                       outputStarted = true;
                       emit({ type: "progress", phase: "output" });
                     }
-                    parser.push(content);
+                    emit({
+                      type: "transcript",
+                      channel: "output",
+                      content: outputDelta,
+                    });
+                    if (typeof content === "string") parser.push(content);
                   }
                   if (typeof choice?.finish_reason === "string") {
                     finishReason = choice.finish_reason;
