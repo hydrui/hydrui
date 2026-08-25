@@ -11,9 +11,9 @@ import {
   useTranscriptionTranscriptActions,
   useTranscriptionTranscriptStore,
 } from "@/store/transcriptionTranscriptStore";
+import { formatDuration } from "@/utils/format";
 
 import "./index.css";
-import { formatDuration } from "@/utils/format";
 
 const STATUS_LABELS: Record<TranscriptionTranscript["status"], string> = {
   running: "In progress",
@@ -250,7 +250,11 @@ const TranscriptModalContent: React.FC<TranscriptModalContentProps> = ({
                 </div>
                 <div>
                   <dt>Phase</dt>
-                  <dd>{transcript.status === "running" ? PHASE_LABELS[transcript.phase] : "Finished"}</dd>
+                  <dd>
+                    {transcript.status === "running"
+                      ? PHASE_LABELS[transcript.phase]
+                      : "Finished"}
+                  </dd>
                 </div>
                 <div>
                   <dt>Started</dt>
@@ -258,7 +262,9 @@ const TranscriptModalContent: React.FC<TranscriptModalContentProps> = ({
                 </div>
                 <div>
                   <dt>Duration</dt>
-                  <dd>{formatDuration((finishedAt - transcript.startedAt) / 1000)}</dd>
+                  <dd>
+                    {formatDuration((finishedAt - transcript.startedAt) / 1000)}
+                  </dd>
                 </div>
                 <div>
                   <dt>Annotations</dt>
@@ -268,7 +274,10 @@ const TranscriptModalContent: React.FC<TranscriptModalContentProps> = ({
                   <dt>Finish reason</dt>
                   <dd>
                     {/* This is hideous. But, it works. */}
-                    {transcript.completion?.finishReason?.toLowerCase().replace(/\b\w/g, char => char.toUpperCase()) ?? "Not reported"}
+                    {transcript.completion?.finishReason
+                      ?.toLowerCase()
+                      .replace(/\b\w/g, (char) => char.toUpperCase()) ??
+                      "Not reported"}
                   </dd>
                 </div>
               </dl>
