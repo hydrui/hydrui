@@ -76,10 +76,13 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
   useEffect(() => {
     resetView();
     setIsImageLoaded(false);
+  }, [fileId, fileUrl]);
+
+  useEffect(() => {
     if (fileData.width && fileData.height) {
       centerImageWithSize(fileData.width, fileData.height);
     }
-  }, [fileId, fileData]);
+  }, [fileId, fileData.height, fileData.width]);
 
   // Add a listener for mouseup events outside the component
   useEffect(() => {
