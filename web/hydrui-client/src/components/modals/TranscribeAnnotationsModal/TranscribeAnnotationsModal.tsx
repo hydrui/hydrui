@@ -39,6 +39,7 @@ const TranscribeAnnotationsModal: React.FC<TranscribeAnnotationsModalProps> = ({
     (state) => state.selectedProviderId,
   );
   const systemPrompt = useLLMStore((state) => state.transcriptionSystemPrompt);
+  const translationLanguage = useLLMStore((state) => state.translationLanguage);
   const defaultsByProvider = useLLMStore(
     (state) => state.providerTranscriptionDefaults,
   );
@@ -91,6 +92,7 @@ const TranscribeAnnotationsModal: React.FC<TranscribeAnnotationsModalProps> = ({
     if (!provider || !canStart) return;
     const settings: TranscriptionRequestSettings = {
       systemPrompt,
+      translationLanguage,
       boundingBoxFormat: defaults.boundingBoxFormat,
     };
     if (overrideModel) settings.model = model;

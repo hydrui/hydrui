@@ -395,6 +395,7 @@ export function newAnnotation(
   body: string,
   imageWidth: number,
   imageHeight: number,
+  contents?: AnnotationContent[],
 ): LocalAnnotation {
   const $id = newLocalAnnotationId();
   const note: LocalAnnotation = {
@@ -405,6 +406,7 @@ export function newAnnotation(
     imageWidth,
     imageHeight,
     body,
+    ...(contents === undefined ? {} : { contents }),
     $hydrusNote: hydruiAnnotationsNoteName,
     $format: hydruiAnnotationFormat,
     $id,

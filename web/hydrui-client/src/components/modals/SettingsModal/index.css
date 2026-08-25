@@ -311,6 +311,29 @@
   max-width: 320px;
 }
 
+.settings-transcription-language-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.settings-transcription-language-input input {
+  width: 12rem;
+  padding: 0.25rem 0.5rem;
+  background-color: var(--color-gray-700);
+  border: 1px solid var(--color-gray-600);
+  border-radius: var(--radius-sm);
+  color: var(--color-white);
+}
+
+.settings-transcription-language-input input[aria-invalid="true"] {
+  border-color: var(--color-red-500);
+}
+
+.settings-transcription-language-error {
+  color: var(--color-red-400);
+}
+
 .settings-text-input {
   width: 70px;
   padding: 0.25rem 0.5rem;

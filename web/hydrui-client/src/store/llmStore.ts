@@ -3,9 +3,11 @@ import { persist } from "zustand/middleware";
 
 import {
   DEFAULT_TRANSCRIPTION_SYSTEM_PROMPT,
+  DEFAULT_TRANSLATION_LANGUAGE,
   ProviderConfig,
   ProviderTranscriptionDefaults,
   TranscriptionPromptHistoryEntry,
+  canonicalizeLanguageTag,
   recordPromptHistory,
   resolveProviderTranscriptionDefaults,
   serverLLMProvider,
@@ -18,6 +20,7 @@ interface LLMState {
   providers: ProviderConfig[];
   selectedProviderId: string | null;
   transcriptionSystemPrompt: string;
+  translationLanguage: string;
   transcriptionPromptHistory: TranscriptionPromptHistoryEntry[];
   providerTranscriptionDefaults: Record<string, ProviderTranscriptionDefaults>;
   actions: {
@@ -26,6 +29,7 @@ interface LLMState {
     removeProvider: (id: string) => void;
     selectProvider: (id: string | null) => void;
     setTranscriptionSystemPrompt: (prompt: string) => void;
+    setTranslationLanguage: (language: string) => void;
     resetTranscriptionSystemPrompt: () => void;
     recordTranscriptionSystemPrompt: (prompt: string) => void;
     updateProviderTranscriptionDefaults: (
@@ -41,6 +45,7 @@ export const useLLMStore = create<LLMState>()(
       providers: [],
       selectedProviderId: null,
       transcriptionSystemPrompt: DEFAULT_TRANSCRIPTION_SYSTEM_PROMPT,
+      translationLanguage: DEFAULT_TRANSLATION_LANGUAGE,
       transcriptionPromptHistory: [],
       providerTranscriptionDefaults: {},
       actions: {
@@ -74,6 +79,10 @@ export const useLLMStore = create<LLMState>()(
         selectProvider: (id) => set({ selectedProviderId: id }),
         setTranscriptionSystemPrompt: (transcriptionSystemPrompt) =>
           set({ transcriptionSystemPrompt }),
+        setTranslationLanguage: (language) => {
+          const translationLanguage = canonicalizeLanguageTag(language);
+          if (translationLanguage) set({ translationLanguage });
+        },
         resetTranscriptionSystemPrompt: () =>
           set({
             transcriptionSystemPrompt: DEFAULT_TRANSCRIPTION_SYSTEM_PROMPT,
@@ -108,6 +117,7 @@ export const useLLMStore = create<LLMState>()(
         providers: state.providers,
         selectedProviderId: state.selectedProviderId,
         transcriptionSystemPrompt: state.transcriptionSystemPrompt,
+        translationLanguage: state.translationLanguage,
         transcriptionPromptHistory: state.transcriptionPromptHistory,
         providerTranscriptionDefaults: state.providerTranscriptionDefaults,
       }),

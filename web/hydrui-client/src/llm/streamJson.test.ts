@@ -19,7 +19,8 @@ function collect(): { events: Event[]; parser: StreamingArrayParser } {
   return { events, parser };
 }
 
-const ITEM = '{"box_2d": [10, 20, 30, 40], "label": "hello", "label_en": "hi"}';
+const ITEM =
+  '{"box_2d": [10, 20, 30, 40], "label": "hello", "label_fr": "salut"}';
 
 describe("StreamingArrayParser", () => {
   test("parses a complete array in one push", () => {
@@ -29,12 +30,16 @@ describe("StreamingArrayParser", () => {
       { kind: "value", index: 0, key: "box_2d", value: [10, 20, 30, 40] },
       { kind: "delta", index: 0, key: "label", value: "hello" },
       { kind: "value", index: 0, key: "label", value: "hello" },
-      { kind: "delta", index: 0, key: "label_en", value: "hi" },
-      { kind: "value", index: 0, key: "label_en", value: "hi" },
+      { kind: "delta", index: 0, key: "label_fr", value: "salut" },
+      { kind: "value", index: 0, key: "label_fr", value: "salut" },
       {
         kind: "end",
         index: 0,
-        value: { box_2d: [10, 20, 30, 40], label: "hello", label_en: "hi" },
+        value: {
+          box_2d: [10, 20, 30, 40],
+          label: "hello",
+          label_fr: "salut",
+        },
       },
     ]);
   });

@@ -1,5 +1,10 @@
 import { StreamingArrayParser } from "./streamJson";
-import { BoundingBoxFormat } from "./transcription";
+import {
+  BoundingBoxFormat,
+  buildTranscriptionSystemPrompt,
+  canonicalizeLanguageTag,
+  translationPropertyName,
+} from "./transcription";
 import {
   LLMProvider,
   NoteBox,
@@ -104,10 +109,18 @@ export function buildTranscriptionRequestBody(
     | "model"
     | "reasoningEffort"
     | "systemPrompt"
+    | "translationLanguage"
   >,
   dataUrl: string,
 ): Record<string, unknown> {
   const box = getBoundingBoxDefinition(opts.boundingBoxFormat);
+  const translationLanguage = canonicalizeLanguageTag(opts.translationLanguage);
+  if (!translationLanguage) {
+    throw new Error(
+      `Invalid BCP-47 translation language: ${opts.translationLanguage}`,
+    );
+  }
+  const translationProperty = translationPropertyName(translationLanguage);
   return {
     ...(config.extra ?? {}),
     ...(opts.additionalParameters ?? {}),
@@ -117,7 +130,13 @@ export function buildTranscriptionRequestBody(
       : {}),
     stream: true,
     messages: [
-      { role: "system", content: opts.systemPrompt },
+      {
+        role: "system",
+        content: buildTranscriptionSystemPrompt(
+          opts.systemPrompt,
+          translationLanguage,
+        ),
+      },
       {
         role: "user",
         content: [{ type: "image_url", image_url: { url: dataUrl } }],
@@ -139,10 +158,17 @@ export function buildTranscriptionRequestBody(
                 minItems: 4,
                 maxItems: 4,
               },
-              label: { type: "string" },
-              label_en: { type: "string" },
+              language: {
+                type: "string",
+                description: "BCP-47 language identifier for label",
+              },
+              label: { type: "string", description: "Raw transcription" },
+              [translationProperty]: {
+                type: "string",
+                description: `Translation into ${translationLanguage}`,
+              },
             },
-            required: [box.key, "label", "label_en"],
+            required: [box.key, "language", "label", translationProperty],
             additionalProperties: false,
           },
         },
@@ -178,6 +204,15 @@ export class OpenAIProvider implements LLMProvider {
   transcribe(opts: TranscribeOptions): AsyncIterable<TranscribeEvent> {
     const { config } = this;
     const boxFormat = getBoundingBoxDefinition(opts.boundingBoxFormat);
+    const translationLanguage = canonicalizeLanguageTag(
+      opts.translationLanguage,
+    );
+    if (!translationLanguage) {
+      throw new Error(
+        `Invalid BCP-47 translation language: ${opts.translationLanguage}`,
+      );
+    }
+    const translationProperty = translationPropertyName(translationLanguage);
     return {
       [Symbol.asyncIterator]: () => {
         const pending: TranscribeEvent[] = [];
@@ -217,7 +252,7 @@ export class OpenAIProvider implements LLMProvider {
           pump();
         };
 
-        const labels: string[] = [];
+        const translations: string[] = [];
         const parser = new StreamingArrayParser({
           onItemValue: (index, key, value) => {
             if (key === boxFormat.key) {
@@ -228,21 +263,31 @@ export class OpenAIProvider implements LLMProvider {
                 boxFormat.range,
               );
               if (box) emit({ type: "box", index, box });
-            } else if (key === "label_en" && typeof value === "string") {
-              labels[index] = value;
+            } else if (
+              key === translationProperty &&
+              typeof value === "string"
+            ) {
+              translations[index] = value;
               emit({ type: "text", index, body: value });
             }
           },
           onItemTextDelta: (index, key, delta) => {
-            if (key !== "label_en") return;
-            labels[index] = (labels[index] ?? "") + delta;
-            emit({ type: "text", index, body: labels[index]! });
+            if (key !== translationProperty) return;
+            translations[index] = (translations[index] ?? "") + delta;
+            emit({ type: "text", index, body: translations[index]! });
           },
           onItemEnd: (index, raw) => {
             emit({
               type: "end",
               index,
-              note: denormalizeNote(raw, opts.width, opts.height, boxFormat),
+              note: denormalizeNote(
+                raw,
+                opts.width,
+                opts.height,
+                boxFormat,
+                translationLanguage,
+                translationProperty,
+              ),
             });
           },
         });
@@ -369,6 +414,8 @@ function denormalizeNote(
   imgWidth: number,
   imgHeight: number,
   format: BoundingBoxDefinition,
+  translationLanguage: string,
+  translationProperty: string,
 ): TranscribedNote | null {
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as Record<string, unknown>;
@@ -379,9 +426,32 @@ function denormalizeNote(
     format.range,
   );
   if (!box) return null;
-  const text =
-    typeof obj["label_en"] === "string"
-      ? obj["label_en"]
-      : String(obj["label_en"] ?? "");
-  return { ...box, body: text };
+  const transcription =
+    typeof obj["label"] === "string"
+      ? obj["label"]
+      : String(obj["label"] ?? "");
+  const translation =
+    typeof obj[translationProperty] === "string"
+      ? obj[translationProperty]
+      : String(obj[translationProperty] ?? "");
+  const sourceLanguage =
+    typeof obj["language"] === "string"
+      ? (canonicalizeLanguageTag(obj["language"]) ?? "und")
+      : "und";
+  return {
+    ...box,
+    body: translation,
+    contents: [
+      {
+        language: sourceLanguage,
+        contentType: "transcription",
+        body: transcription,
+      },
+      {
+        language: translationLanguage,
+        contentType: "translation",
+        body: translation,
+      },
+    ],
+  };
 }

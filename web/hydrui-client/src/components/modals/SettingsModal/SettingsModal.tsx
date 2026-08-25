@@ -18,6 +18,7 @@ import { HydrusFileType, filetypeEnumToString } from "@/constants/filetypes";
 import { useShortcut } from "@/hooks/useShortcut";
 import {
   ProviderConfig,
+  canonicalizeLanguageTag,
   createProvider,
   resolveProviderTranscriptionDefaults,
   serverLLMProvider,
@@ -1131,11 +1132,49 @@ function LanguageModelProviderSettings() {
 
 function GlobalTranscriptionSettings() {
   const systemPrompt = useLLMStore((s) => s.transcriptionSystemPrompt);
-  const { setTranscriptionSystemPrompt } = useLLMStore((s) => s.actions);
+  const translationLanguage = useLLMStore((s) => s.translationLanguage);
+  const { setTranscriptionSystemPrompt, setTranslationLanguage } = useLLMStore(
+    (s) => s.actions,
+  );
+  const [languageInput, setLanguageInput] = useState(translationLanguage);
+  const canonicalLanguage = canonicalizeLanguageTag(languageInput);
+
+  useEffect(() => {
+    setLanguageInput(translationLanguage);
+  }, [translationLanguage]);
 
   return (
     <fieldset className="settings-form settings-transcription-global">
       <legend>Image Transcription</legend>
+      <div className="settings-row">
+        <label htmlFor="settings-transcription-language">
+          Translation language
+        </label>
+        <div className="settings-transcription-language-input">
+          <input
+            id="settings-transcription-language"
+            type="text"
+            value={languageInput}
+            onChange={(event) => setLanguageInput(event.currentTarget.value)}
+            onBlur={() => {
+              if (canonicalLanguage) {
+                setTranslationLanguage(canonicalLanguage);
+                setLanguageInput(canonicalLanguage);
+              }
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+            }}
+            aria-invalid={!canonicalLanguage}
+            spellCheck={false}
+          />
+          {!canonicalLanguage && (
+            <small className="settings-transcription-language-error">
+              Enter a valid BCP-47 language tag.
+            </small>
+          )}
+        </div>
+      </div>
       <SystemPromptInput
         id="settings-transcription-system-prompt"
         value={systemPrompt}

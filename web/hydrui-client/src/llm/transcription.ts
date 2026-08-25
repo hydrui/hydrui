@@ -1,5 +1,33 @@
 export const DEFAULT_TRANSCRIPTION_SYSTEM_PROMPT =
-  'Transcribe and translate all text in the image. You must provide a complete transcription of all text in the image, you may not output generic descriptions of text such as "text bubble" or "text". Use the "label" attribute for a raw transcription, then, if the text is in a language other than English, place a translation in "label_en", otherwise, repeat the text from "label".';
+  'Transcribe and translate all text in the image. You must provide a complete transcription of all text in the image; do not output generic descriptions such as "text bubble" or "text". Use the "label" attribute for the raw transcription and "language" for its BCP-47 language identifier. Follow the request-specific target-language instruction for the translation.';
+
+export function canonicalizeLanguageTag(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    return Intl.getCanonicalLocales(trimmed)[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+const displayLanguage =
+  typeof document === "undefined" ? "" : document.documentElement.lang;
+
+export const DEFAULT_TRANSLATION_LANGUAGE =
+  canonicalizeLanguageTag(displayLanguage) ?? "en";
+
+export function translationPropertyName(language: string): string {
+  return `label_${language}`;
+}
+
+export function buildTranscriptionSystemPrompt(
+  systemPrompt: string,
+  translationLanguage: string,
+): string {
+  const translationProperty = translationPropertyName(translationLanguage);
+  return `${systemPrompt.trim()}\n\nTranslate into the language identified by BCP-47 tag "${translationLanguage}" and place that text in "${translationProperty}". If the source text is already in that language, repeat "label" in "${translationProperty}".`;
+}
 
 export const BOUNDING_BOX_FORMATS = [
   {
@@ -22,6 +50,7 @@ export interface ProviderTranscriptionDefaults {
 
 export interface TranscriptionRequestSettings {
   systemPrompt: string;
+  translationLanguage: string;
   boundingBoxFormat: BoundingBoxFormat;
   model?: string;
   reasoningEffort?: string;

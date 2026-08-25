@@ -7,8 +7,16 @@ export interface NoteBox {
   height: number;
 }
 
+export interface TranscribedNoteContent {
+  [key: string]: unknown;
+  language: string;
+  contentType: "transcription" | "translation";
+  body: string;
+}
+
 export interface TranscribedNote extends NoteBox {
   body: string;
+  contents: TranscribedNoteContent[];
 }
 
 export type TranscriptionPhase = "initializing" | "reasoning" | "output";
