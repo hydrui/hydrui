@@ -3,6 +3,9 @@
 {{- if and (not .Values.serverMode.hydrus.existingApiKeySecret) .Values.serverMode.hydrus.apiKey }}
 {{- $needsSecret = true }}
 {{- end }}
+{{- if and (not .Values.serverMode.llm.existingApiKeySecret) .Values.serverMode.llm.apiKey }}
+{{- $needsSecret = true }}
+{{- end }}
 {{- if and (not .Values.serverMode.existingSessionSecret) (or .Values.serverMode.sessionSecret (not .Values.serverMode.existingSessionSecret)) }}
 {{- $needsSecret = true }}
 {{- end }}
@@ -21,6 +24,9 @@ type: Opaque
 stringData:
   {{- if and (not .Values.serverMode.hydrus.existingApiKeySecret) .Values.serverMode.hydrus.apiKey }}
   hydrus-api-key: {{ .Values.serverMode.hydrus.apiKey | quote }}
+  {{- end }}
+  {{- if and (not .Values.serverMode.llm.existingApiKeySecret) .Values.serverMode.llm.apiKey }}
+  llm-api-key: {{ .Values.serverMode.llm.apiKey | quote }}
   {{- end }}
   {{- if not .Values.serverMode.existingSessionSecret }}
   jwt-secret: {{ .Values.serverMode.sessionSecret | default (include "hydrui.generateSecret" .) | quote }}

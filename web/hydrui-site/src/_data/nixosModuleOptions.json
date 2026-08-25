@@ -3,7 +3,7 @@
     "default": false,
     "description": "Whether to enable Hydrui Server.",
     "example": true,
-    "location": { "column": 7, "file": "nix/module.nix", "line": 50 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 61 },
     "name": "enable",
     "type": "boolean"
   },
@@ -11,7 +11,7 @@
     "default": { "_type": "literalExpression", "text": "pkgs.hydrui-server" },
     "description": "The hydrui-server package to use.",
     "example": null,
-    "location": { "column": 7, "file": "nix/module.nix", "line": 53 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 64 },
     "name": "package",
     "type": "package"
   },
@@ -19,7 +19,7 @@
     "default": true,
     "description": "Whether to automatically open the necessary ports in the firewall.",
     "example": true,
-    "location": { "column": 7, "file": "nix/module.nix", "line": 54 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 65 },
     "name": "openFirewall",
     "type": "boolean"
   },
@@ -27,7 +27,7 @@
     "default": false,
     "description": "Enable Hydrui's server mode, as opposed to the default client-only mode.\n\nWhen enabled, Hydrui Server will act as a proxy to the upstream hydrus client.\nThe API credentials will need to be specified directly to Hydrui Server. When\nthis value is set, hydrusUrl and hydrusApiKeyFile must be set.\n",
     "example": true,
-    "location": { "column": 7, "file": "nix/module.nix", "line": 60 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 71 },
     "name": "serverMode",
     "type": "boolean"
   },
@@ -35,7 +35,7 @@
     "default": false,
     "description": "Whether to enable automatic TLS with ACME.",
     "example": true,
-    "location": { "column": 7, "file": "nix/module.nix", "line": 69 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 80 },
     "name": "acme",
     "type": "boolean"
   },
@@ -43,7 +43,7 @@
     "default": "",
     "description": "Address to listen on; empty string for all interfaces.",
     "example": "127.0.0.1",
-    "location": { "column": 7, "file": "nix/module.nix", "line": 70 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 81 },
     "name": "bindAddress",
     "type": "string"
   },
@@ -51,7 +51,7 @@
     "default": null,
     "description": "User under which the service is running on, or null for systemd DynamicUser.",
     "example": "hydrus",
-    "location": { "column": 7, "file": "nix/module.nix", "line": 76 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 87 },
     "name": "user",
     "type": "null or string"
   },
@@ -59,7 +59,7 @@
     "default": null,
     "description": "Group under which the service is running on.",
     "example": "hydrus",
-    "location": { "column": 7, "file": "nix/module.nix", "line": 82 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 93 },
     "name": "group",
     "type": "null or string"
   },
@@ -67,7 +67,7 @@
     "default": 8080,
     "description": "Port to listen on, or null to disable listening on TCP.",
     "example": null,
-    "location": { "column": 7, "file": "nix/module.nix", "line": 88 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 99 },
     "name": "port",
     "type": "null or 16 bit unsigned integer; between 0 and 65535 (both inclusive)"
   },
@@ -75,7 +75,7 @@
     "default": null,
     "description": "UNIX domain socket path to bind, or null to disable listening on a UNIX domain socket.",
     "example": "/var/run/hydrui.sock",
-    "location": { "column": 7, "file": "nix/module.nix", "line": 93 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 104 },
     "name": "socket",
     "type": "null or absolute path"
   },
@@ -83,7 +83,7 @@
     "default": null,
     "description": "Port to listen on for HTTPS (TLS), or null to disable listening on TCP TLS.",
     "example": 8443,
-    "location": { "column": 7, "file": "nix/module.nix", "line": 99 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 110 },
     "name": "portTLS",
     "type": "null or 16 bit unsigned integer; between 0 and 65535 (both inclusive)"
   },
@@ -91,7 +91,7 @@
     "default": null,
     "description": "UNIX domain socket path to bind for HTTPS (TLS), or null to disable listening on a UNIX domain socket TLS.",
     "example": "/var/run/hydrui-tls.sock",
-    "location": { "column": 7, "file": "nix/module.nix", "line": 105 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 116 },
     "name": "socketTLS",
     "type": "null or absolute path"
   },
@@ -99,7 +99,7 @@
     "default": null,
     "description": "Path to the TLS certificate file (full chain, PEM-formatted).",
     "example": "/var/lib/hydrui/cert.pem",
-    "location": { "column": 7, "file": "nix/module.nix", "line": 111 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 122 },
     "name": "tlsCertFile",
     "type": "null or absolute path"
   },
@@ -107,7 +107,7 @@
     "default": null,
     "description": "Path to the TLS private key file (PEM-formatted).",
     "example": "/var/lib/hydrui/key.pem",
-    "location": { "column": 7, "file": "nix/module.nix", "line": 117 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 128 },
     "name": "tlsKeyFile",
     "type": "null or absolute path"
   },
@@ -115,7 +115,7 @@
     "default": null,
     "description": "Permissions to set on the UNIX domain socket, or null to use Hydrui's default.",
     "example": "0660",
-    "location": { "column": 7, "file": "nix/module.nix", "line": 123 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 134 },
     "name": "socketPerms",
     "type": "null or string"
   },
@@ -123,7 +123,7 @@
     "default": null,
     "description": "Hydrus client API server to connect to. (server mode only)",
     "example": "http://localhost:45869",
-    "location": { "column": 7, "file": "nix/module.nix", "line": 129 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 140 },
     "name": "hydrusUrl",
     "type": "null or string"
   },
@@ -131,15 +131,55 @@
     "default": null,
     "description": "Path to a file that contains the hydrus client API access key. (server mode only)",
     "example": null,
-    "location": { "column": 7, "file": "nix/module.nix", "line": 135 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 146 },
     "name": "hydrusApiKeyFile",
     "type": "null or absolute path"
   },
   {
     "default": null,
+    "description": "OpenAI-compatible language model provider URL, excluding the /v1 suffix. (server mode only)",
+    "example": "http://localhost:8081",
+    "location": { "column": 7, "file": "nix/module.nix", "line": 151 },
+    "name": "llmUrl",
+    "type": "null or string"
+  },
+  {
+    "default": null,
+    "description": "Path to a file that contains the language model provider API key. (server mode only)",
+    "example": null,
+    "location": { "column": 7, "file": "nix/module.nix", "line": 157 },
+    "name": "llmApiKeyFile",
+    "type": "null or absolute path"
+  },
+  {
+    "default": null,
+    "description": "Model used for server-proxied language model requests. (server mode only)",
+    "example": "vision-model",
+    "location": { "column": 7, "file": "nix/module.nix", "line": 162 },
+    "name": "llmModel",
+    "type": "null or string"
+  },
+  {
+    "default": null,
+    "description": "Display name for the server-configured language model provider. (server mode only)",
+    "example": "Local vision model",
+    "location": { "column": 7, "file": "nix/module.nix", "line": 168 },
+    "name": "llmName",
+    "type": "null or string"
+  },
+  {
+    "default": true,
+    "description": "Whether to validate the language model provider's TLS certificate.",
+    "example": null,
+    "location": { "column": 7, "file": "nix/module.nix", "line": 174 },
+    "name": "llmSecure",
+    "type": "boolean"
+  },
+  {
+    "default": null,
     "description": "Path to a file that contains an htpasswd file for authentication. (server mode only)",
     "example": null,
-    "location": { "column": 7, "file": "nix/module.nix", "line": 140 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 179 },
     "name": "htpasswdFile",
     "type": "null or absolute path"
   },
@@ -147,7 +187,7 @@
     "default": null,
     "description": "Allow users to submit issue reports to the Hydrui Mothership. You can\ndisable this to improve privacy if you don't think you will ever use\nthe issue reporting functionality within Hydrui. (server mode only)\n",
     "example": null,
-    "location": { "column": 7, "file": "nix/module.nix", "line": 145 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 184 },
     "name": "allowReport",
     "type": "null or boolean"
   },
@@ -155,7 +195,7 @@
     "default": false,
     "description": "Disables authentication in server mode. Make sure you have appropriate\nsecurity in front of the Hydrui server! (server mode only)\n",
     "example": null,
-    "location": { "column": 7, "file": "nix/module.nix", "line": 154 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 193 },
     "name": "noAuth",
     "type": "boolean"
   },
@@ -163,7 +203,7 @@
     "default": null,
     "description": "Secret keymatter used for session validation. If not specified, it will be generated and stored locally in /var/lib.",
     "example": null,
-    "location": { "column": 7, "file": "nix/module.nix", "line": 162 },
+    "location": { "column": 7, "file": "nix/module.nix", "line": 201 },
     "name": "secretFile",
     "type": "null or absolute path"
   }

@@ -10,10 +10,21 @@ import { ErrorBoundary } from "react-error-boundary";
 
 import EditColorModal from "@/components/modals/EditColorModal/EditColorModal";
 import FileTypeInput from "@/components/widgets/FileTypeInput/FileTypeInput";
+import ModelInput from "@/components/widgets/ModelInput/ModelInput";
+import ProviderTranscriptionOptions from "@/components/widgets/ProviderTranscriptionOptions/ProviderTranscriptionOptions";
 import PushButton from "@/components/widgets/PushButton/PushButton";
+import SystemPromptInput from "@/components/widgets/SystemPromptInput/SystemPromptInput";
 import { HydrusFileType, filetypeEnumToString } from "@/constants/filetypes";
 import { useShortcut } from "@/hooks/useShortcut";
+import {
+  ProviderConfig,
+  canonicalizeLanguageTag,
+  createProvider,
+  resolveProviderTranscriptionDefaults,
+  serverLLMProvider,
+} from "@/llm";
 import { useApiStore } from "@/store/apiStore";
+import { useLLMStore } from "@/store/llmStore";
 import { useModelMetaStore } from "@/store/modelMetaStore";
 import { usePreferencesStore } from "@/store/preferencesStore";
 import { useToastActions } from "@/store/toastStore";
@@ -180,17 +191,29 @@ function SettingsModal({ onClose }: SettingsModalProps) {
                 </>
               )}
               {activeTab === "models" && (
-                <ErrorBoundary
-                  fallbackRender={({ error }) => (
-                    <p>
-                      An error occurred in the model manager: {String(error)}
-                    </p>
-                  )}
-                >
-                  <ModelsManager
-                    setShowAddTagsModelModal={setShowAddTagsModelModal}
-                  />
-                </ErrorBoundary>
+                <>
+                  <ErrorBoundary
+                    fallbackRender={({ error }) => (
+                      <p>
+                        An error occurred in the model manager: {String(error)}
+                      </p>
+                    )}
+                  >
+                    <ModelsManager
+                      setShowAddTagsModelModal={setShowAddTagsModelModal}
+                    />
+                  </ErrorBoundary>
+                  <ErrorBoundary
+                    fallbackRender={({ error }) => (
+                      <p>
+                        An error occurred in the model provider settings:{" "}
+                        {String(error)}
+                      </p>
+                    )}
+                  >
+                    <LanguageModelProviderSettings />
+                  </ErrorBoundary>
+                </>
               )}
             </div>
             <div className="settings-modal-buttons">
@@ -741,15 +764,12 @@ function ModelsManager({ setShowAddTagsModelModal }: ModelsManagerProps) {
   return (
     <>
       <fieldset className="settings-form">
-        <legend>Info</legend>
+        <legend>Tagging Models</legend>
         <p>
-          Hydrui has optional support for some features that use machine
-          learning.
-        </p>
-        <p>
-          These features run locally in your web browser. Please note that
-          neural network weights are generally large, so using these features
-          will use some bandwidth and disk space.
+          Hydrui can suggest tags for images using tagging models that run
+          locally in your web browser. Please note that model weights are
+          generally large, so using this feature will use some bandwidth and
+          disk space.
         </p>
         {isServerMode ? (
           <p>
@@ -771,9 +791,6 @@ function ModelsManager({ setShowAddTagsModelModal }: ModelsManagerProps) {
             MiB).
           </p>
         ) : undefined}
-      </fieldset>
-      <fieldset className="settings-form">
-        <legend>Tagging Models</legend>
         <div
           className={`settings-model-dropzone ${dropActive ? "dropping" : ""}`}
           onDragOver={(e) => {
@@ -909,5 +926,261 @@ function ModelsManager({ setShowAddTagsModelModal }: ModelsManagerProps) {
         </div>
       </fieldset>
     </>
+  );
+}
+
+function LanguageModelProviderSettings() {
+  const providers = useLLMStore((s) => s.providers);
+  const selectedId = useLLMStore((s) => s.selectedProviderId);
+  const defaultsByProvider = useLLMStore(
+    (s) => s.providerTranscriptionDefaults,
+  );
+  const {
+    addProvider,
+    removeProvider,
+    selectProvider,
+    updateProvider,
+    updateProviderTranscriptionDefaults,
+  } = useLLMStore((s) => s.actions);
+  const { addToast } = useToastActions();
+
+  const handleAdd = () => {
+    const id =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `p-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    addProvider({
+      id,
+      name: "New Provider",
+      kind: "openai",
+      baseUrl: "http://127.0.0.1:8080",
+      apiKey: "",
+      model: "",
+    });
+  };
+
+  const fetchModels = async (config: ProviderConfig) => {
+    try {
+      const provider = createProvider(config);
+      const models = await provider.listModels(new AbortController().signal);
+      if (models.length === 0) {
+        addToast("No models returned.", "warning");
+        return;
+      }
+      addToast(`Found ${models.length} model(s).`, "success");
+      if (!config.model && models[0]) {
+        updateProvider(config.id, { model: models[0] });
+      }
+    } catch (e) {
+      addToast(`Failed to list models: ${e}`, "error");
+    }
+  };
+
+  if (isServerMode) {
+    const provider = serverLLMProvider;
+    return (
+      <>
+        <GlobalTranscriptionSettings />
+        <fieldset className="settings-form">
+          <legend>Language Model Provider</legend>
+          <p>
+            In server mode, language model connection settings and credentials
+            are managed by Hydrui Server.
+          </p>
+          {provider ? (
+            <fieldset className="settings-llm-provider">
+              <legend>{provider.name}</legend>
+              <div className="settings-row">
+                <label>Model</label>
+                <span>{provider.model}</span>
+                <PushButton
+                  onClick={() => fetchModels(provider)}
+                  variant="secondary"
+                >
+                  Test
+                </PushButton>
+              </div>
+              <details className="settings-llm-transcription">
+                <summary>Overrides</summary>
+                <ProviderTranscriptionOptions
+                  provider={provider}
+                  value={resolveProviderTranscriptionDefaults(
+                    defaultsByProvider[provider.id],
+                  )}
+                  onChange={(patch) =>
+                    updateProviderTranscriptionDefaults(provider.id, patch)
+                  }
+                  allowModelOverride={false}
+                />
+              </details>
+            </fieldset>
+          ) : (
+            <p>
+              <em>No language model provider is configured on the server.</em>
+            </p>
+          )}
+        </fieldset>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <GlobalTranscriptionSettings />
+      <fieldset className="settings-form">
+        <legend>Language Model Providers</legend>
+        <p>
+          Some features, such as image transcription, can use models that are
+          too large to run in your web browser. To use them, configure a model
+          provider here. Currently only OpenAI-compatible APIs (e.g. llama.cpp,
+          Ollama, OpenAI) are supported.
+        </p>
+        {providers.length === 0 ? (
+          <p>
+            <em>No providers configured.</em>
+          </p>
+        ) : (
+          <div className="settings-llm-providers">
+            {providers.map((p) => (
+              <fieldset key={p.id} className="settings-llm-provider">
+                <legend>
+                  <label>
+                    <input
+                      type="radio"
+                      name="llm-selected"
+                      checked={selectedId === p.id}
+                      onChange={() => selectProvider(p.id)}
+                    />{" "}
+                    {p.name || "Unnamed"}
+                  </label>
+                </legend>
+                <div className="settings-row">
+                  <label>Name</label>
+                  <input
+                    type="text"
+                    value={p.name}
+                    onChange={(e) =>
+                      updateProvider(p.id, { name: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="settings-row">
+                  <label>Base URL</label>
+                  <input
+                    type="text"
+                    value={p.baseUrl}
+                    onChange={(e) =>
+                      updateProvider(p.id, { baseUrl: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="settings-row">
+                  <label>API Key</label>
+                  <input
+                    type="password"
+                    value={p.apiKey}
+                    onChange={(e) =>
+                      updateProvider(p.id, { apiKey: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="settings-row">
+                  <label>Model</label>
+                  <ModelInput
+                    config={p}
+                    value={p.model}
+                    onChange={(model) => updateProvider(p.id, { model })}
+                  />
+                  <PushButton
+                    onClick={() => fetchModels(p)}
+                    variant="secondary"
+                  >
+                    Test
+                  </PushButton>
+                </div>
+                <details className="settings-llm-transcription">
+                  <summary>Overrides</summary>
+                  <ProviderTranscriptionOptions
+                    provider={p}
+                    value={resolveProviderTranscriptionDefaults(
+                      defaultsByProvider[p.id],
+                    )}
+                    onChange={(patch) =>
+                      updateProviderTranscriptionDefaults(p.id, patch)
+                    }
+                  />
+                </details>
+                <div className="settings-llm-actions">
+                  <PushButton
+                    onClick={() => removeProvider(p.id)}
+                    variant="danger"
+                  >
+                    Remove
+                  </PushButton>
+                </div>
+              </fieldset>
+            ))}
+          </div>
+        )}
+        <div className="settings-llm-actions">
+          <PushButton onClick={handleAdd}>Add Provider</PushButton>
+        </div>
+      </fieldset>
+    </>
+  );
+}
+
+function GlobalTranscriptionSettings() {
+  const systemPrompt = useLLMStore((s) => s.transcriptionSystemPrompt);
+  const translationLanguage = useLLMStore((s) => s.translationLanguage);
+  const { setTranscriptionSystemPrompt, setTranslationLanguage } = useLLMStore(
+    (s) => s.actions,
+  );
+  const [languageInput, setLanguageInput] = useState(translationLanguage);
+  const canonicalLanguage = canonicalizeLanguageTag(languageInput);
+
+  useEffect(() => {
+    setLanguageInput(translationLanguage);
+  }, [translationLanguage]);
+
+  return (
+    <fieldset className="settings-form settings-transcription-global">
+      <legend>Image Transcription</legend>
+      <div className="settings-row">
+        <label htmlFor="settings-transcription-language">
+          Translation language
+        </label>
+        <div className="settings-transcription-language-input">
+          <input
+            id="settings-transcription-language"
+            type="text"
+            value={languageInput}
+            onChange={(event) => setLanguageInput(event.currentTarget.value)}
+            onBlur={() => {
+              if (canonicalLanguage) {
+                setTranslationLanguage(canonicalLanguage);
+                setLanguageInput(canonicalLanguage);
+              }
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+            }}
+            aria-invalid={!canonicalLanguage}
+            spellCheck={false}
+          />
+          {!canonicalLanguage && (
+            <small className="settings-transcription-language-error">
+              Enter a valid BCP-47 language tag.
+            </small>
+          )}
+        </div>
+      </div>
+      <SystemPromptInput
+        id="settings-transcription-system-prompt"
+        value={systemPrompt}
+        onChange={setTranscriptionSystemPrompt}
+        rows={5}
+      />
+    </fieldset>
   );
 }

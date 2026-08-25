@@ -1,0 +1,61 @@
+.model-input-container {
+  position: relative;
+}
+
+.model-input-field {
+  width: 100%;
+  background-color: var(--color-gray-700);
+  border: 1px solid var(--color-gray-600);
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.5rem;
+  color: var(--color-white);
+}
+
+.model-input-field:focus {
+  outline: none;
+  border-color: var(--color-blue-500);
+  box-shadow: 0 0 0 2px var(--color-blue-500, rgba(59, 130, 246, 0.5));
+}
+
+.model-input-field::placeholder {
+  color: var(--color-gray-400);
+}
+
+.model-input-field:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.model-input-suggestions {
+  position: absolute;
+  margin-top: 0.25rem;
+  width: 100%;
+  max-height: 15rem;
+  overflow-y: auto;
+  background-color: var(--color-gray-700);
+  border: 1px solid var(--color-gray-600);
+  border-radius: var(--radius-sm);
+  z-index: 10;
+}
+
+.model-input-suggestion-item {
+  padding: 0.375rem 0.75rem;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-input-suggestion-item:hover {
+  background-color: var(--color-gray-600);
+}
+
+.model-input-suggestion-item.selected {
+  background-color: var(--color-blue-600);
+}
+
+.model-input-suggestion-note {
+  padding: 0.375rem 0.75rem;
+  color: var(--color-gray-400);
+  font-style: italic;
+}

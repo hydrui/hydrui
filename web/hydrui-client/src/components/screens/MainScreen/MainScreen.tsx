@@ -8,6 +8,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import AboutModal from "@/components/modals/AboutModal/AboutModal";
 import DemoModal from "@/components/modals/DemoModal/DemoModal";
 import SettingsModal from "@/components/modals/SettingsModal/SettingsModal";
+import TranscriptionTranscriptModal from "@/components/modals/TranscriptionTranscriptModal/TranscriptionTranscriptModal";
 import PopupPanel from "@/components/panels/PopupPanel/PopupPanel";
 import ContextMenu from "@/components/widgets/Menu/ContextMenu";
 import MenuBar from "@/components/widgets/Menu/MenuBar";
@@ -216,6 +217,7 @@ const MainScreen = () => {
       <PopupPanel />
       <ContextMenu />
       <ToastContainer />
+      <TranscriptionTranscriptModal />
       {showAboutModal && (
         <AboutModal onClose={() => setShowAboutModal(false)} />
       )}

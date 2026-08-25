@@ -33,6 +33,15 @@ let
   ++ optionals (cfg.hydrusApiKeyFile != null) [
     "-hydrus-api-key-file=$CREDENTIALS_DIRECTORY/hydrus-api-key"
   ]
+  ++ optionals (cfg.llmUrl != null) [
+    "-llm-url=${cfg.llmUrl}"
+    "-llm-secure=${boolStr cfg.llmSecure}"
+  ]
+  ++ optionals (cfg.llmApiKeyFile != null) [
+    "-llm-api-key-file=$CREDENTIALS_DIRECTORY/llm-api-key"
+  ]
+  ++ optionals (cfg.llmModel != null) [ "-llm-model=${cfg.llmModel}" ]
+  ++ optionals (cfg.llmName != null) [ "-llm-name=${cfg.llmName}" ]
   ++ optionals (cfg.htpasswdFile != null) [ "-htpasswd=$CREDENTIALS_DIRECTORY/htpasswd" ]
   ++ optionals (cfg.allowReport != null) [ "-allow-bug-report=${boolStr cfg.allowReport}" ]
   ++ optionals cfg.noAuth [ "-no-auth=true" ]
@@ -139,6 +148,34 @@ in
         default = null;
         description = "Path to a file that contains the hydrus client API access key. (server mode only)";
       };
+      llmUrl = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        example = "http://localhost:8081";
+        description = "OpenAI-compatible language model provider URL, excluding the /v1 suffix. (server mode only)";
+      };
+      llmApiKeyFile = mkOption {
+        type = types.nullOr types.path;
+        default = null;
+        description = "Path to a file that contains the language model provider API key. (server mode only)";
+      };
+      llmModel = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        example = "vision-model";
+        description = "Model used for server-proxied language model requests. (server mode only)";
+      };
+      llmName = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        example = "Local vision model";
+        description = "Display name for the server-configured language model provider. (server mode only)";
+      };
+      llmSecure = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Whether to validate the language model provider's TLS certificate.";
+      };
       htpasswdFile = mkOption {
         type = types.nullOr types.path;
         default = null;
@@ -203,6 +240,20 @@ in
         message = "services.hydrui.hydrusApiKeyFile can't be set in client-only mode; see services.hydrui.serverMode";
       }
       {
+        assertion =
+          cfg.serverMode == true
+          || (cfg.llmUrl == null && cfg.llmApiKeyFile == null && cfg.llmModel == null && cfg.llmName == null);
+        message = "services.hydrui language model options can't be set in client-only mode; see services.hydrui.serverMode";
+      }
+      {
+        assertion = (cfg.llmUrl == null) == (cfg.llmModel == null);
+        message = "services.hydrui.llmUrl and services.hydrui.llmModel must be set together";
+      }
+      {
+        assertion = cfg.llmUrl != null || (cfg.llmApiKeyFile == null && cfg.llmName == null);
+        message = "services.hydrui.llmUrl must be set when other language model options are configured";
+      }
+      {
         assertion = cfg.serverMode == true || cfg.htpasswdFile == null;
         message = "services.hydrui.htpasswd can't be set in client-only mode; see services.hydrui.serverMode";
       }
@@ -251,11 +302,12 @@ in
       after = [ "network-online.target" ];
       serviceConfig = {
         DynamicUser = cfg.user == null;
-        ExecStart = "${cfg.package}/bin/hydrui-server ${lib.concatStringsSep " " args}";
+        ExecStart = "${cfg.package}/bin/hydrui-server ${lib.escapeShellArgs args}";
         Group = cfg.group;
         LoadCredential =
           optionals (cfg.serverMode && cfg.secretFile != null) [ "secret:${cfg.secretFile}" ]
           ++ optionals (cfg.hydrusApiKeyFile != null) [ "hydrus-api-key:${cfg.hydrusApiKeyFile}" ]
+          ++ optionals (cfg.llmApiKeyFile != null) [ "llm-api-key:${cfg.llmApiKeyFile}" ]
           ++ optionals (cfg.htpasswdFile != null) [ "htpasswd:${cfg.htpasswdFile}" ]
           ++ optionals (cfg.tlsCertFile != null) [ "tls-cert:${cfg.tlsCertFile}" ]
           ++ optionals (cfg.tlsKeyFile != null) [ "tls-key:${cfg.tlsKeyFile}" ];

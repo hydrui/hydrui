@@ -104,6 +104,22 @@ serverMode:
     # Validate TLS certificate when connecting to Hydrus
     secure: false
 
+  llm:
+    # OpenAI-compatible provider base URL, excluding the /v1 suffix.
+    # Leave empty to disable language model features in server mode.
+    url: ""
+    # Model used for all requests through the server proxy. Required when url is set.
+    model: ""
+    # Display name shown to clients. Defaults to "Server Language Model".
+    name: ""
+    # Provider API key. This is kept server-side and never sent to clients.
+    apiKey: ""
+    # Alternatively, reference an existing secret.
+    existingApiKeySecret: ""
+    existingApiKeySecretKey: "llm-api-key"
+    # Validate the provider's TLS certificate.
+    secure: true
+
   security:
     # Use secure cookies (set to false if not using HTTPS)
     secureCookies: false

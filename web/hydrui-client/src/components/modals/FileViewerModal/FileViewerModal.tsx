@@ -1,16 +1,20 @@
 import {
   ArrowDownTrayIcon,
   ArrowTopRightOnSquareIcon,
+  ChatBubbleBottomCenterTextIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { FocusTrap } from "focus-trap-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import { FileMetadata } from "@/api/types";
 import BrokenImageModal from "@/components/modals/BrokenImageModal/BrokenImageModal";
-import FileViewer from "@/components/widgets/FileViewer/FileViewer";
+import ConfirmModal from "@/components/modals/ConfirmModal/ConfirmModal";
+import FileViewer, {
+  UpdateAnnotationStateFn,
+} from "@/components/widgets/FileViewer/FileViewer";
 import PushButton from "@/components/widgets/PushButton/PushButton";
 import { ContentUpdateAction } from "@/constants/contentUpdates";
 import { useShortcut } from "@/hooks/useShortcut";
@@ -27,6 +31,16 @@ interface FileViewerModalProps {
   onNext: () => void;
   hasPrevious: boolean;
   hasNext: boolean;
+}
+
+function nextAnnotationVisibility(
+  currentVisibility: boolean,
+  isNewFile: boolean,
+  viewerCanShowAnnotations: boolean,
+  fileHasAnnotations: boolean,
+): boolean {
+  if (!viewerCanShowAnnotations) return false;
+  return isNewFile ? fileHasAnnotations : currentVisibility;
 }
 
 function generateFileName(file: FileMetadata): string {
@@ -155,25 +169,103 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({
   hasNext,
 }) => {
   const [isBrokenImageModalOpen, setIsBrokenImageModalOpen] = useState(false);
+  const [canShowAnnotations, setCanShowAnnotations] = useState(false);
+  const [showAnnotations, setShowAnnotations] = useState(false);
+  const [hasUnsavedAnnotationChanges, setHasUnsavedAnnotationChanges] =
+    useState(false);
+  const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const annotationStateFileId = useRef<number | null>(null);
+  const pendingViewerAction = useRef<(() => void) | null>(null);
+
+  const handleUpdateAnnotationState = useCallback<UpdateAnnotationStateFn>(
+    ({ viewerCanShowAnnotations, fileHasAnnotations }) => {
+      const isNewFile = annotationStateFileId.current !== fileId;
+      annotationStateFileId.current = fileId;
+      setCanShowAnnotations(viewerCanShowAnnotations);
+      setShowAnnotations((currentVisibility) =>
+        nextAnnotationVisibility(
+          currentVisibility,
+          isNewFile,
+          viewerCanShowAnnotations,
+          fileHasAnnotations,
+        ),
+      );
+    },
+    [fileId],
+  );
+
+  const requestViewerAction = useCallback(
+    (action: () => void) => {
+      if (!hasUnsavedAnnotationChanges) {
+        action();
+        return;
+      }
+      pendingViewerAction.current = action;
+      setShowDiscardModal(true);
+    },
+    [hasUnsavedAnnotationChanges],
+  );
+
+  const handleClose = useCallback(
+    () => requestViewerAction(onClose),
+    [onClose, requestViewerAction],
+  );
+  const handlePrevious = useCallback(() => {
+    if (hasPrevious) requestViewerAction(onPrevious);
+  }, [hasPrevious, onPrevious, requestViewerAction]);
+  const handleNext = useCallback(() => {
+    if (hasNext) requestViewerAction(onNext);
+  }, [hasNext, onNext, requestViewerAction]);
+
+  const handleToggleAnnotations = useCallback(() => {
+    if (!showAnnotations) {
+      setShowAnnotations(true);
+      return;
+    }
+    requestViewerAction(() => setShowAnnotations(false));
+  }, [requestViewerAction, showAnnotations]);
+
+  const handleDiscard = useCallback(() => {
+    const action = pendingViewerAction.current;
+    pendingViewerAction.current = null;
+    setShowDiscardModal(false);
+    setHasUnsavedAnnotationChanges(false);
+    action?.();
+  }, []);
+
+  const handleKeepEditing = useCallback(() => {
+    pendingViewerAction.current = null;
+    setShowDiscardModal(false);
+  }, []);
 
   // Handle keyboard navigation
   useShortcut({
-    Escape: onClose,
-    ArrowLeft: onPrevious,
-    ArrowRight: onNext,
+    Escape: handleClose,
+    ArrowLeft: handlePrevious,
+    ArrowRight: handleNext,
   });
 
   const previewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (previewRef.current) {
-      previewRef.current.addEventListener("click", (event: MouseEvent) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      });
-    }
-  }, [onClose, previewRef]);
+    const preview = previewRef.current;
+    if (!preview) return;
+    const handleClick = (event: MouseEvent) => {
+      if (event.target === event.currentTarget) handleClose();
+    };
+    preview.addEventListener("click", handleClick);
+    return () => preview.removeEventListener("click", handleClick);
+  }, [handleClose]);
+
+  useEffect(() => {
+    if (!hasUnsavedAnnotationChanges) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedAnnotationChanges]);
 
   const showBrokenImageReport = fileData?.mime === "image/vnd.adobe.photoshop";
 
@@ -206,6 +298,20 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({
                 Broken image?
               </PushButton>
             )}
+            {canShowAnnotations && (
+              <button
+                type="button"
+                onClick={handleToggleAnnotations}
+                title={
+                  showAnnotations
+                    ? "Hide annotations"
+                    : "Show or edit annotations"
+                }
+                className="file-viewer-modal-action-button"
+              >
+                <ChatBubbleBottomCenterTextIcon className="file-viewer-modal-small-icon" />
+              </button>
+            )}
             <a
               href={client.getFileUrl(fileId)}
               target="_blank"
@@ -222,7 +328,7 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({
               <ArrowDownTrayIcon className="file-viewer-modal-small-icon" />
             </a>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="file-viewer-modal-action-button"
             >
               <XMarkIcon className="file-viewer-modal-medium-icon" />
@@ -234,14 +340,16 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({
         <div className="file-viewer-modal-content">
           {/* Navigation buttons */}
           <button
-            onClick={onPrevious}
+            onClick={handlePrevious}
+            disabled={!hasPrevious}
             className="file-viewer-modal-nav-button file-viewer-modal-prev-button"
           >
             <ChevronLeftIcon className="file-viewer-modal-large-icon" />
           </button>
 
           <button
-            onClick={onNext}
+            onClick={handleNext}
+            disabled={!hasNext}
             className="file-viewer-modal-nav-button file-viewer-modal-next-button"
           >
             <ChevronRightIcon className="file-viewer-modal-large-icon" />
@@ -253,8 +361,11 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({
               fileId={fileId}
               fileData={fileData}
               autoActivate={true}
-              navigateLeft={hasPrevious ? onPrevious : undefined}
-              navigateRight={hasNext ? onNext : undefined}
+              showAnnotations={showAnnotations}
+              onUpdateAnnotationState={handleUpdateAnnotationState}
+              onAnnotationDirtyChange={setHasUnsavedAnnotationChanges}
+              navigateLeft={hasPrevious ? handlePrevious : undefined}
+              navigateRight={hasNext ? handleNext : undefined}
             />
           </div>
         </div>
@@ -263,6 +374,16 @@ const FileViewerModal: React.FC<FileViewerModalProps> = ({
           <BrokenImageModal
             onClose={() => setIsBrokenImageModalOpen(false)}
             url={client.getFileUrl(fileId)}
+          />
+        )}
+        {showDiscardModal && (
+          <ConfirmModal
+            title="Discard Changes"
+            message="You have unsaved annotation changes. Are you sure you want to discard them?"
+            confirmLabel="Discard"
+            cancelLabel="Keep Editing"
+            onConfirm={handleDiscard}
+            onCancel={handleKeepEditing}
           />
         )}
       </div>

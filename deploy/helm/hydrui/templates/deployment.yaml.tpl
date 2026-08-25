@@ -56,6 +56,16 @@ spec:
             {{- if .Values.serverMode.hydrus.secure }}
             - "-hydrus-secure"
             {{- end }}
+            {{- if .Values.serverMode.llm.url }}
+            - "-llm-url={{ .Values.serverMode.llm.url }}"
+            - "-llm-secure={{ .Values.serverMode.llm.secure }}"
+            {{- end }}
+            {{- if .Values.serverMode.llm.model }}
+            - "-llm-model={{ .Values.serverMode.llm.model }}"
+            {{- end }}
+            {{- if .Values.serverMode.llm.name }}
+            - "-llm-name={{ .Values.serverMode.llm.name }}"
+            {{- end }}
             {{- if .Values.serverMode.acme.enabled }}
             - "-acme"
             {{- if .Values.serverMode.acme.email }}
@@ -94,6 +104,13 @@ spec:
                 secretKeyRef:
                   name: {{ include "hydrui.sessionSecretName" . }}
                   key: {{ include "hydrui.sessionSecretKey" . }}
+            {{- if or .Values.serverMode.llm.apiKey .Values.serverMode.llm.existingApiKeySecret }}
+            - name: HYDRUI_LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "hydrui.llmApiKeySecretName" . }}
+                  key: {{ include "hydrui.llmApiKeySecretKey" . }}
+            {{- end }}
             {{- end }}
             {{- with .Values.hydrui.extraEnv }}
             {{- toYaml . | nindent 12 }}
