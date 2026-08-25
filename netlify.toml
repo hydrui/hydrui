@@ -5,4 +5,4 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src *; img-src *; media-src *; frame-ancestors 'none'; base-uri 'self';"
+    Content-Security-Policy = "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; connect-src *; img-src * data: blob:; media-src * data: blob:; frame-ancestors 'none'; base-uri 'self';"

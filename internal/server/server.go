@@ -183,11 +183,12 @@ func New(config Config, clientData *pack.Pack) *Server {
 
 	csp := "default-src 'none';"
 	csp += "script-src 'self' 'wasm-unsafe-eval';" // Ruffle needs wasm-unsafe-eval
+	csp += "worker-src 'self' blob:;"              // OGV.js creates blob-backed workers
 	csp += "style-src 'self' 'unsafe-inline';"     // Ruffle needs unsafe-inline
 	if config.ServerMode {
 		csp += "connect-src 'self';"
 		csp += "img-src 'self' data: blob:;"
-		csp += "media-src 'self' blob:;"
+		csp += "media-src 'self' data: blob:;"
 	} else {
 		// In pure client mode, the client may need to connect to arbitrary origins.
 		csp += "connect-src *;"

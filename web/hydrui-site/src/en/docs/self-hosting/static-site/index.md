@@ -29,20 +29,21 @@ Adding a CSP header is optional, but will marginally improve the security postur
 ```
 default-src 'none';
 script-src 'self' 'wasm-unsafe-eval';
+worker-src 'self' blob:;
 style-src 'self' 'unsafe-inline';
 connect-src *;
-img-src *;
-media-src *;
+img-src * data: blob:;
+media-src * data: blob:;
 frame-ancestors 'none';
 base-uri 'self';
 ```
 
-(`connect-src`, `img-src` and `media-src` need to be `*` in client-only mode for communicating with the hydrus network client API. `wasm-unsafe-eval` is needed in `script-src` for Ruffle. If you want to improve this somewhat, you can replace `*` with an appropriate rule that will only match the hydrus network client API origins you wish to be able to connect to.)
+(`connect-src`, `img-src` and `media-src` need to be `*` in client-only mode for communicating with the hydrus network client API. `wasm-unsafe-eval` is needed in `script-src` for Ruffle. OGV.js needs `blob:` in `worker-src` and `data:` in `media-src`. If you want to improve this somewhat, you can replace `*` with an appropriate rule that will only match the hydrus network client API origins you wish to be able to connect to.)
 
 If you want to apply this header with nginx, you could use the following directive:
 
 ```nginx
-add_header Content-Security-Policy "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src *; img-src *; media-src *; frame-ancestors 'none'; base-uri 'self';";
+add_header Content-Security-Policy "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; connect-src *; img-src * data: blob:; media-src * data: blob:; frame-ancestors 'none'; base-uri 'self';";
 ```
 
 You can add an [`add_header`](https://nginx.org/en/docs/http/ngx_http_headers_module.html) directive in an `http`, `server` or `location` block.
