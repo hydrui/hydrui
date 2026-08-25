@@ -13,6 +13,7 @@ import React, {
 } from "react";
 
 import { FileMetadata } from "@/api/types";
+import ConfirmModal from "@/components/modals/ConfirmModal/ConfirmModal";
 import TranscribeAnnotationsModal from "@/components/modals/TranscribeAnnotationsModal/TranscribeAnnotationsModal";
 import {
   Annotation,
@@ -73,6 +74,7 @@ export interface AnnotationOverlayProps {
   translateX: number;
   translateY: number;
   scale: number;
+  onDirtyChange?: ((dirty: boolean) => void) | undefined;
 }
 
 const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
@@ -84,6 +86,7 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
   translateX,
   translateY,
   scale,
+  onDirtyChange,
 }) => {
   const { updateFileNotes } = usePageActions();
   const { addToast, removeToast, updateToastMessage } = useToastActions();
@@ -98,17 +101,61 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
   const [saving, setSaving] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [showTranscribeModal, setShowTranscribeModal] = useState(false);
+  const [showDiscardModal, setShowDiscardModal] = useState(false);
   const transcribeAbort = useRef<AbortController | null>(null);
+  const fileDataRef = useRef(fileData);
+  fileDataRef.current = fileData;
+  const loadedMetadata = useRef<{
+    fileId: number;
+    notes: FileMetadata["notes"];
+    width: FileMetadata["width"];
+    height: FileMetadata["height"];
+  } | null>(null);
 
-  // Load notes from current metadata.
-  useEffect(() => {
-    const annotations = deserializeAnnotations(fileData);
+  const loadAnnotations = useCallback((metadata: FileMetadata) => {
+    loadedMetadata.current = {
+      fileId: metadata.file_id,
+      notes: metadata.notes,
+      width: metadata.width,
+      height: metadata.height,
+    };
+    const annotations = deserializeAnnotations(metadata);
     setAnnotations(annotations);
     setOriginalNoteNames(new Set(annotations.map((note) => note.$hydrusNote)));
     setDirty(false);
     setEditing(false);
     setShowTranscribeModal(false);
-  }, [fileId, fileData]);
+    setShowDiscardModal(false);
+  }, []);
+
+  // Refresh when the file or its notes change (and our state is clean)
+  useEffect(() => {
+    const loaded = loadedMetadata.current;
+    const fileChanged = loaded?.fileId !== fileId;
+    const metadataChanged =
+      fileChanged ||
+      loaded?.notes !== fileData.notes ||
+      loaded?.width !== fileData.width ||
+      loaded?.height !== fileData.height;
+    if (!metadataChanged) return;
+    if (!fileChanged && dirty) return;
+    loadAnnotations(fileDataRef.current);
+  }, [
+    dirty,
+    fileId,
+    fileData.height,
+    fileData.notes,
+    fileData.width,
+    loadAnnotations,
+  ]);
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
+
+  useEffect(() => {
+    return () => onDirtyChange?.(false);
+  }, [onDirtyChange]);
 
   // Cancel any active transcription when unmounting / file changes.
   useEffect(() => {
@@ -319,6 +366,7 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
                       note.body,
                       fileData.width!,
                       fileData.height!,
+                      note.contents,
                     ),
                   ]);
                   annotationsChanged = true;
@@ -372,6 +420,20 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
   const cancelTranscribe = useCallback(() => {
     transcribeAbort.current?.abort();
   }, []);
+
+  const discardChanges = useCallback(() => {
+    if (transcribing) cancelTranscribe();
+    loadAnnotations(fileData);
+  }, [cancelTranscribe, fileData, loadAnnotations, transcribing]);
+
+  const handleDone = useCallback(() => {
+    if (dirty) {
+      setShowDiscardModal(true);
+      return;
+    }
+    if (transcribing) cancelTranscribe();
+    setEditing(false);
+  }, [cancelTranscribe, dirty, transcribing]);
 
   const showOverlay = visible || editing;
 
@@ -429,13 +491,8 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => {
-                if (transcribing) cancelTranscribe();
-                setEditing(false);
-                const annotations = deserializeAnnotations(fileData);
-                setAnnotations(annotations);
-                setDirty(false);
-              }}
+              onClick={handleDone}
+              disabled={saving}
               className="annotation-toolbar-text-button"
             >
               Done
@@ -484,6 +541,16 @@ const AnnotationOverlay: React.FC<AnnotationOverlayProps> = ({
             setShowTranscribeModal(false);
             void startTranscribe(provider, settings);
           }}
+        />
+      )}
+      {showDiscardModal && (
+        <ConfirmModal
+          title="Discard Changes"
+          message="You have unsaved annotation changes. Are you sure you want to discard them?"
+          confirmLabel="Discard"
+          cancelLabel="Keep Editing"
+          onConfirm={discardChanges}
+          onCancel={() => setShowDiscardModal(false)}
         />
       )}
     </>

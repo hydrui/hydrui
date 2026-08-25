@@ -19,6 +19,7 @@ viewers.set(ViewerName.HydruiImageViewer, {
     fileId,
     fileData,
     showAnnotations,
+    onAnnotationDirtyChange,
     navigateLeft,
     navigateRight,
   }) {
@@ -29,6 +30,7 @@ viewers.set(ViewerName.HydruiImageViewer, {
         fileData={fileData}
         fileUrl={fileUrl}
         showAnnotations={showAnnotations}
+        onAnnotationDirtyChange={onAnnotationDirtyChange}
         navigateLeft={navigateLeft}
         navigateRight={navigateRight}
       />
@@ -126,6 +128,7 @@ viewers.set(ViewerName.HydrusRenderer, {
     fileId,
     fileData,
     showAnnotations,
+    onAnnotationDirtyChange,
     navigateLeft,
     navigateRight,
   }) {
@@ -136,6 +139,7 @@ viewers.set(ViewerName.HydrusRenderer, {
         fileData={fileData}
         fileUrl={renderUrl}
         showAnnotations={showAnnotations}
+        onAnnotationDirtyChange={onAnnotationDirtyChange}
         navigateLeft={navigateLeft}
         navigateRight={navigateRight}
       />

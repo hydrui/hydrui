@@ -9,6 +9,8 @@ export interface ViewerProps {
   loop: boolean;
   isPreview: boolean;
 
+  onAnnotationDirtyChange?: ((dirty: boolean) => void) | undefined;
+
   navigateLeft?: (() => void) | undefined;
   navigateRight?: (() => void) | undefined;
 }

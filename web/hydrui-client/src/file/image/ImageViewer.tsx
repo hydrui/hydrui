@@ -21,6 +21,7 @@ interface ImageViewerProps {
   fileUrl: string;
 
   showAnnotations: boolean;
+  onAnnotationDirtyChange?: ((dirty: boolean) => void) | undefined;
 
   navigateLeft?: (() => void) | undefined;
   navigateRight?: (() => void) | undefined;
@@ -49,6 +50,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
   fileData,
   fileUrl,
   showAnnotations,
+  onAnnotationDirtyChange,
   navigateLeft,
   navigateRight,
 }) => {
@@ -668,6 +670,7 @@ const ImageViewer: React.FC<ImageViewerProps> = ({
             translateX={translateX + edgeTranslationX}
             translateY={translateY}
             scale={scale}
+            onDirtyChange={onAnnotationDirtyChange}
           />
         )}
       </div>

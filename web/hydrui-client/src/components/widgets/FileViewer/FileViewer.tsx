@@ -41,6 +41,9 @@ export interface FileViewerProps {
   // A callback to report information about file/viewer annotations.
   onUpdateAnnotationState?: UpdateAnnotationStateFn;
 
+  // A callback to report whether annotation edits have not been saved.
+  onAnnotationDirtyChange?: (dirty: boolean) => void;
+
   navigateLeft?: (() => void) | undefined;
   navigateRight?: (() => void) | undefined;
 }
@@ -54,6 +57,7 @@ const FileViewerImpl: React.FC<FileViewerProps> = ({
   isPreview = false,
   showAnnotations = false,
   onUpdateAnnotationState,
+  onAnnotationDirtyChange,
   navigateLeft,
   navigateRight,
 }) => {
@@ -86,6 +90,7 @@ const FileViewerImpl: React.FC<FileViewerProps> = ({
         isPreview={isPreview}
         showAnnotations={showAnnotations}
         onUpdateAnnotationState={onUpdateAnnotationState}
+        onAnnotationDirtyChange={onAnnotationDirtyChange}
         navigateLeft={navigateLeft}
         navigateRight={navigateRight}
       />

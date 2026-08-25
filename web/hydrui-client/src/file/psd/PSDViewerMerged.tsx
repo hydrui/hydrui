@@ -11,6 +11,7 @@ export function MergedPSDViewer({
   fileId,
   fileData,
   showAnnotations,
+  onAnnotationDirtyChange,
   navigateLeft,
   navigateRight,
 }: ViewerProps) {
@@ -40,6 +41,7 @@ export function MergedPSDViewer({
       fileData={fileData}
       fileUrl={mergedUrl}
       showAnnotations={showAnnotations}
+      onAnnotationDirtyChange={onAnnotationDirtyChange}
       navigateLeft={navigateLeft}
       navigateRight={navigateRight}
     />
