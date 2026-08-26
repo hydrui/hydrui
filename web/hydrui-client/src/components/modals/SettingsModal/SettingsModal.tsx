@@ -11,6 +11,7 @@ import { ErrorBoundary } from "react-error-boundary";
 import EditColorModal from "@/components/modals/EditColorModal/EditColorModal";
 import FileTypeInput from "@/components/widgets/FileTypeInput/FileTypeInput";
 import ModelInput from "@/components/widgets/ModelInput/ModelInput";
+import { SearchBar } from "@/components/widgets/PageView/SearchBar";
 import ProviderTranscriptionOptions from "@/components/widgets/ProviderTranscriptionOptions/ProviderTranscriptionOptions";
 import PushButton from "@/components/widgets/PushButton/PushButton";
 import SystemPromptInput from "@/components/widgets/SystemPromptInput/SystemPromptInput";
@@ -26,7 +27,10 @@ import {
 import { useApiStore } from "@/store/apiStore";
 import { useLLMStore } from "@/store/llmStore";
 import { useModelMetaStore } from "@/store/modelMetaStore";
+import { usePageStore } from "@/store/pageStore";
+import { SEARCH_PAGE_KEY, flattenHydrusPages } from "@/store/pageUtils";
 import { usePreferencesStore } from "@/store/preferencesStore";
+import { useSearchStore } from "@/store/searchStore";
 import { useToastActions } from "@/store/toastStore";
 import { isServerMode } from "@/utils/modes";
 
@@ -38,7 +42,7 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-type TabType = "api" | "general" | "pageview" | "fileview" | "models";
+type TabType = "general" | "pageview" | "fileview" | "models";
 
 function SettingsModal({ onClose }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>("general");
@@ -89,16 +93,6 @@ function SettingsModal({ onClose }: SettingsModalProps) {
             <div className="settings-modal-tabs">
               <div className="settings-modal-tabs-list">
                 <button
-                  onClick={() => setActiveTab("api")}
-                  className={`settings-modal-tab ${
-                    activeTab === "api"
-                      ? "settings-modal-tab-active"
-                      : "settings-modal-tab-inactive"
-                  }`}
-                >
-                  {isServerMode ? "Authentication" : "API"}
-                </button>
-                <button
                   onClick={() => setActiveTab("general")}
                   className={`settings-modal-tab ${
                     activeTab === "general"
@@ -143,32 +137,31 @@ function SettingsModal({ onClose }: SettingsModalProps) {
 
             {/* Content */}
             <div className="settings-modal-content-area">
-              {activeTab === "api" && (
-                <fieldset>
-                  <legend>Connection</legend>
-                  {isServerMode ? (
-                    <>
-                      <p>Connected to the Hydrui Server.</p>
-                      <div>
-                        <PushButton onClick={logout} variant="danger">
-                          Log Out
-                        </PushButton>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <p>Currently connnected to {baseUrl}.</p>
-                      <div className="buttons">
-                        <PushButton onClick={logout} variant="danger">
-                          Log Out
-                        </PushButton>
-                      </div>
-                    </>
-                  )}
-                </fieldset>
-              )}
               {activeTab === "general" && (
                 <>
+                  <fieldset>
+                    <legend>Connection</legend>
+                    {isServerMode ? (
+                      <>
+                        <p>Connected to the Hydrui Server.</p>
+                        <div>
+                          <PushButton onClick={logout} variant="danger">
+                            Log Out
+                          </PushButton>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p>Currently connnected to {baseUrl}.</p>
+                        <div className="buttons">
+                          <PushButton onClick={logout} variant="danger">
+                            Log Out
+                          </PushButton>
+                        </div>
+                      </>
+                    )}
+                  </fieldset>
+                  <StartupSettings />
                   <PrivacySettings />
                   <TagColorsEditor editColor={setEditingColor} />
                 </>
@@ -260,6 +253,136 @@ function SettingsModal({ onClose }: SettingsModalProps) {
 }
 
 export default SettingsModal;
+
+function StartupSettings() {
+  const {
+    startupTabMode,
+    startupPageKey,
+    startupSearchMode,
+    startupSearchTags,
+    searchOnStartup,
+    actions: {
+      setStartupTabMode,
+      setStartupPageKey,
+      setStartupSearchMode,
+      setStartupSearchTags,
+      addStartupSearchTag,
+      removeStartupSearchTag,
+      setSearchOnStartup,
+    },
+  } = usePreferencesStore();
+  const pages = usePageStore((state) => state.pages);
+  const currentSearchTags = useSearchStore((state) => state.searchTags);
+  const [queryEditorRevision, setQueryEditorRevision] = useState(0);
+  const pageOptions = flattenHydrusPages(pages);
+  const startupPageAvailable = pageOptions.some(
+    ({ key }) => key === startupPageKey,
+  );
+
+  const handleStartupTabChange = (
+    event: React.ChangeEvent<HTMLSelectElement>,
+  ) => {
+    const pageKey = event.currentTarget.value;
+    if (pageKey === "") {
+      setStartupTabMode("last");
+    } else {
+      setStartupPageKey(pageKey);
+      setStartupTabMode("specific");
+    }
+  };
+
+  return (
+    <fieldset className="settings-form">
+      <legend>Startup</legend>
+      <p>These options take effect the next time Hydrui loads.</p>
+      <div className="settings-row">
+        <label htmlFor="startup-tab">Open tab</label>
+        <select
+          id="startup-tab"
+          className="settings-select-input"
+          value={startupTabMode === "last" ? "" : startupPageKey}
+          onChange={handleStartupTabChange}
+        >
+          <option value="">Last viewed tab</option>
+          <optgroup label="Specific tab">
+            <option value={SEARCH_PAGE_KEY}>Search</option>
+            {startupTabMode === "specific" &&
+              startupPageKey !== SEARCH_PAGE_KEY &&
+              !startupPageAvailable && (
+                <option value={startupPageKey}>
+                  Unavailable Hydrus tab (will use Search)
+                </option>
+              )}
+            {pageOptions.map(({ key, label }) => (
+              <option key={key} value={key}>
+                Hydrus: {label}
+              </option>
+            ))}
+          </optgroup>
+        </select>
+      </div>
+      <div className="settings-row">
+        <label htmlFor="startup-search-query">Search query</label>
+        <select
+          id="startup-search-query"
+          className="settings-select-input"
+          value={startupSearchMode}
+          onChange={(event) =>
+            setStartupSearchMode(
+              event.currentTarget.value === "specific" ? "specific" : "last",
+            )
+          }
+        >
+          <option value="last">Last search query</option>
+          <option value="specific">Specific search query</option>
+        </select>
+      </div>
+      {startupSearchMode === "specific" && (
+        <div className="settings-startup-query-editor">
+          <SearchBar
+            key={queryEditorRevision}
+            searchTags={startupSearchTags}
+            addSearchTag={addStartupSearchTag}
+            removeSearchTag={removeStartupSearchTag}
+          />
+          <div className="settings-startup-query-actions">
+            <PushButton
+              variant="secondary"
+              onClick={() => {
+                setStartupSearchTags(currentSearchTags);
+                setQueryEditorRevision((revision) => revision + 1);
+              }}
+            >
+              Use Current Query
+            </PushButton>
+            <PushButton
+              variant="muted"
+              disabled={startupSearchTags.length === 0}
+              onClick={() => {
+                setStartupSearchTags([]);
+                setQueryEditorRevision((revision) => revision + 1);
+              }}
+            >
+              Clear
+            </PushButton>
+          </div>
+        </div>
+      )}
+      <div>
+        <label>
+          <input
+            type="checkbox"
+            checked={searchOnStartup}
+            onChange={(event) =>
+              setSearchOnStartup(event.currentTarget.checked)
+            }
+          />{" "}
+          Run the search automatically when Hydrui loads
+        </label>
+      </div>
+    </fieldset>
+  );
+}
 
 function PrivacySettings() {
   const {

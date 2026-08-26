@@ -286,14 +286,14 @@ const TabRow: React.FC<TabRowProps> = ({ tabs }) => {
 
 // TabView component to display and manage tabs
 const TabView: React.FC = () => {
-  const { fetchPages } = usePageActions();
+  const { initializeStartup } = usePageActions();
 
   const tabs = useTabs();
 
-  // Initial fetch of pages
+  // Resolve and load the configured startup state.
   useEffect(() => {
-    fetchPages();
-  }, [fetchPages]);
+    initializeStartup();
+  }, [initializeStartup]);
 
   return <TabRow tabs={tabs}></TabRow>;
 };

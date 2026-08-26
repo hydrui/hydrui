@@ -54,7 +54,7 @@ import { useSearchStore } from "@/store/searchStore";
 import { useToastStore } from "@/store/toastStore";
 import { isServerMode } from "@/utils/modes";
 
-import { SearchBar } from "./SearchBar";
+import { PageSearchBar } from "./PageSearchBar";
 import { Thumbnail } from "./Thumbnail";
 import "./index.css";
 
@@ -1549,7 +1549,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
       {/* Render SearchBar only in search mode */}
       {pageType === "search" && (
         <div className="page-search-bar-container">
-          <SearchBar />
+          <PageSearchBar />
         </div>
       )}
       <ScrollView
@@ -1613,7 +1613,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
                     Edit the search query or press the search button to start
                   </div>
                   <div className="files-grid-empty-text">
-                    Your previous search query was restored.
+                    Your search query is ready.
                   </div>
                 </>
               ) : searchError ? (

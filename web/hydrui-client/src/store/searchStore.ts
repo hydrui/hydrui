@@ -28,6 +28,10 @@ interface SearchState {
     setSearchAscending: (ascending: boolean) => void;
     performSearch: () => Promise<void>;
     setAutoSearch: (autoSearch: boolean) => void;
+    initializeSearch: (
+      tags: string[],
+      searchOnStartup: boolean,
+    ) => Promise<void>;
   };
 }
 
@@ -105,6 +109,22 @@ export const useSearchStore = create<SearchState>()(
 
         setAutoSearch: (autoSearch: boolean) => {
           set({ autoSearch });
+        },
+
+        initializeSearch: async (tags: string[], searchOnStartup: boolean) => {
+          const { cancelSearch } = get();
+          cancelSearch?.();
+          set(({ serial }) => ({
+            searchTags: [...tags],
+            searchResults: [],
+            searchStatus: "initial",
+            searchError: null,
+            cancelSearch: null,
+            serial: serial + 1,
+          }));
+          if (searchOnStartup) {
+            await get().actions.performSearch();
+          }
         },
 
         performSearch: async () => {

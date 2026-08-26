@@ -17,7 +17,6 @@ import React, {
 import TagLabel from "@/components/widgets/TagLabel/TagLabel";
 import { SortFilesBy, sortFilesByEnumToString } from "@/constants/sort";
 import { client } from "@/store/apiStore";
-import { useSearchStore } from "@/store/searchStore";
 
 import {
   FileTypeSystemTag,
@@ -116,23 +115,54 @@ enum Prefix {
   Negate = "-",
 }
 
-export const SearchBar: React.FC = () => {
+export interface SearchBarControls {
+  searchSort: SortFilesBy;
+  searchAscending: boolean;
+  searchStatus: "initial" | "loading" | "loaded";
+  searchError: string | null;
+  autoSearch: boolean;
+  setSearchSort: (sort: SortFilesBy) => void;
+  setSearchAscending: (ascending: boolean) => void;
+  performSearch: () => void;
+  setAutoSearch: (autoSearch: boolean) => void;
+}
+
+export interface SearchBarProps {
+  searchTags: string[];
+  addSearchTag: (tag: string) => void;
+  removeSearchTag: (tag: string) => void;
+  controls?: SearchBarControls;
+}
+
+const QUERY_EDITOR_CONTROLS: SearchBarControls = {
+  searchSort: SortFilesBy.IMPORT_TIME,
+  searchAscending: false,
+  searchStatus: "initial",
+  searchError: null,
+  autoSearch: false,
+  setSearchSort: () => {},
+  setSearchAscending: () => {},
+  performSearch: () => {},
+  setAutoSearch: () => {},
+};
+
+export const SearchBar: React.FC<SearchBarProps> = ({
+  searchTags,
+  addSearchTag,
+  removeSearchTag,
+  controls,
+}) => {
   const {
-    searchTags,
     searchSort,
     searchAscending,
     searchStatus,
     searchError,
     autoSearch,
-    actions: {
-      addSearchTag,
-      removeSearchTag,
-      setSearchSort,
-      setSearchAscending,
-      performSearch,
-      setAutoSearch,
-    },
-  } = useSearchStore();
+    setSearchSort,
+    setSearchAscending,
+    performSearch,
+    setAutoSearch,
+  } = controls ?? QUERY_EDITOR_CONTROLS;
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState<TagSuggestion[]>([]);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
@@ -447,65 +477,69 @@ export const SearchBar: React.FC = () => {
             className="page-search-input"
           />
 
-          <select
-            value={searchSort}
-            onChange={(e) =>
-              setSearchSort(Number(e.target.value) as SortFilesBy)
-            }
-            className="page-sort-dropdown"
-            title={`Sorting by: ${sortFilesByEnumToString.get(searchSort)}`}
-          >
-            <option disabled={true}>Sort by...</option>
-            {Array.from(sortFilesByEnumToString.entries()).map(
-              ([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ),
-            )}
-          </select>
+          {controls && (
+            <>
+              <select
+                value={searchSort}
+                onChange={(e) =>
+                  setSearchSort(Number(e.target.value) as SortFilesBy)
+                }
+                className="page-sort-dropdown"
+                title={`Sorting by: ${sortFilesByEnumToString.get(searchSort)}`}
+              >
+                <option disabled={true}>Sort by...</option>
+                {Array.from(sortFilesByEnumToString.entries()).map(
+                  ([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ),
+                )}
+              </select>
 
-          <button
-            onClick={toggleSearchDirection}
-            className="page-sort-direction-button"
-            title={
-              searchAscending
-                ? "Currently sorting ascending (click to sort descending)"
-                : "Currently sorting descending (click to sort ascending)"
-            }
-          >
-            {searchAscending ? (
-              <BarsArrowDownIcon className="page-sort-direction-icon" />
-            ) : (
-              <BarsArrowUpIcon className="page-sort-direction-icon" />
-            )}
-          </button>
+              <button
+                onClick={toggleSearchDirection}
+                className="page-sort-direction-button"
+                title={
+                  searchAscending
+                    ? "Currently sorting ascending (click to sort descending)"
+                    : "Currently sorting descending (click to sort ascending)"
+                }
+              >
+                {searchAscending ? (
+                  <BarsArrowDownIcon className="page-sort-direction-icon" />
+                ) : (
+                  <BarsArrowUpIcon className="page-sort-direction-icon" />
+                )}
+              </button>
 
-          <button
-            onClick={toggleAutoSearch}
-            className={`page-auto-search-button ${
-              autoSearch
-                ? "page-auto-search-enabled"
-                : "page-auto-search-disabled"
-            }`}
-            title={
-              autoSearch
-                ? "Auto-search enabled (click to disable)"
-                : "Auto-search disabled (click to enable)"
-            }
-          >
-            <BoltIcon className="page-auto-search-button-icon" />
-          </button>
+              <button
+                onClick={toggleAutoSearch}
+                className={`page-auto-search-button ${
+                  autoSearch
+                    ? "page-auto-search-enabled"
+                    : "page-auto-search-disabled"
+                }`}
+                title={
+                  autoSearch
+                    ? "Auto-search enabled (click to disable)"
+                    : "Auto-search disabled (click to enable)"
+                }
+              >
+                <BoltIcon className="page-auto-search-button-icon" />
+              </button>
 
-          <button
-            onClick={handleSearch}
-            disabled={searchStatus === "loading"}
-            className={`page-search-button ${
-              searchStatus === "loading" ? "page-search-button-loading" : ""
-            }`}
-          >
-            <MagnifyingGlassIcon className="page-search-button-icon" />
-          </button>
+              <button
+                onClick={handleSearch}
+                disabled={searchStatus === "loading"}
+                className={`page-search-button ${
+                  searchStatus === "loading" ? "page-search-button-loading" : ""
+                }`}
+              >
+                <MagnifyingGlassIcon className="page-search-button-icon" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 

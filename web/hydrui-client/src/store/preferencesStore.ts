@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 
 import { HydrusFileType, filetypeFromMime } from "@/constants/filetypes";
 
+import { SEARCH_PAGE_KEY } from "./pageUtils";
 import { jsonStorage } from "./storage";
 
 // Default tag namespace colors
@@ -39,6 +40,9 @@ interface TagColorPreferences {
   defaultUnnamespacedColor: string;
 }
 
+export type StartupTabMode = "last" | "specific";
+export type StartupSearchMode = "last" | "specific";
+
 interface PreferencesState {
   tagColors: TagColorPreferences;
   autopreviewFileTypes: Set<HydrusFileType>;
@@ -49,6 +53,11 @@ interface PreferencesState {
   useVirtualViewport: boolean;
   allowTokenPassing: boolean;
   eagerLoadThreshold: number;
+  startupTabMode: StartupTabMode;
+  startupPageKey: string;
+  startupSearchMode: StartupSearchMode;
+  startupSearchTags: string[];
+  searchOnStartup: boolean;
   actions: {
     setNamespaceColor: (namespace: string, color: string) => void;
     clearNamespaceColor: (namespace: string) => void;
@@ -62,6 +71,13 @@ interface PreferencesState {
     setVirtualViewport: (enabled: boolean) => void;
     setAllowTokenPassing: (enabled: boolean) => void;
     setEagerLoadThreshold: (eagerLoadThreshold: number) => void;
+    setStartupTabMode: (mode: StartupTabMode) => void;
+    setStartupPageKey: (pageKey: string) => void;
+    setStartupSearchMode: (mode: StartupSearchMode) => void;
+    setStartupSearchTags: (tags: string[]) => void;
+    addStartupSearchTag: (tag: string) => void;
+    removeStartupSearchTag: (tag: string) => void;
+    setSearchOnStartup: (searchOnStartup: boolean) => void;
     setFileTypeViewerOverride: (
       filetype: HydrusFileType,
       viewer: string,
@@ -110,6 +126,13 @@ export const usePreferencesStore = create<PreferencesState>()(
 
       // Maximum number of files in a page before eagerly loading metadata is disabled
       eagerLoadThreshold: 20000,
+
+      // Restore the previous tab and search query without searching on startup.
+      startupTabMode: "last" as StartupTabMode,
+      startupPageKey: SEARCH_PAGE_KEY,
+      startupSearchMode: "last" as StartupSearchMode,
+      startupSearchTags: [],
+      searchOnStartup: false,
 
       // Override the default viewer for viewing a given mimetype
       fileTypeViewerOverride: new Map(),
@@ -240,6 +263,42 @@ export const usePreferencesStore = create<PreferencesState>()(
           });
         },
 
+        setStartupTabMode: (startupTabMode: StartupTabMode) => {
+          set({ startupTabMode });
+        },
+
+        setStartupPageKey: (startupPageKey: string) => {
+          set({ startupPageKey });
+        },
+
+        setStartupSearchMode: (startupSearchMode: StartupSearchMode) => {
+          set({ startupSearchMode });
+        },
+
+        setStartupSearchTags: (startupSearchTags: string[]) => {
+          set({ startupSearchTags: [...startupSearchTags] });
+        },
+
+        addStartupSearchTag: (tag: string) => {
+          set((state) =>
+            state.startupSearchTags.includes(tag)
+              ? {}
+              : { startupSearchTags: [...state.startupSearchTags, tag] },
+          );
+        },
+
+        removeStartupSearchTag: (tag: string) => {
+          set((state) => ({
+            startupSearchTags: state.startupSearchTags.filter(
+              (startupTag) => startupTag !== tag,
+            ),
+          }));
+        },
+
+        setSearchOnStartup: (searchOnStartup: boolean) => {
+          set({ searchOnStartup });
+        },
+
         setFileTypeViewerOverride: (
           fileType: HydrusFileType,
           viewer: string,
@@ -333,6 +392,11 @@ export const usePreferencesStore = create<PreferencesState>()(
         useVirtualViewport: state.useVirtualViewport,
         allowTokenPassing: state.allowTokenPassing,
         eagerLoadThreshold: state.eagerLoadThreshold,
+        startupTabMode: state.startupTabMode,
+        startupPageKey: state.startupPageKey,
+        startupSearchMode: state.startupSearchMode,
+        startupSearchTags: state.startupSearchTags,
+        searchOnStartup: state.searchOnStartup,
         fileTypeViewerOverride: state.fileTypeViewerOverride,
         fileTypePreviewerOverride: state.fileTypePreviewerOverride,
         fileTypeRendererOverride: state.fileTypeRendererOverride,
