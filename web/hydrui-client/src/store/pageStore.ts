@@ -571,6 +571,7 @@ export const usePageStore = create<PageState>()(
                 startupPage.pageType,
                 false,
               );
+              set({ pages: [], error: "Failed to fetch pages" });
             }
 
             await searchPromise;
