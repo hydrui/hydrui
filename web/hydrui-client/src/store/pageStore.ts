@@ -3,7 +3,7 @@ import { persist } from "zustand/middleware";
 
 import { FileMetadata, FileRelationshipPair, Page } from "@/api/types";
 import { FileRelationship } from "@/constants/relationships";
-import { client } from "@/store/apiStore";
+import { client, useApiStore } from "@/store/apiStore";
 import { useSearchStore } from "@/store/searchStore";
 import { jsonStorage } from "@/store/storage";
 import { isDemoMode } from "@/utils/modes";
@@ -553,7 +553,24 @@ export const usePageStore = create<PageState>()(
               );
             } catch (error) {
               console.error("Failed to initialize pages:", error);
-              await activatePage(SEARCH_PAGE_KEY, "search", false);
+              const lastPage = get();
+              const startupPage = resolveStartupPage({
+                startupPageKey:
+                  preferences.startupTabMode === "specific"
+                    ? preferences.startupPageKey
+                    : null,
+                lastPageKey: lastPage.activePageKey,
+                lastPageType: lastPage.pageType,
+                pages: [],
+                virtualPageKeys: lastPage.virtualPageKeys.filter(
+                  (pageKey) => lastPage.virtualPages[pageKey] !== undefined,
+                ),
+              });
+              await activatePage(
+                startupPage.pageKey,
+                startupPage.pageType,
+                false,
+              );
             }
 
             await searchPromise;
@@ -1189,6 +1206,12 @@ export const usePageStore = create<PageState>()(
     },
   ),
 );
+
+useApiStore.subscribe((state, prevState) => {
+  if (prevState.isAuthenticated && !state.isAuthenticated) {
+    usePageStore.setState({ startupInitialized: false });
+  }
+});
 
 useSearchStore.subscribe((state, prevState) => {
   if (state.searchResults !== prevState.searchResults) {
