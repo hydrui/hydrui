@@ -15,10 +15,18 @@ export interface ResolvedStartupPage {
   pageType: ResolvedPageType;
 }
 
-export function hasHydrusPage(pages: Page[], pageKey: string): boolean {
+export function isSelectableHydrusPage(page: Page): boolean {
+  return (page.pages?.length ?? 0) === 0 && page.is_media_page !== false;
+}
+
+export function hasSelectableHydrusPage(
+  pages: Page[],
+  pageKey: string,
+): boolean {
   return pages.some(
     (page) =>
-      page.page_key === pageKey || hasHydrusPage(page.pages ?? [], pageKey),
+      (page.page_key === pageKey && isSelectableHydrusPage(page)) ||
+      hasSelectableHydrusPage(page.pages ?? [], pageKey),
   );
 }
 
@@ -29,7 +37,9 @@ export function flattenHydrusPages(
   return pages.flatMap((page) => {
     const names = [...parentNames, page.name];
     return [
-      { key: page.page_key, label: names.join(" › ") },
+      ...(isSelectableHydrusPage(page)
+        ? [{ key: page.page_key, label: names.join(" › ") }]
+        : []),
       ...flattenHydrusPages(page.pages ?? [], names),
     ];
   });
@@ -56,7 +66,11 @@ export function resolveStartupPage({
     if (pageKey === SEARCH_PAGE_KEY) {
       return { pageKey: SEARCH_PAGE_KEY, pageType: "search" };
     }
-    if (pageKey && pageType === "hydrus" && hasHydrusPage(pages, pageKey)) {
+    if (
+      pageKey &&
+      pageType === "hydrus" &&
+      hasSelectableHydrusPage(pages, pageKey)
+    ) {
       return { pageKey, pageType: "hydrus" };
     }
     if (

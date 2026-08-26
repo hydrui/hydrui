@@ -8,7 +8,11 @@ import { useSearchStore } from "@/store/searchStore";
 import { jsonStorage } from "@/store/storage";
 import { isDemoMode } from "@/utils/modes";
 
-import { SEARCH_PAGE_KEY, resolveStartupPage } from "./pageUtils";
+import {
+  SEARCH_PAGE_KEY,
+  flattenHydrusPages,
+  resolveStartupPage,
+} from "./pageUtils";
 import { usePreferencesStore } from "./preferencesStore";
 import { useToastStore } from "./toastStore";
 
@@ -475,6 +479,15 @@ export const usePageStore = create<PageState>()(
         }
       };
 
+      const reportPageListError = () => {
+        useToastStore
+          .getState()
+          .actions.addToast(
+            "Failed to refresh Hydrus pages; using cached tabs.",
+            "warning",
+          );
+      };
+
       return {
         // Initial state
         activePageKey: SEARCH_PAGE_KEY,
@@ -524,15 +537,16 @@ export const usePageStore = create<PageState>()(
               const response = await client.getPages();
               const pages = response.pages.pages ?? [];
               const lastPage = get();
+              const firstSelectablePage = flattenHydrusPages(pages)[0];
               set({ pages });
 
               const startupPage =
                 isDemoMode &&
                 preferences.startupTabMode === "last" &&
                 lastPage.activePageKey === SEARCH_PAGE_KEY &&
-                pages[0]
+                firstSelectablePage
                   ? {
-                      pageKey: pages[0].page_key,
+                      pageKey: firstSelectablePage.key,
                       pageType: "hydrus" as const,
                     }
                   : resolveStartupPage({
@@ -553,6 +567,7 @@ export const usePageStore = create<PageState>()(
               );
             } catch (error) {
               console.error("Failed to initialize pages:", error);
+              reportPageListError();
               const lastPage = get();
               const startupPage = resolveStartupPage({
                 startupPageKey:
@@ -561,7 +576,7 @@ export const usePageStore = create<PageState>()(
                     : null,
                 lastPageKey: lastPage.activePageKey,
                 lastPageType: lastPage.pageType,
-                pages: [],
+                pages: lastPage.pages,
                 virtualPageKeys: lastPage.virtualPageKeys.filter(
                   (pageKey) => lastPage.virtualPages[pageKey] !== undefined,
                 ),
@@ -571,7 +586,6 @@ export const usePageStore = create<PageState>()(
                 startupPage.pageType,
                 false,
               );
-              set({ pages: [], error: "Failed to fetch pages" });
             }
 
             await searchPromise;
@@ -580,27 +594,21 @@ export const usePageStore = create<PageState>()(
           fetchPages: async () => {
             try {
               const response = await client.getPages();
+              const pages = response.pages.pages ?? [];
+              const firstSelectablePage = flattenHydrusPages(pages)[0];
 
-              set({ pages: response.pages.pages ?? [] });
+              set({ pages });
 
               // If we don't have an active page yet, use the first API page or the search page
               const { activePageKey } = get();
-              if (
-                !activePageKey &&
-                response.pages.pages &&
-                response.pages.pages.length > 0 &&
-                response.pages.pages[0]
-              ) {
-                await get().actions.setPage(
-                  response.pages.pages[0].page_key,
-                  "hydrus",
-                );
+              if (!activePageKey && firstSelectablePage) {
+                await get().actions.setPage(firstSelectablePage.key, "hydrus");
               } else if (!activePageKey) {
                 await get().actions.setPage(SEARCH_PAGE_KEY, "search");
               }
             } catch (error) {
               console.error("Failed to fetch pages:", error);
-              set({ error: "Failed to fetch pages" });
+              reportPageListError();
             }
           },
 
