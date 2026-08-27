@@ -8,11 +8,15 @@ import { useSearchStore } from "@/store/searchStore";
 import { jsonStorage } from "@/store/storage";
 import { isDemoMode } from "@/utils/modes";
 
+import {
+  SEARCH_PAGE_KEY,
+  flattenHydrusPages,
+  resolveStartupPage,
+} from "./pageUtils";
 import { usePreferencesStore } from "./preferencesStore";
 import { useToastStore } from "./toastStore";
 
-// Special page key for our search tab - this will never conflict with API page keys
-export const SEARCH_PAGE_KEY = "hydrui-search-tab";
+export { SEARCH_PAGE_KEY } from "./pageUtils";
 
 export type PageType = "search" | "hydrus" | "virtual";
 
@@ -57,8 +61,10 @@ interface PageState extends PersistedState {
   lastRequestId: number;
   currentAbortController: AbortController | null;
   metadataLoadController: MetadataLoadController | null;
+  startupInitialized: boolean;
   // Actions
   actions: {
+    initializeStartup: () => Promise<void>;
     setPage: (pageKey: string, type: PageType) => Promise<void>;
     updatePageContents: (pageKey: string, type: PageType) => Promise<void>;
     refreshPage: (pageKey: string, type: PageType) => Promise<void>;
@@ -432,6 +438,56 @@ export const usePageStore = create<PageState>()(
         }
       };
 
+      const activatePage = async (
+        pageKey: string,
+        type: PageType,
+        refreshPages: boolean,
+      ) => {
+        // Validate virtual page exists if type is virtual
+        if (type === "virtual" && !get().virtualPages[pageKey]) {
+          set({ error: "Virtual page not found" });
+          return;
+        }
+
+        set((state) => ({
+          fileIds: [],
+          fileIdToIndex: new Map(),
+          activePageKey: pageKey,
+          pageType: type,
+          error: null,
+          isLoadingFiles: true,
+          isLoadingAwake: true,
+          loadedFiles: [],
+          selectedPageKeys: state.selectedPageKeys.includes(pageKey)
+            ? state.selectedPageKeys
+            : [pageKey],
+        }));
+
+        try {
+          await get().actions.updatePageContents(pageKey, type);
+          // Refresh pages to keep the tab list up to date after user navigation.
+          if (refreshPages && type !== "virtual") {
+            await get().actions.fetchPages();
+          }
+        } catch (error) {
+          console.error("Failed to load page:", error);
+          set({
+            error: "Failed to load page data",
+            isLoadingFiles: false,
+            isLoadingAwake: false,
+          });
+        }
+      };
+
+      const reportPageListError = () => {
+        useToastStore
+          .getState()
+          .actions.addToast(
+            "Failed to refresh Hydrus pages; using cached tabs.",
+            "warning",
+          );
+      };
+
       return {
         // Initial state
         activePageKey: SEARCH_PAGE_KEY,
@@ -455,32 +511,104 @@ export const usePageStore = create<PageState>()(
         lastRequestId: 0,
         currentAbortController: null,
         metadataLoadController: null,
+        startupInitialized: false,
 
         actions: {
+          initializeStartup: async () => {
+            if (get().startupInitialized) {
+              return;
+            }
+            // Lock initialization before starting any requests. This also keeps
+            // React's development-mode effect replay from issuing two searches.
+            set({ startupInitialized: true });
+
+            const preferences = usePreferencesStore.getState();
+            const searchStore = useSearchStore.getState();
+            const startupSearchTags =
+              preferences.startupSearchMode === "specific"
+                ? preferences.startupSearchTags
+                : searchStore.searchTags;
+            const searchPromise = searchStore.actions.initializeSearch(
+              startupSearchTags,
+              preferences.searchOnStartup,
+            );
+
+            try {
+              const response = await client.getPages();
+              const pages = response.pages.pages ?? [];
+              const lastPage = get();
+              const firstSelectablePage = flattenHydrusPages(pages)[0];
+              set({ pages });
+
+              const startupPage =
+                isDemoMode &&
+                preferences.startupTabMode === "last" &&
+                lastPage.activePageKey === SEARCH_PAGE_KEY &&
+                firstSelectablePage
+                  ? {
+                      pageKey: firstSelectablePage.key,
+                      pageType: "hydrus" as const,
+                    }
+                  : resolveStartupPage({
+                      startupPageKey:
+                        preferences.startupTabMode === "specific"
+                          ? preferences.startupPageKey
+                          : null,
+                      lastPageKey: lastPage.activePageKey,
+                      lastPageType: lastPage.pageType,
+                      pages,
+                      virtualPageKeys: lastPage.virtualPageKeys,
+                    });
+
+              await activatePage(
+                startupPage.pageKey,
+                startupPage.pageType,
+                false,
+              );
+            } catch (error) {
+              console.error("Failed to initialize pages:", error);
+              reportPageListError();
+              const lastPage = get();
+              const startupPage = resolveStartupPage({
+                startupPageKey:
+                  preferences.startupTabMode === "specific"
+                    ? preferences.startupPageKey
+                    : null,
+                lastPageKey: lastPage.activePageKey,
+                lastPageType: lastPage.pageType,
+                pages: lastPage.pages,
+                virtualPageKeys: lastPage.virtualPageKeys.filter(
+                  (pageKey) => lastPage.virtualPages[pageKey] !== undefined,
+                ),
+              });
+              await activatePage(
+                startupPage.pageKey,
+                startupPage.pageType,
+                false,
+              );
+            }
+
+            await searchPromise;
+          },
+
           fetchPages: async () => {
             try {
               const response = await client.getPages();
+              const pages = response.pages.pages ?? [];
+              const firstSelectablePage = flattenHydrusPages(pages)[0];
 
-              set({ pages: response.pages.pages ?? [] });
+              set({ pages });
 
               // If we don't have an active page yet, use the first API page or the search page
               const { activePageKey } = get();
-              if (
-                !activePageKey &&
-                response.pages.pages &&
-                response.pages.pages.length > 0 &&
-                response.pages.pages[0]
-              ) {
-                await get().actions.setPage(
-                  response.pages.pages[0].page_key,
-                  "hydrus",
-                );
+              if (!activePageKey && firstSelectablePage) {
+                await get().actions.setPage(firstSelectablePage.key, "hydrus");
               } else if (!activePageKey) {
                 await get().actions.setPage(SEARCH_PAGE_KEY, "search");
               }
             } catch (error) {
               console.error("Failed to fetch pages:", error);
-              set({ error: "Failed to fetch pages" });
+              reportPageListError();
             }
           },
 
@@ -667,42 +795,8 @@ export const usePageStore = create<PageState>()(
             });
           },
 
-          setPage: async (pageKey: string, type: PageType) => {
-            // Validate virtual page exists if type is virtual
-            if (type === "virtual" && !get().virtualPages[pageKey]) {
-              set({ error: "Virtual page not found" });
-              return;
-            }
-
-            set((state) => ({
-              fileIds: [],
-              fileIdToIndex: new Map(),
-              activePageKey: pageKey,
-              pageType: type,
-              error: null,
-              isLoadingFiles: true,
-              isLoadingAwake: true,
-              loadedFiles: [],
-              selectedPageKeys: state.selectedPageKeys.includes(pageKey)
-                ? state.selectedPageKeys
-                : [pageKey],
-            }));
-
-            try {
-              await get().actions.updatePageContents(pageKey, type);
-              // Refresh pages to keep tab list up to date
-              if (type !== "virtual") {
-                await get().actions.fetchPages();
-              }
-            } catch (error) {
-              console.error("Failed to load page:", error);
-              set({
-                error: "Failed to load page data",
-                isLoadingFiles: false,
-                isLoadingAwake: false,
-              });
-            }
-          },
+          setPage: async (pageKey: string, type: PageType) =>
+            activatePage(pageKey, type, true),
 
           setSelectedPageKeys: (keys: string[]) => {
             set({ selectedPageKeys: keys });
@@ -1122,17 +1216,9 @@ export const usePageStore = create<PageState>()(
   ),
 );
 
-// This is a workaround to ensure that page contents are loaded after the store is initialized.
-const unsubscribe = useApiStore.subscribe((state) => {
-  if (state.isAuthenticated) {
-    const pageStore = usePageStore.getState();
-    if (pageStore.activePageKey && pageStore.pageType) {
-      pageStore.actions.updatePageContents(
-        pageStore.activePageKey,
-        pageStore.pageType,
-      );
-      unsubscribe();
-    }
+useApiStore.subscribe((state, prevState) => {
+  if (prevState.isAuthenticated && !state.isAuthenticated) {
+    usePageStore.setState({ startupInitialized: false });
   }
 });
 
@@ -1143,12 +1229,3 @@ useSearchStore.subscribe((state, prevState) => {
       .actions.updatePageContents(SEARCH_PAGE_KEY, "search");
   }
 });
-
-if (isDemoMode) {
-  const unsubscribe = usePageStore.subscribe((state) => {
-    if (state.pages[0] && state.activePageKey === SEARCH_PAGE_KEY) {
-      state.actions.setPage(state.pages[0].page_key, "hydrus");
-      unsubscribe();
-    }
-  });
-}

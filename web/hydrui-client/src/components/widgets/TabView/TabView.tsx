@@ -2,17 +2,18 @@ import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/solid";
 import React, { useEffect, useState } from "react";
 
 import PageView from "@/components/widgets/PageView/PageView";
-import { Tab, useTabs } from "@/hooks/useTabs";
+import {
+  Tab,
+  resolveActiveTabIndex,
+  tabContainsKey,
+  useTabs,
+} from "@/hooks/useTabs";
 import { usePageActions, usePageStore } from "@/store/pageStore";
 
 import "./index.css";
 
 interface TabRowProps {
   tabs: Tab[];
-}
-
-function tabContainsKey(tab: Tab, key: string): boolean {
-  return tab.key === key || tab.tabs.some((tab) => tabContainsKey(tab, key));
 }
 
 // TabRow handles a single row of tabs.
@@ -24,25 +25,14 @@ const TabRow: React.FC<TabRowProps> = ({ tabs }) => {
   } = usePageStore();
 
   const [currentIndex, setCurrentIndex] = useState<number>(() =>
-    activePageKey
-      ? tabs.findIndex((tab) => tabContainsKey(tab, activePageKey))
-      : -1,
+    resolveActiveTabIndex(tabs, activePageKey, -1),
   );
 
   useEffect(() => {
-    if (currentIndex === -1 || !tabs[currentIndex]) {
-      return;
+    const nextIndex = resolveActiveTabIndex(tabs, activePageKey, currentIndex);
+    if (nextIndex !== currentIndex) {
+      setCurrentIndex(nextIndex);
     }
-    if (!activePageKey) {
-      setCurrentIndex(-1);
-      return;
-    }
-    if (tabContainsKey(tabs[currentIndex], activePageKey)) {
-      return;
-    }
-    setCurrentIndex(
-      tabs.findIndex((tab) => tabContainsKey(tab, activePageKey)),
-    );
   }, [tabs, currentIndex, activePageKey]);
 
   const setTab = async (index: number) => {
@@ -286,14 +276,14 @@ const TabRow: React.FC<TabRowProps> = ({ tabs }) => {
 
 // TabView component to display and manage tabs
 const TabView: React.FC = () => {
-  const { fetchPages } = usePageActions();
+  const { initializeStartup } = usePageActions();
 
   const tabs = useTabs();
 
-  // Initial fetch of pages
+  // Resolve and load the configured startup state.
   useEffect(() => {
-    fetchPages();
-  }, [fetchPages]);
+    initializeStartup();
+  }, [initializeStartup]);
 
   return <TabRow tabs={tabs}></TabRow>;
 };

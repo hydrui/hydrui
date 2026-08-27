@@ -343,6 +343,42 @@
   color: var(--color-white);
 }
 
+.settings-select-input {
+  width: min(100%, 28rem);
+  padding: 0.375rem 0.5rem;
+  background-color: var(--color-gray-700);
+  border: 1px solid var(--color-gray-600);
+  border-radius: var(--radius-sm);
+  color: var(--color-white);
+}
+
+.settings-select-input:focus {
+  outline: 2px solid var(--color-blue-400);
+  outline-offset: 2px;
+}
+
+.settings-startup-query-editor {
+  position: relative;
+  margin-left: 188px;
+  max-width: 28rem;
+}
+
+.settings-startup-query-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.settings-startup-query-actions .push-button {
+  padding: 0.375rem 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .settings-startup-query-editor {
+    margin-left: 0;
+  }
+}
+
 .settings-model-dropzone {
   position: relative;
 }

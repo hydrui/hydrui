@@ -13,6 +13,29 @@ export interface Tab {
   tabs: Tab[];
 }
 
+export function tabContainsKey(tab: Tab, key: string): boolean {
+  return (
+    tab.key === key || tab.tabs.some((child) => tabContainsKey(child, key))
+  );
+}
+
+export function resolveActiveTabIndex(
+  tabs: Tab[],
+  activePageKey: string | null,
+  currentIndex: number,
+): number {
+  if (!activePageKey) {
+    return -1;
+  }
+
+  const currentTab = tabs[currentIndex];
+  if (currentTab && tabContainsKey(currentTab, activePageKey)) {
+    return currentIndex;
+  }
+
+  return tabs.findIndex((tab) => tabContainsKey(tab, activePageKey));
+}
+
 function hydrusPageToTab(page: Page): Tab {
   return {
     key: page.page_key,
