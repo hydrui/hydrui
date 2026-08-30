@@ -26,6 +26,10 @@ export interface VirtualPage {
   fileIds: number[];
 }
 
+interface SelectionUpdateOptions {
+  offerRestore?: boolean;
+}
+
 // Map of virtual page keys to their data
 export type VirtualPages = Record<string, VirtualPage>;
 
@@ -72,9 +76,16 @@ interface PageState extends PersistedState {
     setSelectedPageKeys: (keys: string[]) => void;
     addSelectedPageKey: (key: string) => void;
     removeSelectedPageKey: (key: string) => void;
-    setSelectedFiles: (pageKey: string, fileIds: number[]) => void;
+    setSelectedFiles: (
+      pageKey: string,
+      fileIds: number[],
+      options?: SelectionUpdateOptions,
+    ) => void;
     addSelectedFiles: (pageKey: string, fileIds: number[]) => void;
-    clearSelectedFiles: (pageKey: string) => void;
+    clearSelectedFiles: (
+      pageKey: string,
+      options?: SelectionUpdateOptions,
+    ) => void;
     setActiveFileId: (pageKey: string, fileId: number | null) => void;
     markActiveFileAsBetter: () => Promise<void>;
     archiveFiles: (fileIds: number[]) => Promise<void>;
@@ -121,6 +132,56 @@ export const usePageActions = () => usePageStore((state) => state.actions);
 export const usePageStore = create<PageState>()(
   persist(
     (set, get) => {
+      const selectionRestoreToastIds = new Map<string, string>();
+
+      const selectionsEqual = (a: number[], b: number[]) =>
+        a === b ||
+        (a.length === b.length && a.every((fileId, i) => fileId === b[i]));
+
+      const offerSelectionRestore = (
+        pageKey: string,
+        previousFileIds: number[],
+        previousActiveFileId: number | null,
+        wasCleared: boolean,
+      ) => {
+        const { addToast, removeToast } = useToastStore.getState().actions;
+        const previousToastId = selectionRestoreToastIds.get(pageKey);
+        if (previousToastId) removeToast(previousToastId);
+
+        let toastId = "";
+        const dismiss = () => {
+          removeToast(toastId);
+          if (selectionRestoreToastIds.get(pageKey) === toastId) {
+            selectionRestoreToastIds.delete(pageKey);
+          }
+        };
+        toastId = addToast(
+          `${wasCleared ? "Cleared" : "Replaced"} selection of ${previousFileIds.length} files.`,
+          "info",
+          {
+            actions: [
+              {
+                label: "Restore",
+                variant: "primary",
+                callback: () => {
+                  get().actions.setSelectedFiles(pageKey, previousFileIds, {
+                    offerRestore: false,
+                  });
+                  get().actions.setActiveFileId(pageKey, previousActiveFileId);
+                  dismiss();
+                },
+              },
+              {
+                label: "Dismiss",
+                variant: "muted",
+                callback: dismiss,
+              },
+            ],
+          },
+        );
+        selectionRestoreToastIds.set(pageKey, toastId);
+      };
+
       const getRealizedFile = async (fileId: number) => {
         const { loadedFiles, fileIdToIndex, metadataLoadController } = get();
         if (metadataLoadController) {
@@ -814,7 +875,21 @@ export const usePageStore = create<PageState>()(
             }));
           },
 
-          setSelectedFiles: (pageKey: string, fileIds: number[]) => {
+          setSelectedFiles: (
+            pageKey: string,
+            fileIds: number[],
+            { offerRestore = true } = {},
+          ) => {
+            const previousFileIds = get().selectedFilesByPage[pageKey] || [];
+            if (selectionsEqual(previousFileIds, fileIds)) return;
+            if (offerRestore && previousFileIds.length > 10) {
+              offerSelectionRestore(
+                pageKey,
+                previousFileIds,
+                get().activeFileByPage[pageKey] ?? null,
+                fileIds.length === 0,
+              );
+            }
             set((state) => ({
               selectedFilesByPage: {
                 ...state.selectedFilesByPage,
@@ -837,7 +912,20 @@ export const usePageStore = create<PageState>()(
             }));
           },
 
-          clearSelectedFiles: (pageKey: string) => {
+          clearSelectedFiles: (
+            pageKey: string,
+            { offerRestore = true } = {},
+          ) => {
+            const previousFileIds = get().selectedFilesByPage[pageKey] || [];
+            if (previousFileIds.length === 0) return;
+            if (offerRestore && previousFileIds.length > 10) {
+              offerSelectionRestore(
+                pageKey,
+                previousFileIds,
+                get().activeFileByPage[pageKey] ?? null,
+                true,
+              );
+            }
             set((state) => {
               const newSelectedFiles = { ...state.selectedFilesByPage };
               delete newSelectedFiles[pageKey];

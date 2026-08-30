@@ -5,6 +5,8 @@ import {
   ArrowTopRightOnSquareIcon,
   ArrowUpTrayIcon,
   ArrowUturnDownIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
   DocumentIcon,
   ExclamationCircleIcon,
   LinkIcon,
@@ -57,11 +59,19 @@ import { isServerMode } from "@/utils/modes";
 import { PageSearchBar } from "./PageSearchBar";
 import { Thumbnail } from "./Thumbnail";
 import "./index.css";
+import {
+  createSelectionIndex,
+  getSelectionOverflow,
+  getSelectionScrollTarget,
+  getViewerExitSelection,
+  selectionIncludesIndex,
+} from "./selectionNavigation";
 
 // Defines the amount of "scroll slack" used to compute item visibility for the
 // render view. This combats scroll jank at the cost of making rendering more
 // expensive.
 const SCROLL_SLACK = 200;
+const GAP_SIZE = 16;
 
 // Referentially stable empty array.
 const EMPTY_ARRAY: never[] = [];
@@ -156,9 +166,32 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
     bottomRows: 0,
     viewHeight: 0,
   });
+  const [selectionOverflow, setSelectionOverflow] = useState({
+    above: 0,
+    below: 0,
+  });
+  const pendingViewerSelectionRef = useRef<number | null>(null);
 
   const selectedFiles = selectedFilesByPage[pageKey] || EMPTY_ARRAY;
   const activeFileId = activeFileByPage[pageKey];
+  const selectionIndex = useMemo(
+    () =>
+      createSelectionIndex(
+        selectedFiles,
+        fileIdToIndex,
+        selectedFiles === fileIds,
+      ),
+    [fileIdToIndex, fileIds, selectedFiles],
+  );
+  const isFileSelected = useCallback(
+    (fileId: number) => {
+      const index = fileIdToIndex.get(fileId);
+      return (
+        index !== undefined && selectionIncludesIndex(selectionIndex, index)
+      );
+    },
+    [fileIdToIndex, selectionIndex],
+  );
 
   const archiveFilesById = useCallback(
     async (files: number[]) => {
@@ -209,7 +242,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
 
   const selectAllFiles = useCallback(() => {
     const { fileIds } = usePageStore.getState();
-    setSelectedFiles(pageKey, [...fileIds]);
+    setSelectedFiles(pageKey, fileIds);
   }, [pageKey, setSelectedFiles]);
 
   const findSimilarFiles = async (distance: number) => {
@@ -218,9 +251,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
       ? (await metadataLoadController.demandFetchMetadata(selectedFiles)).map(
           (f) => f.hash,
         )
-      : loadedFiles
-          .filter((f) => selectedFiles.includes(f.file_id))
-          .map((f) => f.hash);
+      : loadedFiles.filter((f) => isFileSelected(f.file_id)).map((f) => f.hash);
     const query =
       "system:similar to " +
       selectedFileHashes.join(", ") +
@@ -340,10 +371,64 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
     ...viewMenuItems,
   ];
 
-  const GAP_SIZE = 16;
-
   // Calculate grid dimensions based on container width
   const [gridDimensions, setGridDimensions] = useState({ cols: 4, rows: 1 });
+
+  const updateSelectionOverflow = useCallback(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    const nextOverflow = getSelectionOverflow({
+      selectionIndex,
+      columns: gridDimensions.cols,
+      itemSize: thumbnailSize,
+      gapSize: GAP_SIZE,
+      scrollTop: grid.scrollTop,
+      viewportHeight: grid.clientHeight,
+    });
+    setSelectionOverflow((currentOverflow) =>
+      currentOverflow.above === nextOverflow.above &&
+      currentOverflow.below === nextOverflow.below
+        ? currentOverflow
+        : nextOverflow,
+    );
+  }, [gridDimensions.cols, selectionIndex, thumbnailSize]);
+
+  const scrollToSelectionEdge = useCallback(
+    (edge: "top" | "bottom") => {
+      const grid = gridRef.current;
+      if (!grid) return;
+
+      const target = getSelectionScrollTarget(
+        edge,
+        {
+          selectionIndex,
+          columns: gridDimensions.cols,
+          itemSize: thumbnailSize,
+          gapSize: GAP_SIZE,
+        },
+        grid.clientHeight,
+      );
+      if (target === null) return;
+
+      const scrollTop = Math.min(
+        target,
+        Math.max(0, grid.scrollHeight - grid.clientHeight),
+      );
+      if (typeof grid.scrollTo === "function") {
+        grid.scrollTo({ top: scrollTop, behavior: "smooth" });
+      } else {
+        grid.scrollTop = scrollTop;
+        updateSelectionOverflow();
+      }
+    },
+    [
+      gridDimensions.cols,
+      selectionIndex,
+      thumbnailSize,
+      updateSelectionOverflow,
+    ],
+  );
 
   const handleRecalculateRenderView = useCallback(
     (
@@ -387,12 +472,23 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
       const firstIndex = firstRow * cols;
       const lastIndex = Math.min((lastRow + 1) * cols, filesLength);
       const viewHeight = rows * (thumbnailSize + GAP_SIZE) + GAP_SIZE;
-      setRenderView({
-        firstIndex,
-        lastIndex,
-        topRows,
-        bottomRows,
-        viewHeight,
+      setRenderView((currentView) => {
+        if (
+          currentView.firstIndex === firstIndex &&
+          currentView.lastIndex === lastIndex &&
+          currentView.topRows === topRows &&
+          currentView.bottomRows === bottomRows &&
+          currentView.viewHeight === viewHeight
+        ) {
+          return currentView;
+        }
+        return {
+          firstIndex,
+          lastIndex,
+          topRows,
+          bottomRows,
+          viewHeight,
+        };
       });
     },
     [useVirtualViewport],
@@ -402,7 +498,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
     const calculateDimensions = () => {
       if (!gridRef.current) return;
       const width = gridRef.current.clientWidth - 32; // Account for container padding
-      const cols = Math.floor(width / (thumbnailSize + GAP_SIZE));
+      const cols = Math.max(1, Math.floor(width / (thumbnailSize + GAP_SIZE)));
       const rows = Math.ceil(fileIds.length / cols);
       setGridDimensions({ cols, rows });
       handleRecalculateRenderView(
@@ -410,6 +506,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         { cols, rows },
         thumbnailSize,
       );
+      updateSelectionOverflow();
     };
 
     calculateDimensions();
@@ -432,7 +529,16 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         window.removeEventListener("resize", calculateDimensions);
       }
     };
-  }, [fileIds.length, handleRecalculateRenderView, thumbnailSize]);
+  }, [
+    fileIds.length,
+    handleRecalculateRenderView,
+    thumbnailSize,
+    updateSelectionOverflow,
+  ]);
+
+  useLayoutEffect(() => {
+    updateSelectionOverflow();
+  }, [updateSelectionOverflow, renderView.viewHeight]);
 
   // Reprioritize metadata loading when scrolling w/ debounce
   useEffect(() => {
@@ -605,10 +711,11 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
 
     if (event.ctrlKey || event.metaKey) {
       // Toggle selection with Ctrl/Cmd
-      if (selectedFiles.includes(fileId)) {
+      if (isFileSelected(fileId)) {
         setSelectedFiles(
           pageKey,
           selectedFiles.filter((id) => id !== fileId),
+          { offerRestore: false },
         );
         if (activeFileId === fileId) {
           setActiveFileId(pageKey, null);
@@ -642,6 +749,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
     // Double click - open modal
     const fileIndex = fileIdToIndex.get(fileId);
     if (fileIndex !== undefined) {
+      pendingViewerSelectionRef.current = null;
       setModalIndex(fileIndex);
     }
     return;
@@ -657,9 +765,10 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
     event.stopPropagation();
 
     let selectedFiles = selectedFilesByPage[pageKey] || [];
+    const fileWasSelected = isFileSelected(fileId);
 
     // If the file isn't in the current selection, select only it
-    if (!selectedFiles.includes(fileId)) {
+    if (!fileWasSelected) {
       setSelectedFiles(pageKey, [fileId]);
       selectedFiles = [fileId];
     }
@@ -668,7 +777,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
 
     // Get the selected files' metadata
     const selectedFileMetadata = loadedFiles.filter((f) =>
-      selectedFiles.includes(f.file_id),
+      fileWasSelected ? isFileSelected(f.file_id) : f.file_id === fileId,
     );
 
     // Show context menu
@@ -737,9 +846,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
                       selectedFiles,
                     )
                   ).map((f) => f.hash)
-                : loadedFiles
-                    .filter((f) => selectedFiles.includes(f.file_id))
-                    .map((f) => f.hash);
+                : selectedFileMetadata.map((f) => f.hash);
               const relationships = await client.getFileRelationships({
                 hashes,
               });
@@ -1221,8 +1328,27 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
 
   // Modal navigation handlers
   const handleModalClose = () => {
+    pendingViewerSelectionRef.current = fileIds[modalIndex] ?? null;
     setModalIndex(-1);
   };
+
+  useEffect(() => {
+    if (modalIndex !== -1) return;
+    const lastViewedFileId = pendingViewerSelectionRef.current;
+    pendingViewerSelectionRef.current = null;
+    if (lastViewedFileId === null) return;
+
+    const currentSelection =
+      usePageStore.getState().selectedFilesByPage[pageKey] || [];
+    const viewerExitSelection = getViewerExitSelection(
+      currentSelection,
+      lastViewedFileId,
+    );
+    if (!viewerExitSelection) return;
+
+    setSelectedFiles(pageKey, viewerExitSelection);
+    setActiveFileId(pageKey, lastViewedFileId);
+  }, [modalIndex, pageKey, setActiveFileId, setSelectedFiles]);
 
   const modalHasPrevious = modalIndex > 0;
   const modalHasNext = modalIndex < fileIds.length - 1;
@@ -1284,10 +1410,11 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         event.preventDefault();
         if (event.ctrlKey || event.metaKey) {
           // Toggle selection with Ctrl/Cmd
-          if (selectedFiles.includes(fileId)) {
+          if (selectionIncludesIndex(selectionIndex, currentIndex)) {
             setSelectedFiles(
               pageKey,
               selectedFiles.filter((id) => id !== fileId),
+              { offerRestore: false },
             );
             if (activeFileId === fileId) {
               setActiveFileId(pageKey, null);
@@ -1481,7 +1608,7 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
         (selectedFilesByPage[pageKey] &&
           selectedFilesByPage[pageKey].length !== 0)
       ) {
-        setSelectedFiles(pageKey, fileIdsToSelect);
+        setSelectedFiles(pageKey, fileIdsToSelect, { offerRestore: false });
       }
 
       // Update active file
@@ -1552,144 +1679,182 @@ const PageViewImpl: React.FC<PageViewProps> = ({ pageKey }) => {
           <PageSearchBar />
         </div>
       )}
-      <ScrollView
-        ref={gridRef}
-        className="files-grid"
-        style={{
-          gridTemplateColumns: `repeat(${gridDimensions.cols}, minmax(${thumbnailSize}px, 1fr))`,
-          gap: `${GAP_SIZE}px`,
-          cursor: isDragging ? "crosshair" : undefined,
-        }}
-        onMouseDown={handleMouseDown}
-        onContextMenu={handleViewContextMenu}
-        onScroll={() =>
-          handleRecalculateRenderView(
-            fileIds.length,
-            gridDimensions,
-            thumbnailSize,
-          )
-        }
-        loaded={fileIds.length !== 0 && renderView.lastIndex !== 0}
-      >
-        {/* Selection rectangle */}
-        {isDragging && dragStart && dragEnd && (
-          <div
-            className="page-selection-rectangle"
-            style={{
-              left: Math.min(dragStart.x, dragEnd.x),
-              top: Math.min(dragStart.y, dragEnd.y),
-              width: Math.abs(dragEnd.x - dragStart.x),
-              height: Math.abs(dragEnd.y - dragStart.y),
-            }}
-          />
-        )}
+      <div className="files-grid-viewport">
+        <ScrollView
+          ref={gridRef}
+          className="files-grid"
+          style={{
+            gridTemplateColumns: `repeat(${gridDimensions.cols}, minmax(${thumbnailSize}px, 1fr))`,
+            gap: `${GAP_SIZE}px`,
+            cursor: isDragging ? "crosshair" : undefined,
+          }}
+          onMouseDown={handleMouseDown}
+          onContextMenu={handleViewContextMenu}
+          onScroll={() => {
+            handleRecalculateRenderView(
+              fileIds.length,
+              gridDimensions,
+              thumbnailSize,
+            );
+            updateSelectionOverflow();
+          }}
+          loaded={fileIds.length !== 0 && renderView.lastIndex !== 0}
+        >
+          {/* Selection rectangle */}
+          {isDragging && dragStart && dragEnd && (
+            <div
+              className="page-selection-rectangle"
+              style={{
+                left: Math.min(dragStart.x, dragEnd.x),
+                top: Math.min(dragStart.y, dragEnd.y),
+                width: Math.abs(dragEnd.x - dragStart.x),
+                height: Math.abs(dragEnd.y - dragStart.y),
+              }}
+            />
+          )}
 
-        {isLoading && fileIds.length === 0 ? (
-          // Loading state
-          <div className="files-grid-loading">
-            <div className="page-loading-spinner"></div>
-          </div>
-        ) : error ? (
-          // Error state
-          <div className="files-grid-error">
-            <div>{error}</div>
-          </div>
-        ) : fileIds.length === 0 ? (
-          // Empty state
-          <div className="files-grid-empty">
-            {pageType === "search" ? (
-              !searchTags.length ? (
-                <>
-                  <MagnifyingGlassIcon className="files-grid-empty-icon" />
-                  <div>Start your search</div>
-                  <div className="files-grid-empty-text">
-                    Add tags above to find files
-                  </div>
-                </>
-              ) : searchStatus === "initial" ? (
-                <>
-                  <MagnifyingGlassIcon className="files-grid-empty-icon" />
-                  <div>
-                    Edit the search query or press the search button to start
-                  </div>
-                  <div className="files-grid-empty-text">
-                    Your search query is ready.
-                  </div>
-                </>
-              ) : searchError ? (
-                <>
-                  <ExclamationCircleIcon className="files-grid-error-icon" />
-                  <div>Error loading search results</div>
-                  <div className="files-grid-empty-text">
-                    Error: {searchError}
-                  </div>
-                </>
+          {isLoading && fileIds.length === 0 ? (
+            // Loading state
+            <div className="files-grid-loading">
+              <div className="page-loading-spinner"></div>
+            </div>
+          ) : error ? (
+            // Error state
+            <div className="files-grid-error">
+              <div>{error}</div>
+            </div>
+          ) : fileIds.length === 0 ? (
+            // Empty state
+            <div className="files-grid-empty">
+              {pageType === "search" ? (
+                !searchTags.length ? (
+                  <>
+                    <MagnifyingGlassIcon className="files-grid-empty-icon" />
+                    <div>Start your search</div>
+                    <div className="files-grid-empty-text">
+                      Add tags above to find files
+                    </div>
+                  </>
+                ) : searchStatus === "initial" ? (
+                  <>
+                    <MagnifyingGlassIcon className="files-grid-empty-icon" />
+                    <div>
+                      Edit the search query or press the search button to start
+                    </div>
+                    <div className="files-grid-empty-text">
+                      Your search query is ready.
+                    </div>
+                  </>
+                ) : searchError ? (
+                  <>
+                    <ExclamationCircleIcon className="files-grid-error-icon" />
+                    <div>Error loading search results</div>
+                    <div className="files-grid-empty-text">
+                      Error: {searchError}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <MagnifyingGlassIcon className="files-grid-empty-icon" />
+                    <div>No search results</div>
+                    <div className="files-grid-empty-text">
+                      Try different tags
+                    </div>
+                  </>
+                )
               ) : (
                 <>
-                  <MagnifyingGlassIcon className="files-grid-empty-icon" />
-                  <div>No search results</div>
-                  <div className="files-grid-empty-text">
-                    Try different tags
-                  </div>
+                  <div>No files in this page</div>
                 </>
-              )
-            ) : (
-              <>
-                <div>No files in this page</div>
-              </>
-            )}
-          </div>
-        ) : (
-          // Files grid
-          renderFiles.map((fileId, i) => (
-            <div
-              key={fileId}
-              data-file-item
-              data-file-id={fileId}
-              className={`file-item ${
-                selectedFiles.includes(fileId)
-                  ? activeFileId === fileId
-                    ? "file-item-active"
-                    : "file-item-selected"
-                  : ""
-              }`}
-              style={{
-                width: `${thumbnailSize}px`,
-                height: `${thumbnailSize}px`,
-                marginTop:
-                  useVirtualViewport && i < gridDimensions.cols
-                    ? renderView.topRows * (thumbnailSize + GAP_SIZE)
-                    : 0,
-              }}
-              onClick={(e) => handleFileClick(fileId, e)}
-              onDoubleClick={() => handleFileDoubleClick(fileId)}
-              onKeyDown={(e) => handleFileKeyDown(fileId, e)}
-              onMouseUp={(e) => {
-                if (e.button === 1) {
-                  e.preventDefault();
-                  window.open(client.getFileUrl(fileId), "_blank");
-                }
-              }}
-              onContextMenu={(e) => handleFileContextMenu(e, fileId)}
-              tabIndex={0}
-              role="button"
-              aria-selected={selectedFiles.includes(fileId)}
-              aria-label={`File ${fileId}`}
-              {...longPressHandlers}
-            >
-              <Thumbnail fileId={fileId} className="thumbnail-wrapper" />
+              )}
             </div>
-          ))
+          ) : (
+            // Files grid
+            renderFiles.map((fileId, i) => {
+              const fileIndex = useVirtualViewport
+                ? renderView.firstIndex + i
+                : i;
+              const isSelected = selectionIncludesIndex(
+                selectionIndex,
+                fileIndex,
+              );
+              return (
+                <div
+                  key={fileId}
+                  data-file-item
+                  data-file-id={fileId}
+                  className={`file-item ${
+                    isSelected
+                      ? activeFileId === fileId
+                        ? "file-item-active"
+                        : "file-item-selected"
+                      : ""
+                  }`}
+                  style={{
+                    width: `${thumbnailSize}px`,
+                    height: `${thumbnailSize}px`,
+                    marginTop:
+                      useVirtualViewport && i < gridDimensions.cols
+                        ? renderView.topRows * (thumbnailSize + GAP_SIZE)
+                        : 0,
+                  }}
+                  onClick={(e) => handleFileClick(fileId, e)}
+                  onDoubleClick={() => handleFileDoubleClick(fileId)}
+                  onKeyDown={(e) => handleFileKeyDown(fileId, e)}
+                  onMouseUp={(e) => {
+                    if (e.button === 1) {
+                      e.preventDefault();
+                      window.open(client.getFileUrl(fileId), "_blank");
+                    }
+                  }}
+                  onContextMenu={(e) => handleFileContextMenu(e, fileId)}
+                  tabIndex={0}
+                  role="button"
+                  aria-selected={isSelected}
+                  aria-label={`File ${fileId}`}
+                  {...longPressHandlers}
+                >
+                  <Thumbnail fileId={fileId} className="thumbnail-wrapper" />
+                </div>
+              );
+            })
+          )}
+          <div
+            style={{
+              pointerEvents: "none",
+              paddingBottom: useVirtualViewport
+                ? renderView.bottomRows * (thumbnailSize + GAP_SIZE)
+                : 0,
+            }}
+          ></div>
+        </ScrollView>
+
+        {selectionOverflow.above > 0 && (
+          <button
+            type="button"
+            className="page-selection-overflow-indicator page-selection-overflow-indicator-top"
+            onClick={() => scrollToSelectionEdge("top")}
+            title={`Show ${selectionOverflow.above} selected file${selectionOverflow.above === 1 ? "" : "s"} above`}
+            aria-label={`Show selected files above (${selectionOverflow.above})`}
+          >
+            <ChevronUpIcon className="page-selection-overflow-icon" />
+            <span>{selectionOverflow.above} selected</span>
+          </button>
         )}
-        <div
-          style={{
-            pointerEvents: "none",
-            paddingBottom: useVirtualViewport
-              ? renderView.bottomRows * (thumbnailSize + GAP_SIZE)
-              : 0,
-          }}
-        ></div>
-      </ScrollView>
+
+        {selectionOverflow.below > 0 && (
+          <button
+            type="button"
+            className="page-selection-overflow-indicator page-selection-overflow-indicator-bottom"
+            onClick={() => scrollToSelectionEdge("bottom")}
+            title={`Show ${selectionOverflow.below} selected file${selectionOverflow.below === 1 ? "" : "s"} below`}
+            aria-label={`Show selected files below (${selectionOverflow.below})`}
+          >
+            <span>{selectionOverflow.below} selected</span>
+            <ChevronDownIcon className="page-selection-overflow-icon" />
+          </button>
+        )}
+      </div>
 
       {modalIndex !== -1 && fileIds[modalIndex] && (
         <FileViewerModal
