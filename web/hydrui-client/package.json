@@ -33,6 +33,7 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^4",
     "jsdom": "^26",
+    "terser": "^5.51.2",
     "typescript": "^5",
     "vite": "^7",
     "vite-plugin-pwa": "^1.1.0",
