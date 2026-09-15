@@ -4,7 +4,7 @@ import { ContentUpdateAction } from "@/constants/contentUpdates";
 import { ServiceType } from "@/constants/services";
 import { PSDParser } from "@/file/psd/parser";
 
-import { HttpHandler } from "./memoryHttpClient";
+import { type HttpHandler, MemoryHttpClient } from "./memoryHttpClient";
 import {
   AddFilesRequest,
   AddNotesRequest,
@@ -1387,4 +1387,12 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
         return new Response("page not found", { status: 404 });
     }
   }
+}
+
+export function createDemoBackend() {
+  const server = new DemoServer();
+  return {
+    server,
+    httpClient: new MemoryHttpClient(server),
+  };
 }

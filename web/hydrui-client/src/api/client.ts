@@ -2,9 +2,8 @@ import * as z from "zod/mini";
 
 import { isDemoMode, isServerMode } from "@/utils/modes";
 
-import { DemoServer } from "./demoServer";
+import type { DemoServer } from "./demoServer";
 import { FetchHttpClient } from "./fetchHttpClient";
-import { MemoryHttpClient } from "./memoryHttpClient";
 import {
   AddFileResponse,
   AddFilesRequest,
@@ -56,6 +55,10 @@ import {
   UndeleteFilesRequest,
 } from "./types";
 
+const createDemoBackend = isDemoMode
+  ? (await import("./demoServer")).createDemoBackend
+  : undefined;
+
 type NoParams = Record<string, never>;
 
 interface RequestOptions<Params, Request> {
@@ -80,9 +83,10 @@ export class HydrusClient {
   ) {
     this.baseUrl = isServerMode ? "/hydrus" : baseUrl;
     this.apiKey = isServerMode ? "" : apiKey;
-    if (isDemoMode) {
-      this.demoServer = new DemoServer();
-      this.httpClient = new MemoryHttpClient(this.demoServer);
+    if (createDemoBackend) {
+      const demoBackend = createDemoBackend();
+      this.demoServer = demoBackend.server;
+      this.httpClient = demoBackend.httpClient;
     } else {
       this.httpClient = httpClient;
     }

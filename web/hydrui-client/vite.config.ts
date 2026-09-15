@@ -68,6 +68,9 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ["onnxruntime-web"],
   },
+  build: {
+    minify: "terser",
+  },
   ...defineVitestConfig({
     test: {
       globals: true,
