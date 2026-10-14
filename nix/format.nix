@@ -1,6 +1,6 @@
 {
   writeShellApplication,
-  nixfmt-rfc-style,
+  nixfmt,
   yamlfmt,
   go,
 }:
@@ -8,7 +8,7 @@ writeShellApplication {
   name = "format";
 
   runtimeInputs = [
-    nixfmt-rfc-style
+    nixfmt
     yamlfmt
     go
   ];
