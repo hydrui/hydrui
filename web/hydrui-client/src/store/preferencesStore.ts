@@ -124,7 +124,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       // Allow passing tokens to external client-side apps
       allowTokenPassing: false,
 
-      // Maximum number of files in a page before eagerly loading metadata is disabled
+      // Number of files on a page to eagerly load metadata for before pausing
       eagerLoadThreshold: 20000,
 
       // Restore the previous tab and search query without searching on startup.

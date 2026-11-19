@@ -431,6 +431,10 @@ function PageViewSettings() {
       setEagerLoadThreshold: setEagerLoadThresholdState,
     },
   } = usePreferencesStore();
+  const eagerLoadPageKeys = usePageStore((state) => state.eagerLoadPageKeys);
+  const clearEagerLoadPageKeys = usePageStore(
+    (state) => state.actions.clearEagerLoadPageKeys,
+  );
 
   const [thumbnailSizeInput, setThumbnailSizeInput] = useState(thumbnailSize);
 
@@ -504,11 +508,18 @@ function PageViewSettings() {
         </div>
         <div>
           <p>
-            When there are greater than {eagerLoadThreshold} files on a page,
-            Hydrui will only load metadata as-needed rather than loading all of
-            it.
+            Hydrui eagerly loads metadata for up to {eagerLoadThreshold} files
+            on a page, then pauses and loads the rest on demand. Resuming a page
+            loads all of it, and Hydrui remembers that for next time.
           </p>
         </div>
+        {eagerLoadPageKeys.length > 0 && (
+          <div className="settings-row">
+            <PushButton variant="muted" onClick={clearEagerLoadPageKeys}>
+              Reset remembered pages ({eagerLoadPageKeys.length})
+            </PushButton>
+          </div>
+        )}
       </fieldset>
     </>
   );

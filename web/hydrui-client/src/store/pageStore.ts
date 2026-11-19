@@ -20,6 +20,29 @@ export { SEARCH_PAGE_KEY } from "./pageUtils";
 
 export type PageType = "search" | "hydrus" | "virtual";
 
+const EAGER_LOAD_PAGE_LIMIT = 50;
+
+const areStringArraysEqual = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((value, index) => value === b[index]);
+
+const condenseLoadedFiles = (loadedFiles: FileMetadata[]) => {
+  const denseFiles = Object.values(loadedFiles);
+  const fileIdToIndex = new Map<number, number>();
+  for (const [i, file] of denseFiles.entries()) {
+    fileIdToIndex.set(file.file_id, i);
+  }
+  return {
+    fileIds: denseFiles.map((file) => file.file_id),
+    fileIdToIndex,
+    loadedFiles: denseFiles,
+    loadedFileCount: denseFiles.length,
+    totalFileCount: denseFiles.length,
+  };
+};
+
+let pendingSearchUpdate: Promise<void> | null = null;
+let stopSupersededSearchLoad: (() => void) | null = null;
+
 // Interface for virtual pages
 export interface VirtualPage {
   name: string;
@@ -42,6 +65,8 @@ interface PersistedState {
   pageType: PageType;
   pageName: string | null;
   selectedPageKeys: string[];
+  // Pages resumed past eagerLoadThreshold, remembered across reloads.
+  eagerLoadPageKeys: string[];
 }
 
 interface MetadataLoadController {
@@ -124,6 +149,7 @@ interface PageState extends PersistedState {
       updates: Partial<VirtualPage>,
     ) => Promise<void>;
     setIsLoadingPaused: (isLoadingPaused: boolean) => void;
+    clearEagerLoadPageKeys: () => void;
   };
 }
 
@@ -198,18 +224,50 @@ export const usePageStore = create<PageState>()(
       };
 
       const pauseWait = (wakeupRef: { value: () => void }) => {
-        if (!get().isLoadingPaused) {
-          wakeupRef.value = () => {};
-          return Promise.resolve();
+        if (get().isLoadingAwake) {
+          set({ isLoadingAwake: false });
         }
-        set({ isLoadingAwake: false });
         return new Promise<void>((resolve) => {
           wakeupRef.value = () => {
-            set({ isLoadingAwake: true });
+            wakeupRef.value = () => {};
             resolve();
           };
         });
       };
+
+      const stopActiveMetadataLoad = (
+        update: (state: PageState) => Partial<PageState>,
+      ): number => {
+        const { currentAbortController, metadataLoadController } = get();
+        let nextRequestId = 0;
+        set((state) => {
+          nextRequestId = state.lastRequestId + 1;
+          return {
+            isLoadingPaused: false,
+            lastRequestId: nextRequestId,
+            currentAbortController: null,
+            metadataLoadController: null,
+            ...update(state),
+          };
+        });
+        metadataLoadController?.wakeup();
+        currentAbortController?.abort();
+        return nextRequestId;
+      };
+
+      const stopCurrentLoadAndCondense = () => {
+        stopActiveMetadataLoad((state) => {
+          if (!state.isLoadingFiles) {
+            return { isLoadingAwake: false };
+          }
+          return {
+            ...condenseLoadedFiles(state.loadedFiles),
+            isLoadingFiles: false,
+            isLoadingAwake: false,
+          };
+        });
+      };
+      stopSupersededSearchLoad = stopCurrentLoadAndCondense;
 
       // Helper function to update state with file IDs
       const updateWithFileIds = async (
@@ -220,8 +278,13 @@ export const usePageStore = create<PageState>()(
         const state = get();
         const CHUNK_SIZE = 256;
 
-        // Only update if we're on the same page.
-        if (state.activePageKey !== pageKey) return;
+        // Only update if this is still the active page and request.
+        if (
+          state.activePageKey !== pageKey ||
+          state.lastRequestId !== requestId
+        ) {
+          return;
+        }
 
         // Abort any existing request
         if (state.currentAbortController) {
@@ -230,16 +293,33 @@ export const usePageStore = create<PageState>()(
 
         if (fileIds.length === 0) {
           set({
+            error: null,
             isLoadingFiles: false,
+            isLoadingPaused: false,
             isLoadingAwake: false,
             fileIds: [],
             fileIdToIndex: new Map(),
             loadedFiles: [],
             loadedFileCount: 0,
             totalFileCount: 0,
+            currentAbortController: null,
+            metadataLoadController: null,
           });
           return;
         }
+
+        const initialThreshold = Math.max(
+          0,
+          usePreferencesStore.getState().eagerLoadThreshold,
+        );
+        const isRemembered = state.eagerLoadPageKeys.includes(pageKey);
+        const splitAt =
+          !isRemembered &&
+          initialThreshold > 0 &&
+          initialThreshold < fileIds.length &&
+          initialThreshold % CHUNK_SIZE !== 0
+            ? initialThreshold
+            : null;
 
         const wakeupRef = { value: () => {} };
         const demandSet = new Set<number[]>();
@@ -250,8 +330,12 @@ export const usePageStore = create<PageState>()(
           number[],
           [Promise<void>, () => void, (reason: unknown) => void]
         >();
-        for (let i = 0; i < fileIds.length; i += CHUNK_SIZE) {
-          const chunk = fileIds.slice(i, i + CHUNK_SIZE);
+        for (let i = 0; i < fileIds.length; ) {
+          let end = Math.min(i + CHUNK_SIZE, fileIds.length);
+          if (splitAt !== null && i < splitAt && end > splitAt) {
+            end = splitAt;
+          }
+          const chunk = fileIds.slice(i, end);
           for (const [j, fileId] of chunk.entries()) {
             fileIdToChunk.set(fileId, chunk);
             fileIdToIndex.set(fileId, i + j);
@@ -262,6 +346,7 @@ export const usePageStore = create<PageState>()(
           });
           chunkToPromise.set(chunk, [promise, promiseFn![0], promiseFn![1]]);
           fileIdChunks.push(chunk);
+          i = end;
           // In extremely huge pages, yield periodically.
           // The map will get pretty intense.
           if (fileIdChunks.length % 100 === 0) {
@@ -370,14 +455,16 @@ export const usePageStore = create<PageState>()(
           abortController = new AbortController();
         }
         let loadedFileCount = 0;
+        let processedFileCount = 0;
+        const startPaused = initialThreshold === 0 && !isRemembered;
+        let hasAutoPaused = startPaused;
         set({
           error: null,
           fileIds,
           fileIdToIndex,
           isLoadingFiles: true,
-          isLoadingPaused:
-            fileIds.length > usePreferencesStore.getState().eagerLoadThreshold,
-          isLoadingAwake: true,
+          isLoadingPaused: startPaused,
+          isLoadingAwake: !startPaused,
           loadedFiles: [],
           loadedFileCount,
           totalFileCount: fileIds.length,
@@ -401,11 +488,47 @@ export const usePageStore = create<PageState>()(
 
         try {
           // Process files in chunks
-          for (
-            let chunk = fileIdChunks.shift();
-            chunk;
-            chunk = fileIdChunks.shift()
-          ) {
+          while (fileIdChunks.length > 0) {
+            if (
+              get().lastRequestId !== requestId ||
+              get().activePageKey !== pageKey
+            ) {
+              return;
+            }
+
+            if (
+              demandSet.size === 0 &&
+              !hasAutoPaused &&
+              !get().isLoadingPaused &&
+              processedFileCount >=
+                Math.max(
+                  0,
+                  usePreferencesStore.getState().eagerLoadThreshold,
+                ) &&
+              !get().eagerLoadPageKeys.includes(pageKey)
+            ) {
+              hasAutoPaused = true;
+              set({ isLoadingPaused: true });
+            }
+
+            while (demandSet.size === 0 && get().isLoadingPaused) {
+              await pauseWait(wakeupRef);
+              if (
+                get().lastRequestId !== requestId ||
+                get().activePageKey !== pageKey
+              ) {
+                return;
+              }
+            }
+
+            const chunk = fileIdChunks.shift();
+            if (!chunk) {
+              break;
+            }
+            if (!get().isLoadingAwake) {
+              set({ isLoadingAwake: true });
+            }
+
             const [, resolve] = chunkToPromise.get(chunk) ?? [];
             if (!resolve) {
               throw new Error(
@@ -431,6 +554,7 @@ export const usePageStore = create<PageState>()(
             demandSet.delete(chunk);
 
             // Update progress
+            processedFileCount += chunk.length;
             loadedFileCount += response.metadata.length;
             set((state) => {
               // For performance reasons, we re-use the same loadedFiles array.
@@ -452,11 +576,6 @@ export const usePageStore = create<PageState>()(
                 loadedFileCount,
               };
             });
-
-            // Yield if paused, if there is no demand set, if there are still chunks left
-            if (demandSet.size === 0 && fileIdChunks.length > 0) {
-              await pauseWait(wakeupRef);
-            }
           }
 
           // Only update if we're still on the same page and this is the most recent request
@@ -465,12 +584,16 @@ export const usePageStore = create<PageState>()(
             get().lastRequestId !== requestId
           )
             return;
-          set({
+          set((state) => ({
+            ...(loadedFileCount < fileIds.length
+              ? condenseLoadedFiles(state.loadedFiles)
+              : {}),
             isLoadingFiles: false,
+            isLoadingPaused: false,
             isLoadingAwake: false,
             currentAbortController: null,
             metadataLoadController: null,
-          });
+          }));
         } catch (error: unknown) {
           // Only update error if it wasn't due to abort
           rejectUnfulfilledPromises(error);
@@ -479,20 +602,17 @@ export const usePageStore = create<PageState>()(
             get().lastRequestId !== requestId
           )
             return;
-          if (
-            error instanceof Error &&
-            error.name !== "AbortError" &&
-            get().activePageKey === pageKey &&
-            get().lastRequestId === requestId
-          ) {
+          if (error instanceof Error && error.name !== "AbortError") {
             console.error("Failed to load file metadata:", error);
-            set({
+            set((state) => ({
+              ...condenseLoadedFiles(state.loadedFiles),
               error: "Failed to load file data",
               isLoadingFiles: false,
+              isLoadingPaused: false,
               isLoadingAwake: false,
               currentAbortController: null,
               metadataLoadController: null,
-            });
+            }));
           }
         } finally {
           rejectUnfulfilledPromises(new Error("Aborted"));
@@ -510,7 +630,7 @@ export const usePageStore = create<PageState>()(
           return;
         }
 
-        set((state) => ({
+        stopActiveMetadataLoad((state) => ({
           fileIds: [],
           fileIdToIndex: new Map(),
           activePageKey: pageKey,
@@ -519,6 +639,8 @@ export const usePageStore = create<PageState>()(
           isLoadingFiles: true,
           isLoadingAwake: true,
           loadedFiles: [],
+          loadedFileCount: 0,
+          totalFileCount: 0,
           selectedPageKeys: state.selectedPageKeys.includes(pageKey)
             ? state.selectedPageKeys
             : [pageKey],
@@ -532,11 +654,17 @@ export const usePageStore = create<PageState>()(
           }
         } catch (error) {
           console.error("Failed to load page:", error);
-          set({
-            error: "Failed to load page data",
-            isLoadingFiles: false,
-            isLoadingAwake: false,
-          });
+          if (get().activePageKey === pageKey) {
+            set((state) => ({
+              ...(state.isLoadingFiles
+                ? condenseLoadedFiles(state.loadedFiles)
+                : {}),
+              error: "Failed to load page data",
+              isLoadingFiles: false,
+              isLoadingPaused: false,
+              isLoadingAwake: false,
+            }));
+          }
         }
       };
 
@@ -573,6 +701,7 @@ export const usePageStore = create<PageState>()(
         currentAbortController: null,
         metadataLoadController: null,
         startupInitialized: false,
+        eagerLoadPageKeys: [],
 
         actions: {
           initializeStartup: async () => {
@@ -674,21 +803,23 @@ export const usePageStore = create<PageState>()(
           },
 
           updatePageContents: async (pageKey: string, type: PageType) => {
-            const state = get();
-            const requestId = state.lastRequestId + 1;
-
             // Only update if we're on the same page.
             if (get().activePageKey !== pageKey) return;
 
-            set({ lastRequestId: requestId });
+            const requestId = stopActiveMetadataLoad(() => ({}));
 
             try {
               // Get the source of files based on page type
               switch (type) {
                 case "hydrus": {
                   const pageInfo = await client.getPageInfo(pageKey);
-                  // Only update if we're on the same page
-                  if (get().activePageKey !== pageKey) return;
+                  // Only update if this is still the active page and request
+                  if (
+                    get().activePageKey !== pageKey ||
+                    get().lastRequestId !== requestId
+                  ) {
+                    return;
+                  }
                   set({
                     pageName: pageInfo.page_info.name,
                   });
@@ -709,9 +840,14 @@ export const usePageStore = create<PageState>()(
                 }
 
                 case "virtual": {
-                  const virtualPage = state.virtualPages[pageKey];
+                  const virtualPage = get().virtualPages[pageKey];
                   if (!virtualPage) {
-                    set({ error: "Virtual page not found" });
+                    set({
+                      error: "Virtual page not found",
+                      isLoadingFiles: false,
+                      isLoadingPaused: false,
+                      isLoadingAwake: false,
+                    });
                     return;
                   }
                   set({
@@ -727,35 +863,101 @@ export const usePageStore = create<PageState>()(
               }
             } catch (error) {
               console.error("Failed to update page contents:", error);
-              // Only update error if we're on the same page.
-              if (get().activePageKey === pageKey) {
-                set({
+              // Only update error if this is still the active page and request.
+              if (
+                get().activePageKey === pageKey &&
+                get().lastRequestId === requestId
+              ) {
+                set((state) => ({
+                  ...(state.isLoadingFiles
+                    ? condenseLoadedFiles(state.loadedFiles)
+                    : {}),
                   error: "Failed to load page data",
                   isLoadingFiles: false,
+                  isLoadingPaused: false,
                   isLoadingAwake: false,
-                });
+                  currentAbortController: null,
+                  metadataLoadController: null,
+                }));
               }
             }
           },
 
           refreshPage: async (pageKey: string, type: PageType) => {
             switch (type) {
+              case "search": {
+                if (
+                  pageKey !== SEARCH_PAGE_KEY ||
+                  get().activePageKey !== pageKey
+                ) {
+                  return;
+                }
+                // Preserve manually uploaded files on the search tab when no query is active.
+                if (useSearchStore.getState().searchTags.length === 0) {
+                  break;
+                }
+                const prevUpdate = pendingSearchUpdate;
+                await useSearchStore.getState().actions.performSearch();
+                if (pendingSearchUpdate && pendingSearchUpdate !== prevUpdate) {
+                  await pendingSearchUpdate;
+                }
+                return;
+              }
               case "hydrus": {
-                set({
-                  isLoadingFiles: true,
-                  isLoadingAwake: true,
-                });
-                await client.refreshPage(pageKey);
+                const isActive = get().activePageKey === pageKey;
+                const refreshRequestId = isActive
+                  ? stopActiveMetadataLoad(() => ({
+                      isLoadingFiles: true,
+                      isLoadingAwake: true,
+                      loadedFileCount: 0,
+                      totalFileCount: 0,
+                    }))
+                  : null;
+                try {
+                  await client.refreshPage(pageKey);
 
-                // Wait for page to be ready
-                for (let i = 0; i < 30; i++) {
-                  const pageInfo = await client.getPageInfo(pageKey);
-                  if (pageInfo.page_info.page_state === 0) {
-                    break;
+                  // Wait for page to be ready
+                  for (let i = 0; i < 30; i++) {
+                    if (
+                      refreshRequestId !== null &&
+                      (get().activePageKey !== pageKey ||
+                        get().lastRequestId !== refreshRequestId)
+                    ) {
+                      return;
+                    }
+                    const pageInfo = await client.getPageInfo(pageKey);
+                    if (pageInfo.page_info.page_state === 0) {
+                      break;
+                    }
+                    await new Promise((resolve) =>
+                      setTimeout(resolve, i < 5 ? 1000 : 5000),
+                    );
                   }
-                  await new Promise((resolve) =>
-                    setTimeout(resolve, i < 5 ? 1000 : 5000),
-                  );
+                } catch (error) {
+                  console.error("Failed to refresh page:", error);
+                  if (
+                    refreshRequestId !== null &&
+                    get().activePageKey === pageKey &&
+                    get().lastRequestId === refreshRequestId
+                  ) {
+                    set((state) => ({
+                      ...(state.isLoadingFiles
+                        ? condenseLoadedFiles(state.loadedFiles)
+                        : {}),
+                      error: "Failed to load page data",
+                      isLoadingFiles: false,
+                      isLoadingPaused: false,
+                      isLoadingAwake: false,
+                    }));
+                  }
+                  return;
+                }
+                if (
+                  refreshRequestId !== null &&
+                  (get().activePageKey !== pageKey ||
+                    get().lastRequestId !== refreshRequestId)
+                ) {
+                  return;
                 }
                 break;
               }
@@ -765,31 +967,8 @@ export const usePageStore = create<PageState>()(
           },
 
           cancelCurrentPageLoad: () => {
-            const state = get();
             useSearchStore.getState().cancelSearch?.();
-            if (state.currentAbortController) {
-              state.currentAbortController.abort();
-            }
-            if (!state.isLoadingFiles) {
-              return;
-            }
-            const loadedFiles = Object.values(state.loadedFiles);
-            const fileIdToIndex = new Map<number, number>();
-            for (const [i, file] of loadedFiles.entries()) {
-              fileIdToIndex.set(file.file_id, i);
-            }
-            set({
-              fileIds: loadedFiles.map((file) => file.file_id),
-              fileIdToIndex,
-              isLoadingFiles: false,
-              isLoadingAwake: false,
-              loadedFiles,
-              loadedFileCount: loadedFiles.length,
-              totalFileCount: loadedFiles.length,
-              lastRequestId: state.lastRequestId + 1,
-              currentAbortController: null,
-              metadataLoadController: null,
-            });
+            stopCurrentLoadAndCondense();
           },
 
           addFilesToView: async (fileIds: number[]) => {
@@ -968,6 +1147,9 @@ export const usePageStore = create<PageState>()(
               return {
                 virtualPages: newVirtualPages,
                 virtualPageKeys: state.virtualPageKeys.filter(
+                  (key) => key !== pageKey,
+                ),
+                eagerLoadPageKeys: state.eagerLoadPageKeys.filter(
                   (key) => key !== pageKey,
                 ),
               };
@@ -1279,10 +1461,44 @@ export const usePageStore = create<PageState>()(
           },
 
           setIsLoadingPaused: (isLoadingPaused: boolean) => {
-            set({ isLoadingPaused });
+            set((state) => {
+              const nextPaused = state.isLoadingFiles ? isLoadingPaused : false;
+              const { activePageKey, totalFileCount } = state;
+              if (activePageKey === null) {
+                return { isLoadingPaused: nextPaused };
+              }
+              if (isLoadingPaused) {
+                return {
+                  isLoadingPaused: nextPaused,
+                  eagerLoadPageKeys: state.eagerLoadPageKeys.filter(
+                    (key) => key !== activePageKey,
+                  ),
+                };
+              }
+              const threshold = Math.max(
+                0,
+                usePreferencesStore.getState().eagerLoadThreshold,
+              );
+              if (totalFileCount <= threshold) {
+                return { isLoadingPaused: nextPaused };
+              }
+              return {
+                isLoadingPaused: nextPaused,
+                eagerLoadPageKeys: [
+                  ...state.eagerLoadPageKeys.filter(
+                    (key) => key !== activePageKey,
+                  ),
+                  activePageKey,
+                ].slice(-EAGER_LOAD_PAGE_LIMIT),
+              };
+            });
             if (!isLoadingPaused) {
               get().metadataLoadController?.wakeup();
             }
+          },
+
+          clearEagerLoadPageKeys: () => {
+            set({ eagerLoadPageKeys: [] });
           },
         },
       };
@@ -1299,6 +1515,7 @@ export const usePageStore = create<PageState>()(
         pages: state.pages,
         activePageKey: state.activePageKey,
         pageType: state.pageType,
+        eagerLoadPageKeys: state.eagerLoadPageKeys,
       }),
     },
   ),
@@ -1311,9 +1528,32 @@ useApiStore.subscribe((state, prevState) => {
 });
 
 useSearchStore.subscribe((state, prevState) => {
+  if (!areStringArraysEqual(state.searchTags, prevState.searchTags)) {
+    const { eagerLoadPageKeys } = usePageStore.getState();
+    if (eagerLoadPageKeys.includes(SEARCH_PAGE_KEY)) {
+      usePageStore.setState({
+        eagerLoadPageKeys: eagerLoadPageKeys.filter(
+          (key) => key !== SEARCH_PAGE_KEY,
+        ),
+      });
+    }
+  }
+  if (
+    state.searchStatus === "loading" &&
+    state.serial !== prevState.serial &&
+    usePageStore.getState().activePageKey === SEARCH_PAGE_KEY
+  ) {
+    stopSupersededSearchLoad?.();
+  }
   if (state.searchResults !== prevState.searchResults) {
-    usePageStore
+    const updatePromise = usePageStore
       .getState()
       .actions.updatePageContents(SEARCH_PAGE_KEY, "search");
+    pendingSearchUpdate = updatePromise;
+    void updatePromise.finally(() => {
+      if (pendingSearchUpdate === updatePromise) {
+        pendingSearchUpdate = null;
+      }
+    });
   }
 });
