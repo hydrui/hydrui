@@ -1,13 +1,21 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import FileRating from "@/components/widgets/FileRating/FileRating";
 import FileViewer from "@/components/widgets/FileViewer/FileViewer";
+import { ServiceType } from "@/constants/services";
 import { useFileRatings } from "@/hooks/useFileRatings";
 import { client } from "@/store/apiStore";
 import { usePageStore } from "@/store/pageStore";
+import { useServices } from "@/store/servicesStore";
 import { useToastStore } from "@/store/toastStore";
-import { formatDuration, formatFileSize } from "@/utils/format";
+import {
+  formatDuration,
+  formatFileSize,
+  formatTimestamp,
+  formatTimestampFull,
+} from "@/utils/format";
 
+import { getFileDomains, getFileTimeImported } from "./fileMetadata";
 import "./index.css";
 
 const FilePreview: React.FC = () => {
@@ -30,10 +38,24 @@ const FilePreview: React.FC = () => {
     ? (fileIdToIndex.get(activeFileId) ?? -1)
     : -1;
   const fileData = loadedFiles[activeFileIndex];
+  const services = useServices();
   const { ratings } = useFileRatings(fileData || null);
   const {
     actions: { addToast },
   } = useToastStore();
+
+  const { domains, timeImported } = useMemo(() => {
+    if (!fileData) {
+      return {
+        domains: [],
+        timeImported: undefined,
+      };
+    }
+    return {
+      domains: getFileDomains(fileData, services),
+      timeImported: getFileTimeImported(fileData, services),
+    };
+  }, [fileData, services]);
 
   // Reset loading state when file changes
   useEffect(() => {
@@ -114,27 +136,31 @@ const FilePreview: React.FC = () => {
       <div className="file-preview-metadata">
         <div className="file-preview-metadata-row">
           <span className="file-preview-metadata-label">Dimensions:</span>
-          <span>
+          <span className="file-preview-metadata-value">
             {fileData.width} × {fileData.height}
           </span>
         </div>
         <div className="file-preview-metadata-row">
           <span className="file-preview-metadata-label">Size:</span>
-          <span>{formatFileSize(fileData.size)}</span>
+          <span className="file-preview-metadata-value">
+            {formatFileSize(fileData.size)}
+          </span>
         </div>
         <div className="file-preview-metadata-row">
           <span className="file-preview-metadata-label">Type:</span>
-          <span>{fileData.mime}</span>
+          <span className="file-preview-metadata-value">{fileData.mime}</span>
         </div>
         {fileData.duration && (
           <div className="file-preview-metadata-row">
             <span className="file-preview-metadata-label">Duration:</span>
-            <span>{formatDuration(Math.ceil(fileData.duration / 1000))}</span>
+            <span className="file-preview-metadata-value">
+              {formatDuration(Math.ceil(fileData.duration / 1000))}
+            </span>
           </div>
         )}
         <div className="file-preview-metadata-row">
           <span className="file-preview-metadata-label">Status:</span>
-          <span>
+          <span className="file-preview-metadata-value">
             {fileData.is_deleted
               ? "Deleted"
               : fileData.is_trashed
@@ -144,6 +170,63 @@ const FilePreview: React.FC = () => {
                   : "Archived"}
           </span>
         </div>
+        {domains.length > 0 && (
+          <div className="file-preview-metadata-row">
+            <span className="file-preview-metadata-label">Domains:</span>
+            <span className="file-preview-metadata-value">
+              {domains.map((domain, index) => {
+                const formattedTime =
+                  domain.timeImported !== undefined
+                    ? formatTimestampFull(domain.timeImported)
+                    : "";
+                const timeLabel =
+                  domain.type === ServiceType.LOCAL_FILE_TRASH_DOMAIN
+                    ? "Trashed"
+                    : "Imported";
+                return (
+                  <React.Fragment key={domain.serviceKey}>
+                    {index > 0 && ", "}
+                    <span
+                      title={
+                        formattedTime
+                          ? `${timeLabel}: ${formattedTime}`
+                          : undefined
+                      }
+                    >
+                      {domain.name}
+                    </span>
+                  </React.Fragment>
+                );
+              })}
+            </span>
+          </div>
+        )}
+        {(
+          [
+            ["Imported", timeImported],
+            ["Modified", fileData.time_modified],
+            ["Archived", fileData.time_archived],
+          ] as const
+        ).map(([label, timestamp]) => {
+          if (timestamp == null) {
+            return null;
+          }
+          const formatted = formatTimestamp(timestamp);
+          if (!formatted) {
+            return null;
+          }
+          return (
+            <div className="file-preview-metadata-row" key={label}>
+              <span className="file-preview-metadata-label">{label}:</span>
+              <span
+                className="file-preview-metadata-value"
+                title={formatTimestampFull(timestamp) || undefined}
+              >
+                {formatted}
+              </span>
+            </div>
+          );
+        })}
 
         {/* Ratings section */}
         {ratings.length > 0 && (

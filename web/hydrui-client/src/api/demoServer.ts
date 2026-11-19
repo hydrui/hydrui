@@ -441,11 +441,18 @@ export class DemoServer implements HttpHandler {
       notes: {},
       file_services: {
         current: {
-          "6c6f63616c2066696c6573": this.services["6c6f63616c2066696c6573"],
-          "616c6c206c6f63616c2066696c6573":
-            this.services["616c6c206c6f63616c2066696c6573"],
-          "616c6c206c6f63616c206d65646961":
-            this.services["616c6c206c6f63616c206d65646961"],
+          "6c6f63616c2066696c6573": {
+            ...this.services["6c6f63616c2066696c6573"],
+            time_imported: 1760758600,
+          },
+          "616c6c206c6f63616c2066696c6573": {
+            ...this.services["616c6c206c6f63616c2066696c6573"],
+            time_imported: 1760758600,
+          },
+          "616c6c206c6f63616c206d65646961": {
+            ...this.services["616c6c206c6f63616c206d65646961"],
+            time_imported: 1760758600,
+          },
         },
         deleted: {},
       },
@@ -494,11 +501,18 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
       },
       file_services: {
         current: {
-          "6c6f63616c2066696c6573": this.services["6c6f63616c2066696c6573"],
-          "616c6c206c6f63616c2066696c6573":
-            this.services["616c6c206c6f63616c2066696c6573"],
-          "616c6c206c6f63616c206d65646961":
-            this.services["616c6c206c6f63616c206d65646961"],
+          "6c6f63616c2066696c6573": {
+            ...this.services["6c6f63616c2066696c6573"],
+            time_imported: 1760765700,
+          },
+          "616c6c206c6f63616c2066696c6573": {
+            ...this.services["616c6c206c6f63616c2066696c6573"],
+            time_imported: 1760765700,
+          },
+          "616c6c206c6f63616c206d65646961": {
+            ...this.services["616c6c206c6f63616c206d65646961"],
+            time_imported: 1760765700,
+          },
         },
         deleted: {},
       },
@@ -1231,7 +1245,7 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
       num_frames,
       has_audio,
     } = await processFile(body);
-    const time = Date.now();
+    const time = Math.floor(Date.now() / 1000);
     const fileUrls: DemoFile = {
       file: new URL(fileUrl),
       thumbnail: new URL(thumbnailUrl),
@@ -1255,11 +1269,18 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
       notes: {},
       file_services: {
         current: {
-          "6c6f63616c2066696c6573": this.services["6c6f63616c2066696c6573"],
-          "616c6c206c6f63616c2066696c6573":
-            this.services["616c6c206c6f63616c2066696c6573"],
-          "616c6c206c6f63616c206d65646961":
-            this.services["616c6c206c6f63616c206d65646961"],
+          "6c6f63616c2066696c6573": {
+            ...this.services["6c6f63616c2066696c6573"],
+            time_imported: time,
+          },
+          "616c6c206c6f63616c2066696c6573": {
+            ...this.services["616c6c206c6f63616c2066696c6573"],
+            time_imported: time,
+          },
+          "616c6c206c6f63616c206d65646961": {
+            ...this.services["616c6c206c6f63616c206d65646961"],
+            time_imported: time,
+          },
         },
         deleted: {},
       },
@@ -1304,8 +1325,10 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
 
   private async archiveFiles(body: Blob) {
     const request: ArchiveFilesRequest = JSON.parse(await body.text());
+    const archivedAt = Math.floor(Date.now() / 1000);
     for (const file of this.fileMetadata(request)) {
       file.is_inbox = false;
+      file.time_archived ??= archivedAt;
     }
     return emptyResponse();
   }
@@ -1314,6 +1337,7 @@ Attribution: (c) copyright Blender Foundation | www.bigbuckbunny.org
     const request: UnarchiveFilesRequest = JSON.parse(await body.text());
     for (const file of this.fileMetadata(request)) {
       file.is_inbox = true;
+      file.time_archived = null;
     }
     return emptyResponse();
   }
