@@ -1,4 +1,9 @@
-import { formatDuration, formatFileSize } from "./format";
+import {
+  formatDuration,
+  formatFileSize,
+  formatTimestamp,
+  formatTimestampFull,
+} from "./format";
 
 describe("formatFileSize", () => {
   test("handles undefined or zero bytes", () => {
@@ -73,5 +78,40 @@ describe("formatDuration", () => {
     expect(formatDuration(61)).toBe("1:01");
     expect(formatDuration(3601)).toBe("1:00:01");
     expect(formatDuration(3661)).toBe("1:01:01");
+  });
+});
+
+describe("formatTimestamp", () => {
+  test("formats Unix timestamps in seconds including epoch 0 and pre-1970", () => {
+    expect(formatTimestamp(1760758570)).toContain("2025");
+    expect(formatTimestamp(-86400)).toContain("1969");
+    expect(formatTimestamp(0).length).toBeGreaterThan(0);
+  });
+
+  test("returns empty string for non-finite or out-of-range timestamps", () => {
+    expect(formatTimestamp(NaN)).toBe("");
+    expect(formatTimestamp(Infinity)).toBe("");
+    expect(formatTimestamp(-Infinity)).toBe("");
+    expect(formatTimestamp(1e20)).toBe("");
+    expect(formatTimestamp(-1e20)).toBe("");
+  });
+});
+
+describe("formatTimestampFull", () => {
+  test("formats Unix timestamps in seconds with fuller output than compact format", () => {
+    const compact = formatTimestamp(1760758570);
+    const full = formatTimestampFull(1760758570);
+    expect(full).toContain("2025");
+    expect(full).not.toBe(compact);
+    expect(formatTimestampFull(-86400)).toContain("1969");
+    expect(formatTimestampFull(0).length).toBeGreaterThan(0);
+  });
+
+  test("returns empty string for non-finite or out-of-range timestamps", () => {
+    expect(formatTimestampFull(NaN)).toBe("");
+    expect(formatTimestampFull(Infinity)).toBe("");
+    expect(formatTimestampFull(-Infinity)).toBe("");
+    expect(formatTimestampFull(1e20)).toBe("");
+    expect(formatTimestampFull(-1e20)).toBe("");
   });
 });

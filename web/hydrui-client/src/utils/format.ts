@@ -35,3 +35,39 @@ export const formatDuration = (seconds: number): string => {
   }
   return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 };
+
+const timestampFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+const timestampFullFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "full",
+  timeStyle: "medium",
+});
+
+const formatUnixTimestamp = (
+  timestamp: number,
+  formatter: Intl.DateTimeFormat,
+): string => {
+  if (!Number.isFinite(timestamp)) {
+    return "";
+  }
+  const date = new Date(timestamp * 1000);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return formatter.format(date);
+};
+
+/**
+ * Format a Unix timestamp in seconds to a compact local date and time string
+ */
+export const formatTimestamp = (timestamp: number): string =>
+  formatUnixTimestamp(timestamp, timestampFormatter);
+
+/**
+ * Format a Unix timestamp in seconds to a full local date and time string for tooltips
+ */
+export const formatTimestampFull = (timestamp: number): string =>
+  formatUnixTimestamp(timestamp, timestampFullFormatter);

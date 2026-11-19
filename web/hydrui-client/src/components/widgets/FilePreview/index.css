@@ -65,12 +65,20 @@
 .file-preview-metadata-row {
   display: flex;
   justify-content: space-between;
+  gap: 0.5rem;
   margin-bottom: 4px;
   line-height: 16px;
 }
 
 .file-preview-metadata-label {
   color: var(--color-gray-400);
+  flex-shrink: 0;
+}
+
+.file-preview-metadata-value {
+  text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .file-preview-ratings-divider {
