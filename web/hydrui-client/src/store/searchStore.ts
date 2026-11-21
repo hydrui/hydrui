@@ -207,9 +207,9 @@ export const useSearchStore = create<SearchState>()(
               };
             });
           } finally {
-            set({
-              cancelSearch: null,
-            });
+            set(({ serial }) =>
+              serial === currentSerial ? { cancelSearch: null } : {},
+            );
           }
         },
       },

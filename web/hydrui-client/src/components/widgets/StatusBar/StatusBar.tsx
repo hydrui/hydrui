@@ -43,10 +43,12 @@ const StatusBar: React.FC = () => {
     { images: 0, videos: 0, other: 0, totalSize: 0 },
   );
 
+  const isSearching = pageType === "search" && searchStatus === "loading";
+
   return (
     <div className="status-bar">
       <div className="status-bar-info">
-        {isLoadingFiles && (
+        {isLoadingFiles && !isSearching && (
           <button
             onClick={handlePauseToggle}
             className="status-bar-pause-button"
@@ -64,10 +66,12 @@ const StatusBar: React.FC = () => {
             // Search mode status
             searchStatus === "loading" || isLoadingFiles ? (
               <span className="status-bar-info">
-                {isLoadingAwake && (
+                {(searchStatus === "loading" || isLoadingAwake) && (
                   <div className="status-bar-loading-spinner"></div>
                 )}
-                {isLoadingFiles && loadedFileCount < totalFileCount
+                {!isSearching &&
+                isLoadingFiles &&
+                loadedFileCount < totalFileCount
                   ? isLoadingPaused
                     ? `Loading paused (${loadedFileCount} of ${totalFileCount})`
                     : `Loading files (${loadedFileCount} of ${totalFileCount})...`
@@ -106,9 +110,13 @@ const StatusBar: React.FC = () => {
               )}
               {isLoadingFiles ? (
                 <span className="status-bar-info">
-                  <div className="status-bar-loading-spinner"></div>
+                  {isLoadingAwake && (
+                    <div className="status-bar-loading-spinner"></div>
+                  )}
                   {loadedFileCount < totalFileCount
-                    ? `Loading files (${loadedFileCount} of ${totalFileCount})...`
+                    ? isLoadingPaused
+                      ? `Loading paused (${loadedFileCount} of ${totalFileCount})`
+                      : `Loading files (${loadedFileCount} of ${totalFileCount})...`
                     : "Loading..."}
                   <button
                     onClick={cancelCurrentPageLoad}
